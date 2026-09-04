@@ -37,7 +37,7 @@ Ao concluir qualquer trabalho descrito na secção 8:
 | 1 — Stock, ponta a ponta | 🟡 Em curso |
 | 2 — Pessoas | 🟡 Em curso |
 | 3 — Vista do colaborador e PWA | 🟡 Em curso |
-| 4 — Dashboard, estabilização e piloto | ⬜ Por iniciar |
+| 4 — Dashboard, estabilização e piloto | 🟡 Em curso |
 
 Legenda: ⬜ Por iniciar · 🟡 Em curso · ✅ Concluída
 
@@ -397,12 +397,12 @@ Alertas são visuais. Sem email, SMS ou notificações nesta fase.
 
 ### Fase 4 — Dashboard, estabilização e piloto
 *P0-19, P0-22, P0-23. Depende de: Fases 1 a 3, P0-20 e P0-21 (AT).*
-**Estado:** ⬜ Por iniciar
+**Estado:** 🟡 Em curso
 
-- [ ] Dashboard do gerente, sem gráficos sofisticados: contador de artigos com stock baixo, últimos movimentos, pedidos de férias pendentes, quem está em turno.
+- [x] Dashboard do gerente, sem gráficos sofisticados: contador de artigos com stock baixo, últimos movimentos, pedidos de férias pendentes, quem está em turno.
 - [ ] Correção de bugs P0 e P1 encontrados nos testes funcionais do AT.
-- [ ] Ambiente de demonstração: domínio, hosting, HTTPS, backups, utilizadores de teste.
-- [ ] Fixtures de dados de exemplo para demonstração e para o percurso dos quatro perfis.
+- [ ] Ambiente de demonstração: domínio, hosting, HTTPS, backups, utilizadores de teste. *(bloqueado pelas decisões de hosting/domínio da secção 12)*
+- [x] Fixtures de dados de exemplo para demonstração e para o percurso dos quatro perfis. *(`python manage.py demo`, idempotente)*
 
 ---
 
@@ -499,6 +499,7 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 
 | Data | Fase | O que foi feito | Por fechar | Próximo passo |
 |---|---|---|---|---|
+| 2026-09-04 (2ª sessão, cont. 3) | 4 | Dashboard do gerente com os quatro sinais do docx (áreas de pessoas escondidas ao resp. de stock) e comando `manage.py demo` — restaurante Tasca da Esquina, contas dos 4 perfis (password demo1234, PIN da Marta 2468), stock com movimentos, ponto e férias, incluindo um pedido pendente que sobrepõe um aprovado. 65 testes. Commit na sequência de `bae972d`. | Da Fase 4 falta: bugs P0/P1 do AT (depende dos testes funcionais dele) e ambiente de demonstração (bloqueado por hosting/domínio, secção 12). Das Fases 1–3: revisão visual + teste da PWA em telemóvel real. | O TM deve: correr `manage.py demo` + `runserver`, percorrer os 4 perfis, testar a PWA num telemóvel (instalar, modo avião, sincronizar) e marcar as fases ✅. Em paralelo: fechar com o AT as decisões da secção 12 (PIN, permissões do gerente, hosting). |
 | 2026-09-04 (2ª sessão, cont. 2) | 3 | Fase 3 escrita: login por PIN (seleção de trabalhador + PIN 4–6 dígitos, hash do Django, throttling 5 falhas/60s, cookie assinado de dispositivo com 180 dias ativado pelo gerente em Configuração→Dispositivo), sessão PIN marcada na sessão e testada contra o backoffice com login real; botão de estado com cronómetro (hx-post único), totais dia/semana, histórico em talões escuros, férias em 3 campos; gestão de PIN no backoffice (Trabalhadores→Definir/Repor PIN); PWA com manifest, ícones Pillow, sw.js (cache do shell, servido na raiz via view) e fila offline em `app.js` (localStorage, `marcado_em` com o timestamp original, nunca no futuro; reenvia ao voltar online). 62 testes. Commit `bae972d`. | Itens de PWA/offline estão `[~]`: o service worker e a fila offline só se verificam num browser real (instalação Android/iOS, modo avião) — não há teste automático que os cubra. Restante por fechar: revisão visual das Fases 1–3. | Testar a PWA num telemóvel real (instalar, marcar ponto em modo avião, voltar a ter rede) e rever visualmente os módulos. Depois: Fase 4 (dashboard, fixtures, ambiente de demonstração). |
 | 2026-09-04 (2ª sessão, cont.) | 2 | Fase 2 completa em código: `Worker` (conta opcional), `TimeEntry` com constraint parcial de turno único aberto + serviços `open/close_shift` (invariantes 3 e 4), correção e registo manual auditados com motivo obrigatório (invariante 5), `VacationRequest` com decisão auditada, badge de sobreposição com aprovados e bloqueio de delete de aprovados no admin (invariante 6). Vista de equipa por dia com navegação de datas e «Saída em falta»; novo pedido de férias em nome do trabalhador; modal único de decisão. 46 testes no total — `test_double_open_shift_rejected`, `test_checkout_without_checkin_rejected`, `test_vacation_overlap_flagged`, `test_staff_cannot_see_others_data` incluídos. Commit `d262050`. | Revisão visual dos três módulos no browser. Fases 1 e 2 ficam 🟡 até à revisão visual do TM. | Rever visualmente stock + pessoas; marcar fases ✅. Depois: Fase 3 (login PIN, ecrã de ponto staff, PWA) — atenção à decisão pendente do PIN com o AT (secção 12). |
 | 2026-09-04 (2ª sessão) | 0→1 | Fase 0 fechada após revisão visual do TM. Fase 1 completa em código: modelos `inventory` com constraints, `register_movement()` (transação + `select_for_update`, rejeita stock negativo), admin de movimentos só-consulta, sementes de categorias no `post_save` do `Restaurant`, CRUD de artigos (sem delete — `is_active`) e categorias (criar/renomear/eliminar com PROTECT), movimento em modal HTMX com linha + contador OOB e toast por `HX-Trigger`, pesquisa/filtros parciais, histórico em talões (limite 200). 25 testes; invariantes 1, 2 e 5 testadas. Commit `925769e`. | Revisão visual do módulo de stock no browser e o percurso de aceitação do docx feito à mão (criar artigo → registar entrada → confirmar stock e histórico). Estado da fase fica 🟡 até lá. | Rever visualmente o módulo de stock; se estiver bom, marcar a Fase 1 ✅ e arrancar a Fase 2 (Pessoas: `Worker`, ponto no backoffice, férias). |
