@@ -1,0 +1,50 @@
+{% extends "base_manage.html" %}
+{% block title %}Categorias{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <h1 class="font-display text-2xl font-bold">Categorias</h1>
+  {% include "components/botao.html" with label="Voltar ao stock" variante="fantasma" href="/gestao/stock/" %}
+</div>
+
+<div class="mt-6 grid max-w-4xl gap-6 md:grid-cols-2">
+  <div class="cartao">
+    {% if categorias %}
+    <table class="tabela">
+      <thead><tr><th>Categoria</th><th class="th-dados">Artigos</th><th><span class="sr-only">Ações</span></th></tr></thead>
+      <tbody>
+        {% for c in categorias %}
+        <tr>
+          <td class="font-medium">{{ c.name }}</td>
+          <td class="td-dados">{{ c.items.count }}</td>
+          <td class="text-right">
+            <a href="{% url 'inventory:categoria_editar' c.pk %}" class="mr-3 text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Renomear</a>
+            <button type="button" x-data
+                    x-on:click="$dispatch('abrir-modal', { id: 'eliminar-{{ c.pk }}' })"
+                    class="text-sm text-ardosia underline underline-offset-2 hover:text-chama">Eliminar</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="px-6 py-12 text-center text-sm text-ardosia">Ainda não há categorias. Crie a primeira ao lado.</div>
+    {% endif %}
+  </div>
+
+  <div>
+    <form method="post" class="cartao space-y-4 p-6">
+      {% csrf_token %}
+      <h2 class="font-display text-base font-bold">Nova categoria</h2>
+      {% include "components/campo.html" with field=form.name %}
+      {% include "components/botao.html" with label="Criar categoria" %}
+    </form>
+  </div>
+</div>
+
+{% for c in categorias %}
+{% url 'inventory:categoria_eliminar' c.pk as url_eliminar %}
+{% with cid=c.pk|stringformat:"s" %}
+{% include "components/modal.html" with id="eliminar-"|add:cid titulo="Eliminar esta categoria?" corpo="Só é possível eliminar categorias sem artigos. Esta ação não se desfaz." confirmar_label="Eliminar categoria" form_action=url_eliminar %}
+{% endwith %}
+{% endfor %}
+{% endblock %}

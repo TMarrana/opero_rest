@@ -1,0 +1,22 @@
+<div id="rail-historico">
+  {% if movimentos %}
+  <div class="rail-taloes">
+    {% for mov in movimentos %}
+    <article class="talao">
+      <time class="block text-xs text-ardosia">{{ mov.occurred_at|date:"d M Y · H:i"|upper }}</time>
+      <p class="mt-1 font-semibold uppercase tracking-wide">{{ mov.get_movement_type_display }} · {{ mov.item.name }}</p>
+      <p class="mt-0.5">{% if mov.signed_quantity > 0 %}+{% endif %}{{ mov.signed_quantity }} {{ mov.item.unit }}{% if mov.reason %} · {{ mov.reason }}{% endif %}{% if mov.reference %} · {{ mov.reference }}{% endif %}</p>
+      <p class="mt-1 text-xs text-ardosia">registado por {{ mov.created_by }}</p>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="cartao px-6 py-12 text-center text-sm text-ardosia">
+    {% if filtros.artigo or filtros.de or filtros.ate %}
+    <p>Nenhum movimento corresponde aos filtros. Alargue o período ou escolha outro artigo.</p>
+    {% else %}
+    <p>Ainda não há movimentos. Registe o primeiro a partir da lista de artigos.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>

@@ -1,0 +1,8 @@
+<span id="contador-baixo" {% if oob %}hx-swap-oob="true"{% endif %}>
+  {% if contador_baixo %}
+  <span class="font-dados font-semibold text-chama">{{ contador_baixo }}</span>
+  <span>artigo{{ contador_baixo|pluralize }} abaixo do mínimo</span>
+  {% else %}
+  <span>Nenhum artigo abaixo do mínimo</span>
+  {% endif %}
+</span>

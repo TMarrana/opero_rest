@@ -1,0 +1,19 @@
+<tr id="item-{{ item.pk }}" {% if oob %}hx-swap-oob="true"{% endif %} {% if not item.is_active %}class="opacity-50"{% endif %}>
+  <td class="font-medium">{{ item.name }}{% if not item.is_active %} <span class="text-xs text-ardosia">(inativo)</span>{% endif %}</td>
+  <td class="text-ardosia">{{ item.category.name }}</td>
+  <td class="td-dados">{{ item.current_stock }} {{ item.unit }}</td>
+  <td class="td-dados text-ardosia">{{ item.minimum_stock }} {{ item.unit }}</td>
+  <td>
+    {% if item.is_low %}
+    {% include "components/badge.html" with label="Stock baixo" variante="chama" %}
+    {% else %}
+    {% include "components/badge.html" with label="OK" variante="neutro" %}
+    {% endif %}
+  </td>
+  <td class="whitespace-nowrap text-right text-sm">
+    <button type="button"
+            hx-get="{% url 'inventory:movimento' item.pk %}" hx-target="#modal-slot" hx-swap="innerHTML"
+            class="font-semibold text-carvao underline underline-offset-2 hover:text-chama">Movimento</button>
+    <a href="{% url 'inventory:editar' item.pk %}" class="ml-3 text-ardosia underline underline-offset-2 hover:text-carvao">Editar</a>
+  </td>
+</tr>

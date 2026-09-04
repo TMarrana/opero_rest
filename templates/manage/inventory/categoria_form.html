@@ -1,0 +1,16 @@
+{% extends "base_manage.html" %}
+{% block title %}Renomear categoria{% endblock %}
+{% block content %}
+<h1 class="font-display text-2xl font-bold">Renomear categoria</h1>
+<p class="mt-1 text-sm text-ardosia">Os artigos associados ficam na categoria com o novo nome.</p>
+<form method="post" class="mt-6 max-w-md space-y-5">
+  {% csrf_token %}
+  <div class="cartao space-y-4 p-6">
+    {% include "components/campo.html" with field=form.name %}
+  </div>
+  <div class="flex justify-end gap-3">
+    {% include "components/botao.html" with label="Cancelar" variante="fantasma" href="/gestao/stock/categorias/" %}
+    {% include "components/botao.html" with label="Guardar categoria" %}
+  </div>
+</form>
+{% endblock %}

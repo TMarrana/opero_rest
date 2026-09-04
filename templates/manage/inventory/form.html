@@ -1,0 +1,33 @@
+{% extends "base_manage.html" %}
+{% block title %}{% if item %}Editar artigo{% else %}Novo artigo{% endif %}{% endblock %}
+{% block content %}
+<h1 class="font-display text-2xl font-bold">{% if item %}Editar artigo{% else %}Novo artigo{% endif %}</h1>
+{% if item %}
+<p class="mt-1 text-sm text-ardosia">Stock atual: <span class="font-dados">{{ item.current_stock }} {{ item.unit }}</span> — o stock só muda por movimento, não aqui.</p>
+{% else %}
+<p class="mt-1 text-sm text-ardosia">O stock inicial regista-se depois, com um movimento de entrada.</p>
+{% endif %}
+
+<form method="post" class="mt-6 max-w-xl space-y-5">
+  {% csrf_token %}
+  <div class="cartao space-y-5 p-6">
+    {% include "components/campo.html" with field=form.name %}
+    <div class="grid grid-cols-2 gap-4">
+      {% include "components/campo.html" with field=form.category %}
+      {% include "components/campo.html" with field=form.unit %}
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+      {% include "components/campo.html" with field=form.minimum_stock %}
+      {% include "components/campo.html" with field=form.reference_cost %}
+    </div>
+    {% include "components/campo.html" with field=form.notes %}
+    <label class="flex min-h-toque cursor-pointer items-center gap-2 text-sm font-medium">
+      {{ form.is_active }} {{ form.is_active.label }}
+    </label>
+  </div>
+  <div class="flex justify-end gap-3">
+    {% include "components/botao.html" with label="Cancelar" variante="fantasma" href="/gestao/stock/" %}
+    {% include "components/botao.html" with label="Guardar artigo" %}
+  </div>
+</form>
+{% endblock %}

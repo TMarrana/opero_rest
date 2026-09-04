@@ -1,0 +1,5 @@
+{% comment %}Resposta ao POST de movimento: linha atualizada (alvo do hx-target),
+contador OOB e limpeza do modal OOB.{% endcomment %}
+{% include "partials/inventory/item_row.html" %}
+{% include "partials/inventory/contador_baixo.html" with oob=True %}
+<div id="modal-slot" hx-swap-oob="true"></div>

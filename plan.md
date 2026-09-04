@@ -33,8 +33,8 @@ Ao concluir qualquer trabalho descrito na secção 8:
 
 | Fase | Estado |
 |---|---|
-| 0 — Fundação e sistema de design | 🟡 Em curso |
-| 1 — Stock, ponta a ponta | ⬜ Por iniciar |
+| 0 — Fundação e sistema de design | ✅ Concluída |
+| 1 — Stock, ponta a ponta | 🟡 Em curso |
 | 2 — Pessoas | ⬜ Por iniciar |
 | 3 — Vista do colaborador e PWA | ⬜ Por iniciar |
 | 4 — Dashboard, estabilização e piloto | ⬜ Por iniciar |
@@ -333,7 +333,7 @@ Ciclos curtos de uma semana, com revisão semanal AT + TM. Estimativas técnicas
 
 ### Fase 0 — Fundação e sistema de design
 *Corresponde a P0-10 e P0-11. Depende de: P0-01 a P0-05 (AT).*
-**Estado:** 🟡 Em curso
+**Estado:** ✅ Concluída
 
 - [x] `git init`, `.gitignore`, dependências, apagar `main.py`.
 - [x] Projeto Django, settings por ambiente, `.env.example`.
@@ -341,7 +341,7 @@ Ciclos curtos de uma semana, com revisão semanal AT + TM. Estimativas técnicas
 - [x] Groups por perfil e mixins de permissão em `core/mixins.py`.
 - [x] Login por email e password, logout, redirecionamento por perfil.
 - [x] Tailwind standalone em watch; tokens de cor e tipo em `input.css`; fontes locais.
-- [~] `base_manage.html`, `base_staff.html` e a biblioteca `components/` completa — botão, campo, badge, talão, tabela, modal, toast.
+- [x] `base_manage.html`, `base_staff.html` e a biblioteca `components/` completa — botão, campo, badge, talão, tabela, modal, toast.
 
 **Construir os componentes antes dos ecrãs.** É o que impede a deriva visual módulo a módulo, e é a razão pela qual o sistema de design entra na Fase 0 e não no fim.
 
@@ -351,7 +351,7 @@ Ciclos curtos de uma semana, com revisão semanal AT + TM. Estimativas técnicas
 
 ### Fase 1 — Stock, ponta a ponta
 *P0-16, P0-17, P0-18. Depende de: Fase 0, P0-03, P0-04, P0-05 (AT).*
-**Estado:** ⬜ Por iniciar
+**Estado:** 🟡 Em curso
 
 Módulo central e primeiro a ser construído, por decisão explícita do docx: é a necessidade declarada inegociável e dá valor direto ao gerente e ao responsável de stock.
 

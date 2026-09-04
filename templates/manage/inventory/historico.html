@@ -1,0 +1,34 @@
+{% extends "base_manage.html" %}
+{% block title %}Histórico de stock{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <h1 class="font-display text-2xl font-bold">Histórico de movimentos</h1>
+  {% include "components/botao.html" with label="Voltar ao stock" variante="fantasma" href="/gestao/stock/" %}
+</div>
+
+<form class="mt-6 flex flex-wrap items-end gap-3"
+      hx-get="{% url 'inventory:historico' %}" hx-target="#rail-historico" hx-swap="outerHTML"
+      hx-trigger="change from:find select, change from:find input">
+  <label class="block text-sm font-medium">
+    <span class="mb-1.5 block">Artigo</span>
+    <select name="artigo" class="campo-input min-w-[14rem]">
+      <option value="">Todos os artigos</option>
+      {% for i in items %}
+      <option value="{{ i.pk }}" {% if filtros.artigo == i.pk|stringformat:"s" %}selected{% endif %}>{{ i.name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="block text-sm font-medium">
+    <span class="mb-1.5 block">De</span>
+    <input type="date" name="de" value="{{ filtros.de }}" class="campo-input font-dados">
+  </label>
+  <label class="block text-sm font-medium">
+    <span class="mb-1.5 block">Até</span>
+    <input type="date" name="ate" value="{{ filtros.ate }}" class="campo-input font-dados">
+  </label>
+</form>
+
+<div class="mt-6 max-w-2xl">
+  {% include "partials/inventory/rail_historico.html" %}
+</div>
+{% endblock %}

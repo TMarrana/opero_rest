@@ -1,0 +1,32 @@
+<div id="tabela-items" class="cartao">
+  {% if items %}
+  <div class="overflow-x-auto">
+    <table class="tabela">
+      <thead>
+        <tr>
+          <th>Artigo</th>
+          <th>Categoria</th>
+          <th class="th-dados">Stock</th>
+          <th class="th-dados">Mínimo</th>
+          <th>Estado</th>
+          <th><span class="sr-only">Ações</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        {% include "partials/inventory/item_row.html" %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="px-6 py-12 text-center text-sm text-ardosia">
+    {% if filtros.q or filtros.categoria or filtros.baixo %}
+    <p>Nenhum artigo corresponde aos filtros. Limpe a pesquisa para ver tudo.</p>
+    {% else %}
+    <p>Ainda não há artigos. Comece por criar o primeiro.</p>
+    <p class="mt-4">{% include "components/botao.html" with label="Novo artigo" href="/gestao/stock/novo/" %}</p>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>

@@ -1,9 +1,13 @@
 {% comment %}
-Toasts de confirmação (secção 9): mensagens Django renderizadas como
-toasts com auto-dismiss; a região aria-live também recebe futuros toasts
-HTMX. O verbo do toast é o do botão que o despoletou.
+Toasts de confirmação (secção 9). Duas fontes:
+- mensagens Django (render no load da página);
+- evento HTMX "toast" (HX-Trigger), com detail {texto, tom}.
+O verbo do toast é o do botão que o despoletou.
 {% endcomment %}
-<div aria-live="polite" class="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex flex-col items-center gap-2 px-4">
+<div aria-live="polite"
+     x-data="{ lista: [] }"
+     x-on:toast.window="lista.push($event.detail); setTimeout(() => lista.shift(), 4000)"
+     class="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex flex-col items-center gap-2 px-4">
   {% for message in messages %}
   <div x-data="{ visivel: true }" x-show="visivel" x-init="setTimeout(() => visivel = false, 4000)"
        class="pointer-events-auto flex items-center gap-3 rounded-md px-4 py-3 text-sm font-semibold shadow-lg
@@ -12,4 +16,10 @@ HTMX. O verbo do toast é o do botão que o despoletou.
     <button type="button" x-on:click="visivel = false" class="opacity-60 hover:opacity-100" aria-label="Fechar">✕</button>
   </div>
   {% endfor %}
+  <template x-for="(t, i) in lista" :key="i">
+    <div class="pointer-events-auto flex items-center gap-3 rounded-md px-4 py-3 text-sm font-semibold shadow-lg"
+         :class="t.tom === 'erro' ? 'bg-chama text-superficie' : (t.tom === 'sucesso' ? 'bg-servico text-carvao' : 'bg-carvao text-aco')">
+      <span x-text="t.texto"></span>
+    </div>
+  </template>
 </div>
