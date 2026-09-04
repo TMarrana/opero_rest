@@ -355,12 +355,12 @@ Ciclos curtos de uma semana, com revisão semanal AT + TM. Estimativas técnicas
 
 Módulo central e primeiro a ser construído, por decisão explícita do docx: é a necessidade declarada inegociável e dá valor direto ao gerente e ao responsável de stock.
 
-- [ ] CRUD de categorias e artigos.
-- [ ] `register_movement()` com a invariante 1 garantida por transação e lock.
-- [ ] Registo de movimento via HTMX, sem recarregar a listagem.
-- [ ] Listagem com pesquisa, filtro por categoria e filtro **"Stock baixo"**.
-- [ ] Badge `chama` no artigo com `current_stock <= minimum_stock`; contador no topo do módulo.
-- [ ] Histórico de movimentos em talões, com filtro por artigo e por período.
+- [x] CRUD de categorias e artigos.
+- [x] `register_movement()` com a invariante 1 garantida por transação e lock.
+- [x] Registo de movimento via HTMX, sem recarregar a listagem.
+- [x] Listagem com pesquisa, filtro por categoria e filtro **"Stock baixo"**.
+- [x] Badge `chama` no artigo com `current_stock <= minimum_stock`; contador no topo do módulo.
+- [x] Histórico de movimentos em talões, com filtro por artigo e por período.
 
 Alertas são visuais. Sem email, SMS ou notificações nesta fase.
 
@@ -499,6 +499,7 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 
 | Data | Fase | O que foi feito | Por fechar | Próximo passo |
 |---|---|---|---|---|
+| 2026-09-04 (2ª sessão) | 0→1 | Fase 0 fechada após revisão visual do TM. Fase 1 completa em código: modelos `inventory` com constraints, `register_movement()` (transação + `select_for_update`, rejeita stock negativo), admin de movimentos só-consulta, sementes de categorias no `post_save` do `Restaurant`, CRUD de artigos (sem delete — `is_active`) e categorias (criar/renomear/eliminar com PROTECT), movimento em modal HTMX com linha + contador OOB e toast por `HX-Trigger`, pesquisa/filtros parciais, histórico em talões (limite 200). 25 testes; invariantes 1, 2 e 5 testadas. Commit `925769e`. | Revisão visual do módulo de stock no browser e o percurso de aceitação do docx feito à mão (criar artigo → registar entrada → confirmar stock e histórico). Estado da fase fica 🟡 até lá. | Rever visualmente o módulo de stock; se estiver bom, marcar a Fase 1 ✅ e arrancar a Fase 2 (Pessoas: `Worker`, ponto no backoffice, férias). |
 | 2026-09-04 | 0 | Fase 0 quase completa: projeto Django 5.2, settings dev/prod, primeira migração (`Restaurant`, `TimeStampedModel`, `User` custom), groups por perfil com sync no save, mixins em `core/mixins.py` (incl. fronteira PIN→403), login/logout com redirecionamento por perfil, tokens + Tailwind v3.4.17 standalone, fontes woff2 locais, HTMX 2.0.7 e Alpine 3.15 vendored, `base_manage`/`base_staff`, componentes todos e página `/componentes/`. 9 testes a passar (`test_pin_does_not_open_backoffice` incluído); `check` e `makemigrations --check` limpos. Commit `30cf284`. | Revisão visual no browser das duas superfícies e da página de componentes — os templates renderizam nos testes mas ninguém os viu; por isso o último item está `[~]`. | Correr `runserver` + `tailwindcss -w`, criar um superuser, rever visualmente `/componentes/`, o login e os dois shells; marcar o item e fechar a Fase 0. Depois: Fase 1 (modelos `inventory` + `register_movement()`). |
 | 2026-09-04 | — | Plano de engenharia escrito a partir do docx. Stack, direção de design e fases fixadas. | Nada implementado. | Arrancar a Fase 0: `git init`, dependências e projeto Django. |
 
@@ -508,4 +509,6 @@ Alterações ao plano decididas durante a execução. Se algo aqui contradiz uma
 
 - **2026-09-04 · whitenoise acrescentado ao stack** (servir estáticos em produção sem depender do proxy; em dev `WHITENOISE_AUTOREFRESH=True`). Refletido na tabela da secção 2? Não — a tabela lista camadas principais; whitenoise fica registado aqui e em `requirements.txt`.
 - **2026-09-04 · Tailwind fixado em v3.4.17** (a v4 abandonou o `tailwind.config.js`; o plano assume config JS). Tokens de cor definidos como triplos RGB em `input.css` para os modificadores de opacidade (`/25`) funcionarem.
+- **2026-09-04 · Stock não pode ficar negativo** — o plano não se pronunciava; `register_movement()` rejeita saídas e ajustes que deixem `current_stock < 0`, com mensagem a sugerir ajuste prévio. Racional: um ajuste negativo abaixo de zero implicaria uma contagem física negativa, impossível.
+- **2026-09-04 · Artigos não se apagam** — desativam-se (`is_active`), porque os movimentos os protegem (`on_delete=PROTECT`) e o histórico não se perde. O "D" do CRUD de artigos é a desativação.
 - **2026-09-04 · Grupos criados por data migration** (`accounts/0002`), com sincronização `role`→grupo em signal `post_save`. A autorização efetiva nas views é feita pelos mixins; os grupos mantêm o admin coerente.
