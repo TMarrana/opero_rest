@@ -1,0 +1,23 @@
+{% extends "base_manage.html" %}
+{% block title %}Trabalhadores{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <h1 class="font-display text-2xl font-bold">Trabalhadores</h1>
+  {% include "components/botao.html" with label="Novo trabalhador" href="/gestao/trabalhadores/novo/" %}
+</div>
+
+<form class="mt-6 flex flex-wrap items-center gap-3"
+      hx-get="{% url 'workers:lista' %}" hx-target="#tabela-workers" hx-swap="outerHTML"
+      hx-trigger="input delay:300ms from:find input[type=search], change from:find input[type=checkbox]">
+  <input type="search" name="q" value="{{ filtros.q }}" placeholder="Pesquisar por nome ou função…"
+         class="campo-input max-w-xs" aria-label="Pesquisar trabalhador">
+  <label class="flex min-h-toque cursor-pointer items-center gap-2 text-sm font-medium">
+    <input type="checkbox" name="inativos" value="1" {% if filtros.inativos %}checked{% endif %} class="h-4 w-4 accent-carvao">
+    Mostrar inativos
+  </label>
+</form>
+
+<div class="mt-4">
+  {% include "partials/workers/tabela_workers.html" %}
+</div>
+{% endblock %}

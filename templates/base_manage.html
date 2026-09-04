@@ -21,9 +21,12 @@
       <nav class="flex-1 px-2 space-y-1 text-sm font-medium" aria-label="Navegação principal">
         {% url 'dashboard:home' as url_dash %}
         <a href="{{ url_dash }}" class="block rounded px-3 py-2.5 {% if request.path == url_dash %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Dashboard</a>
-        <span class="block px-3 py-2.5 text-aco/30 cursor-default" title="Fase 2">Trabalhadores</span>
-        <span class="block px-3 py-2.5 text-aco/30 cursor-default" title="Fase 2">Ponto</span>
-        <span class="block px-3 py-2.5 text-aco/30 cursor-default" title="Fase 2">Férias</span>
+        {% url 'workers:lista' as url_workers %}
+        <a href="{{ url_workers }}" class="block rounded px-3 py-2.5 {% if '/gestao/trabalhadores/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Trabalhadores</a>
+        {% url 'attendance:dia' as url_ponto %}
+        <a href="{{ url_ponto }}" class="block rounded px-3 py-2.5 {% if '/gestao/ponto/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Ponto</a>
+        {% url 'vacations:lista' as url_ferias %}
+        <a href="{{ url_ferias }}" class="block rounded px-3 py-2.5 {% if '/gestao/ferias/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Férias</a>
         {% url 'inventory:lista' as url_stock %}
         <a href="{{ url_stock }}" class="block rounded px-3 py-2.5 {% if '/gestao/stock/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Stock</a>
         <span class="block px-3 py-2.5 text-aco/30 cursor-default" title="Fase 4">Configuração</span>

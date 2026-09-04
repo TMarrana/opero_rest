@@ -1,0 +1,27 @@
+{% extends "base_manage.html" %}
+{% block title %}{% if worker %}Editar trabalhador{% else %}Novo trabalhador{% endif %}{% endblock %}
+{% block content %}
+<h1 class="font-display text-2xl font-bold">{% if worker %}{{ worker.full_name }}{% else %}Novo trabalhador{% endif %}</h1>
+<form method="post" class="mt-6 max-w-xl space-y-5">
+  {% csrf_token %}
+  <div class="cartao space-y-5 p-6">
+    {% include "components/campo.html" with field=form.full_name %}
+    <div class="grid grid-cols-2 gap-4">
+      {% include "components/campo.html" with field=form.job_title %}
+      {% include "components/campo.html" with field=form.contact %}
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+      {% include "components/campo.html" with field=form.start_date %}
+      {% include "components/campo.html" with field=form.user %}
+    </div>
+    {% include "components/campo.html" with field=form.notes %}
+    <label class="flex min-h-toque cursor-pointer items-center gap-2 text-sm font-medium">
+      {{ form.is_active }} {{ form.is_active.label }}
+    </label>
+  </div>
+  <div class="flex justify-end gap-3">
+    {% include "components/botao.html" with label="Cancelar" variante="fantasma" href="/gestao/trabalhadores/" %}
+    {% include "components/botao.html" with label="Guardar trabalhador" %}
+  </div>
+</form>
+{% endblock %}

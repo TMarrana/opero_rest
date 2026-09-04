@@ -1,0 +1,126 @@
+{% extends "base_manage.html" %}
+{% block title %}Férias{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <h1 class="font-display text-2xl font-bold">Férias</h1>
+  {% include "components/botao.html" with label="Novo pedido" href="/gestao/ferias/novo/" %}
+</div>
+
+<section class="mt-6">
+  <h2 class="font-display text-lg font-bold">Pendentes
+    {% if pendentes %}<span class="font-dados text-base text-ardosia">{{ pendentes|length }}</span>{% endif %}
+  </h2>
+  <div class="mt-3 cartao">
+    {% if pendentes %}
+    <div class="overflow-x-auto">
+      <table class="tabela">
+        <thead>
+          <tr><th>Trabalhador</th><th class="th-dados">Início</th><th class="th-dados">Fim</th><th>Observação</th><th>Aviso</th><th><span class="sr-only">Decisão</span></th></tr>
+        </thead>
+        <tbody>
+          {% for p in pendentes %}
+          <tr>
+            <td class="font-medium">{{ p.worker.full_name }}</td>
+            <td class="td-dados">{{ p.start_date|date:"d M Y" }}</td>
+            <td class="td-dados">{{ p.end_date|date:"d M Y" }}</td>
+            <td class="text-ardosia">{{ p.request_note|default:"—" }}</td>
+            <td>
+              {% if p.has_overlap %}
+              {% include "components/badge.html" with label="Sobrepõe aprovado" variante="chama" %}
+              {% else %}
+              <span class="text-sm text-ardosia">—</span>
+              {% endif %}
+            </td>
+            <td class="whitespace-nowrap text-right">
+              <button type="button" x-data x-on:click="$dispatch('abrir-decisao', { id: {{ p.pk }}, acao: 'aprovar' })"
+                      class="text-sm font-semibold text-servico underline underline-offset-2">Aprovar</button>
+              <button type="button" x-data x-on:click="$dispatch('abrir-decisao', { id: {{ p.pk }}, acao: 'recusar' })"
+                      class="ml-3 text-sm font-semibold text-chama underline underline-offset-2">Recusar</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="px-6 py-10 text-center text-sm text-ardosia">Não há pedidos pendentes.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="mt-10">
+  <h2 class="font-display text-lg font-bold">Histórico</h2>
+  <form method="get" class="mt-3 flex flex-wrap gap-3">
+    <select name="trabalhador" class="campo-input max-w-[14rem]" onchange="this.form.submit()" aria-label="Filtrar por trabalhador">
+      <option value="">Todos os trabalhadores</option>
+      {% for w in workers %}
+      <option value="{{ w.pk }}" {% if filtros.trabalhador == w.pk|stringformat:"s" %}selected{% endif %}>{{ w.full_name }}</option>
+      {% endfor %}
+    </select>
+    <select name="estado" class="campo-input max-w-[12rem]" onchange="this.form.submit()" aria-label="Filtrar por estado">
+      <option value="">Todos os estados</option>
+      {% for valor, label in estados %}
+      <option value="{{ valor }}" {% if filtros.estado == valor %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  <div class="mt-3 cartao">
+    {% if historico %}
+    <div class="overflow-x-auto">
+      <table class="tabela">
+        <thead>
+          <tr><th>Trabalhador</th><th class="th-dados">Início</th><th class="th-dados">Fim</th><th>Estado</th><th>Decisão</th></tr>
+        </thead>
+        <tbody>
+          {% for p in historico %}
+          <tr>
+            <td class="font-medium">{{ p.worker.full_name }}</td>
+            <td class="td-dados">{{ p.start_date|date:"d M Y" }}</td>
+            <td class="td-dados">{{ p.end_date|date:"d M Y" }}</td>
+            <td>
+              {% if p.status == "APROVADO" %}
+              {% include "components/badge.html" with label="Aprovado" variante="servico" %}
+              {% elif p.status == "RECUSADO" %}
+              {% include "components/badge.html" with label="Recusado" variante="chama" %}
+              {% else %}
+              {% include "components/badge.html" with label=p.get_status_display %}
+              {% endif %}
+            </td>
+            <td class="text-xs text-ardosia">
+              {% if p.decided_by %}{{ p.decided_by }} · {{ p.decided_at|date:"d M Y" }}{% if p.decision_note %} · «{{ p.decision_note }}»{% endif %}{% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="px-6 py-10 text-center text-sm text-ardosia">Ainda não há pedidos decididos.</div>
+    {% endif %}
+  </div>
+</section>
+
+{# Modal de decisão: um só, parametrizado pelo evento abrir-decisao. #}
+<div x-data="{ aberto: false, id: null, acao: null }"
+     x-on:abrir-decisao.window="aberto = true; id = $event.detail.id; acao = $event.detail.acao"
+     x-show="aberto" x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+  <div class="absolute inset-0 bg-carvao/60" x-on:click="aberto = false"></div>
+  <div class="relative w-full max-w-md rounded-md bg-superficie p-6 shadow-xl" x-on:keydown.escape.window="aberto = false">
+    <h2 class="font-display text-lg font-bold text-carvao" x-text="acao === 'aprovar' ? 'Aprovar este pedido?' : 'Recusar este pedido?'"></h2>
+    <p class="mt-2 text-sm text-ardosia">A decisão fica no histórico com o seu nome e não se apaga.</p>
+    <form method="post" x-bind:action="'/gestao/ferias/' + id + '/' + acao + '/'" class="mt-4 space-y-4">
+      {% csrf_token %}
+      {% include "components/campo.html" with field=form_decisao.decision_note %}
+      <div class="flex justify-end gap-3">
+        <button type="button" x-on:click="aberto = false"
+                class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-5 py-2.5 text-sm font-semibold text-carvao hover:bg-carvao/5">Cancelar</button>
+        <button type="submit"
+                x-bind:class="acao === 'aprovar' ? 'bg-servico text-carvao hover:bg-servico/90' : 'bg-chama text-superficie hover:bg-chama/90'"
+                class="inline-flex min-h-toque items-center rounded-md px-5 py-2.5 text-sm font-semibold"
+                x-text="acao === 'aprovar' ? 'Aprovar pedido' : 'Recusar pedido'"></button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

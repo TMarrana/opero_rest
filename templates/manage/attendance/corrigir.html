@@ -1,0 +1,27 @@
+{% extends "base_manage.html" %}
+{% block title %}Corrigir registo{% endblock %}
+{% block content %}
+<h1 class="font-display text-2xl font-bold">Corrigir registo de ponto</h1>
+<p class="mt-1 text-sm text-ardosia">{{ entry.worker.full_name }} · registo de {{ entry.check_in|date:"d M Y" }}. A correção fica auditada: o seu nome, o motivo e a hora entram no registo.</p>
+
+<form method="post" class="mt-6 max-w-md space-y-5">
+  {% csrf_token %}
+  {% for erro in form.non_field_errors %}
+  <p class="rounded-md bg-chama/10 px-4 py-3 text-sm font-medium text-chama">{{ erro }}</p>
+  {% endfor %}
+  <div class="cartao space-y-5 p-6">
+    <div class="grid grid-cols-2 gap-4">
+      {% include "components/campo.html" with field=form.check_in %}
+      {% include "components/campo.html" with field=form.check_out %}
+    </div>
+    {% include "components/campo.html" with field=form.reason %}
+    {% if entry.corrected_by %}
+    <p class="text-xs text-ardosia">Última correção: {{ entry.corrected_by }} em {{ entry.corrected_at|date:"d M Y H:i" }} — «{{ entry.correction_reason }}»</p>
+    {% endif %}
+  </div>
+  <div class="flex justify-end gap-3">
+    {% include "components/botao.html" with label="Cancelar" variante="fantasma" href="/gestao/ponto/" %}
+    {% include "components/botao.html" with label="Corrigir registo" variante="perigo" %}
+  </div>
+</form>
+{% endblock %}

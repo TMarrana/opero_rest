@@ -1,0 +1,22 @@
+{% extends "base_manage.html" %}
+{% block title %}Novo pedido de férias{% endblock %}
+{% block content %}
+<h1 class="font-display text-2xl font-bold">Novo pedido de férias</h1>
+<p class="mt-1 text-sm text-ardosia">Registado em nome do trabalhador. Depois de criado, aprova-se ou recusa-se na lista de pendentes.</p>
+
+<form method="post" class="mt-6 max-w-md space-y-5">
+  {% csrf_token %}
+  <div class="cartao space-y-5 p-6">
+    {% include "components/campo.html" with field=form.worker %}
+    <div class="grid grid-cols-2 gap-4">
+      {% include "components/campo.html" with field=form.start_date %}
+      {% include "components/campo.html" with field=form.end_date %}
+    </div>
+    {% include "components/campo.html" with field=form.request_note %}
+  </div>
+  <div class="flex justify-end gap-3">
+    {% include "components/botao.html" with label="Cancelar" variante="fantasma" href="/gestao/ferias/" %}
+    {% include "components/botao.html" with label="Registar pedido" %}
+  </div>
+</form>
+{% endblock %}
