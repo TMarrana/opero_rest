@@ -2,8 +2,88 @@
 {% block title %}Dashboard{% endblock %}
 {% block content %}
 <h1 class="font-display text-2xl font-bold">Dashboard</h1>
-<div class="mt-6 cartao px-6 py-10 text-center">
-  <p class="text-sm text-ardosia">O dashboard agregado chega na Fase 4.</p>
-  <p class="mt-1 text-sm text-ardosia">Entretanto, veja a <a href="{% url 'core:components' %}" class="font-medium text-carvao underline underline-offset-2">página de componentes</a> do sistema de design.</p>
+
+<div class="mt-6 grid gap-6 lg:grid-cols-2">
+
+  <section class="cartao">
+    <div class="flex items-baseline justify-between border-b border-ardosia/15 px-4 py-3">
+      <h2 class="font-display text-base font-bold">Stock abaixo do mínimo</h2>
+      <span class="font-dados text-sm {% if contador_baixo %}font-semibold text-chama{% else %}text-ardosia{% endif %}">{{ contador_baixo }}</span>
+    </div>
+    {% if stock_baixo %}
+    <ul class="divide-y divide-ardosia/10">
+      {% for item in stock_baixo %}
+      <li class="flex items-baseline justify-between px-4 py-2.5 text-sm">
+        <span class="font-medium">{{ item.name }}</span>
+        <span class="font-dados">{{ item.current_stock }} / {{ item.minimum_stock }} {{ item.unit }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="border-t border-ardosia/10 px-4 py-2.5"><a href="{% url 'inventory:lista' %}?baixo=1" class="text-sm font-medium underline underline-offset-2">Ver todos no stock</a></p>
+    {% else %}
+    <p class="px-4 py-8 text-center text-sm text-ardosia">Nenhum artigo abaixo do mínimo.</p>
+    {% endif %}
+  </section>
+
+  <section class="cartao">
+    <div class="flex items-baseline justify-between border-b border-ardosia/15 px-4 py-3">
+      <h2 class="font-display text-base font-bold">Últimos movimentos</h2>
+      <a href="{% url 'inventory:historico' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Histórico</a>
+    </div>
+    {% if ultimos_movimentos %}
+    <div>
+      {% for mov in ultimos_movimentos %}
+      <article class="talao">
+        <time class="block text-xs text-ardosia">{{ mov.occurred_at|date:"d M · H:i"|upper }}</time>
+        <p class="mt-0.5 text-sm font-semibold uppercase tracking-wide">{{ mov.get_movement_type_display }} · {{ mov.item.name }}</p>
+        <p class="text-sm">{% if mov.signed_quantity > 0 %}+{% endif %}{{ mov.signed_quantity }} {{ mov.item.unit }} · {{ mov.created_by }}</p>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="px-4 py-8 text-center text-sm text-ardosia">Ainda não há movimentos. Registe o primeiro no stock.</p>
+    {% endif %}
+  </section>
+
+  {% if ve_pessoas %}
+  <section class="cartao">
+    <div class="flex items-baseline justify-between border-b border-ardosia/15 px-4 py-3">
+      <h2 class="font-display text-base font-bold">Férias pendentes</h2>
+      <a href="{% url 'vacations:lista' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Decidir</a>
+    </div>
+    {% if ferias_pendentes %}
+    <ul class="divide-y divide-ardosia/10">
+      {% for p in ferias_pendentes %}
+      <li class="flex items-baseline justify-between px-4 py-2.5 text-sm">
+        <span class="font-medium">{{ p.worker.full_name }}</span>
+        <span class="font-dados">{{ p.start_date|date:"d M" }} &rarr; {{ p.end_date|date:"d M" }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-4 py-8 text-center text-sm text-ardosia">Não há pedidos pendentes.</p>
+    {% endif %}
+  </section>
+
+  <section class="cartao">
+    <div class="flex items-baseline justify-between border-b border-ardosia/15 px-4 py-3">
+      <h2 class="font-display text-base font-bold">Em turno agora</h2>
+      <a href="{% url 'attendance:dia' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Ponto</a>
+    </div>
+    {% if em_turno %}
+    <ul class="divide-y divide-ardosia/10">
+      {% for e in em_turno %}
+      <li class="flex items-baseline justify-between px-4 py-2.5 text-sm">
+        <span class="font-medium">{{ e.worker.full_name }}</span>
+        <span class="font-dados">desde {{ e.check_in|date:"H:i" }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-4 py-8 text-center text-sm text-ardosia">Ninguém em turno neste momento.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+
 </div>
 {% endblock %}

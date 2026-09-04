@@ -182,3 +182,42 @@ class TestPWA:
         assert manifest.exists()
         conteudo = manifest.read_text(encoding="utf-8")
         assert '"start_url": "/equipa/"' in conteudo
+
+
+class TestDashboard:
+    def test_dashboard_mostra_os_quatro_sinais(self, client, restaurant, manager):
+        import datetime as dt
+
+        from attendance.services import open_shift as abrir
+        from inventory.models import Category, Item
+
+        cat = Category.objects.create(restaurant=restaurant, name="Cat dash")
+        Item.objects.create(restaurant=restaurant, name="Artigo vazio", category=cat, minimum_stock=1)
+        w = Worker.objects.create(restaurant=restaurant, full_name="Bea Nunes")
+        abrir(worker=w, at=timezone.now() - dt.timedelta(hours=2))
+        VacationRequest.objects.create(
+            worker=w,
+            start_date=dt.date.today() + dt.timedelta(days=10),
+            end_date=dt.date.today() + dt.timedelta(days=12),
+        )
+        client.force_login(manager)
+        corpo = client.get(reverse("dashboard:home")).content.decode()
+        assert "Artigo vazio" in corpo
+        assert "Bea Nunes" in corpo
+        assert "Em turno agora" in corpo
+
+    def test_dashboard_do_resp_stock_sem_areas_de_pessoas(self, client, restaurant, stock_user):
+        client.force_login(stock_user)
+        corpo = client.get(reverse("dashboard:home")).content.decode()
+        assert "Stock abaixo" in corpo
+        assert "Em turno agora" not in corpo
+
+    def test_comando_demo_e_idempotente(self, db):
+        from django.core.management import call_command
+
+        call_command("demo", verbosity=0)
+        call_command("demo", verbosity=0)
+        from core.models import Restaurant
+
+        assert Restaurant.objects.filter(slug="tasca-da-esquina").count() == 1
+        assert Worker.objects.filter(full_name="Marta Silva").count() == 1
