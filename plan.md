@@ -36,7 +36,7 @@ Ao concluir qualquer trabalho descrito na secção 8:
 | 0 — Fundação e sistema de design | ✅ Concluída |
 | 1 — Stock, ponta a ponta | 🟡 Em curso |
 | 2 — Pessoas | 🟡 Em curso |
-| 3 — Vista do colaborador e PWA | ⬜ Por iniciar |
+| 3 — Vista do colaborador e PWA | 🟡 Em curso |
 | 4 — Dashboard, estabilização e piloto | ⬜ Por iniciar |
 
 Legenda: ⬜ Por iniciar · 🟡 Em curso · ✅ Concluída
@@ -382,14 +382,14 @@ Alertas são visuais. Sem email, SMS ou notificações nesta fase.
 
 ### Fase 3 — Vista do colaborador e PWA
 *Fora do docx — requisito do TM. Depende de: Fase 2.*
-**Estado:** ⬜ Por iniciar
+**Estado:** 🟡 Em curso
 
-- [ ] Login por PIN e ecrã de seleção de trabalhador no dispositivo do restaurante.
-- [ ] Ecrã de ponto com o botão de estado descrito na secção 5.
-- [ ] Histórico próprio em talões; totais do dia e da semana em mono.
-- [ ] Pedido de férias em três campos: início, fim, observação.
-- [ ] `manifest.webmanifest`, ícones, service worker com o shell em cache.
-- [ ] Marcações feitas offline entram em fila e sincronizam ao voltar a rede — com o timestamp do momento da marcação, não do envio.
+- [x] Login por PIN e ecrã de seleção de trabalhador no dispositivo do restaurante.
+- [x] Ecrã de ponto com o botão de estado descrito na secção 5.
+- [x] Histórico próprio em talões; totais do dia e da semana em mono.
+- [x] Pedido de férias em três campos: início, fim, observação.
+- [~] `manifest.webmanifest`, ícones, service worker com o shell em cache.
+- [~] Marcações feitas offline entram em fila e sincronizam ao voltar a rede — com o timestamp do momento da marcação, não do envio.
 
 *Aceitação:* um colaborador instala a aplicação no telemóvel, entra com PIN e marca entrada e saída em **menos de 5 segundos e 2 toques**, sem formação prévia.
 
@@ -499,6 +499,7 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 
 | Data | Fase | O que foi feito | Por fechar | Próximo passo |
 |---|---|---|---|---|
+| 2026-09-04 (2ª sessão, cont. 2) | 3 | Fase 3 escrita: login por PIN (seleção de trabalhador + PIN 4–6 dígitos, hash do Django, throttling 5 falhas/60s, cookie assinado de dispositivo com 180 dias ativado pelo gerente em Configuração→Dispositivo), sessão PIN marcada na sessão e testada contra o backoffice com login real; botão de estado com cronómetro (hx-post único), totais dia/semana, histórico em talões escuros, férias em 3 campos; gestão de PIN no backoffice (Trabalhadores→Definir/Repor PIN); PWA com manifest, ícones Pillow, sw.js (cache do shell, servido na raiz via view) e fila offline em `app.js` (localStorage, `marcado_em` com o timestamp original, nunca no futuro; reenvia ao voltar online). 62 testes. Commit `bae972d`. | Itens de PWA/offline estão `[~]`: o service worker e a fila offline só se verificam num browser real (instalação Android/iOS, modo avião) — não há teste automático que os cubra. Restante por fechar: revisão visual das Fases 1–3. | Testar a PWA num telemóvel real (instalar, marcar ponto em modo avião, voltar a ter rede) e rever visualmente os módulos. Depois: Fase 4 (dashboard, fixtures, ambiente de demonstração). |
 | 2026-09-04 (2ª sessão, cont.) | 2 | Fase 2 completa em código: `Worker` (conta opcional), `TimeEntry` com constraint parcial de turno único aberto + serviços `open/close_shift` (invariantes 3 e 4), correção e registo manual auditados com motivo obrigatório (invariante 5), `VacationRequest` com decisão auditada, badge de sobreposição com aprovados e bloqueio de delete de aprovados no admin (invariante 6). Vista de equipa por dia com navegação de datas e «Saída em falta»; novo pedido de férias em nome do trabalhador; modal único de decisão. 46 testes no total — `test_double_open_shift_rejected`, `test_checkout_without_checkin_rejected`, `test_vacation_overlap_flagged`, `test_staff_cannot_see_others_data` incluídos. Commit `d262050`. | Revisão visual dos três módulos no browser. Fases 1 e 2 ficam 🟡 até à revisão visual do TM. | Rever visualmente stock + pessoas; marcar fases ✅. Depois: Fase 3 (login PIN, ecrã de ponto staff, PWA) — atenção à decisão pendente do PIN com o AT (secção 12). |
 | 2026-09-04 (2ª sessão) | 0→1 | Fase 0 fechada após revisão visual do TM. Fase 1 completa em código: modelos `inventory` com constraints, `register_movement()` (transação + `select_for_update`, rejeita stock negativo), admin de movimentos só-consulta, sementes de categorias no `post_save` do `Restaurant`, CRUD de artigos (sem delete — `is_active`) e categorias (criar/renomear/eliminar com PROTECT), movimento em modal HTMX com linha + contador OOB e toast por `HX-Trigger`, pesquisa/filtros parciais, histórico em talões (limite 200). 25 testes; invariantes 1, 2 e 5 testadas. Commit `925769e`. | Revisão visual do módulo de stock no browser e o percurso de aceitação do docx feito à mão (criar artigo → registar entrada → confirmar stock e histórico). Estado da fase fica 🟡 até lá. | Rever visualmente o módulo de stock; se estiver bom, marcar a Fase 1 ✅ e arrancar a Fase 2 (Pessoas: `Worker`, ponto no backoffice, férias). |
 | 2026-09-04 | 0 | Fase 0 quase completa: projeto Django 5.2, settings dev/prod, primeira migração (`Restaurant`, `TimeStampedModel`, `User` custom), groups por perfil com sync no save, mixins em `core/mixins.py` (incl. fronteira PIN→403), login/logout com redirecionamento por perfil, tokens + Tailwind v3.4.17 standalone, fontes woff2 locais, HTMX 2.0.7 e Alpine 3.15 vendored, `base_manage`/`base_staff`, componentes todos e página `/componentes/`. 9 testes a passar (`test_pin_does_not_open_backoffice` incluído); `check` e `makemigrations --check` limpos. Commit `30cf284`. | Revisão visual no browser das duas superfícies e da página de componentes — os templates renderizam nos testes mas ninguém os viu; por isso o último item está `[~]`. | Correr `runserver` + `tailwindcss -w`, criar um superuser, rever visualmente `/componentes/`, o login e os dois shells; marcar o item e fechar a Fase 0. Depois: Fase 1 (modelos `inventory` + `register_movement()`). |
@@ -510,6 +511,8 @@ Alterações ao plano decididas durante a execução. Se algo aqui contradiz uma
 
 - **2026-09-04 · whitenoise acrescentado ao stack** (servir estáticos em produção sem depender do proxy; em dev `WHITENOISE_AUTOREFRESH=True`). Refletido na tabela da secção 2? Não — a tabela lista camadas principais; whitenoise fica registado aqui e em `requirements.txt`.
 - **2026-09-04 · Tailwind fixado em v3.4.17** (a v4 abandonou o `tailwind.config.js`; o plano assume config JS). Tokens de cor definidos como triplos RGB em `input.css` para os modificadores de opacidade (`/25`) funcionarem.
+- **2026-09-04 · Fila offline em app.js, não no service worker** — o SW só faz cache do shell (GET); os POST falhados do ponto entram numa fila em localStorage gerida pela página, que reenvia com `marcado_em` ao voltar a rede. Mais simples de depurar que interceção de POST no SW, e cumpre o requisito do timestamp original. Limite: o servidor recusa `marcado_em` no futuro.
+- **2026-09-04 · Dispositivo do restaurante = cookie assinado** (`django.core.signing`, 180 dias), ativado pelo gerente em /conta/dispositivo/. O ecrã de PIN devolve 403 fora de dispositivos ativados; a lista de trabalhadores nunca é pública.
 - **2026-09-04 · Registo manual de ponto pelo gerente** — o plano previa só «correção de registo»; acrescentou-se «acrescentar registo em falta», que nasce auditado (autor + motivo), porque na prática há dias inteiros sem marcação. É correção no espírito da invariante 5.
 - **2026-09-04 · Pedido de férias criado pelo gerente** — até a Fase 3 dar a vista staff, o backoffice permite registar pedidos em nome do trabalhador; sem isto a aceitação da Fase 2 não era testável de ponta a ponta.
 - **2026-09-04 · Stock não pode ficar negativo** — o plano não se pronunciava; `register_movement()` rejeita saídas e ajustes que deixem `current_stock < 0`, com mensagem a sugerir ajuste prévio. Racional: um ajuste negativo abaixo de zero implicaria uma contagem física negativa, impossível.
