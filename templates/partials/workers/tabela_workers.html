@@ -13,7 +13,10 @@
           <td class="text-ardosia">{{ w.contact|default:"—" }}</td>
           <td>{% if w.user %}{% include "components/badge.html" with label="Com acesso" variante="neutro" %}{% else %}<span class="text-sm text-ardosia">—</span>{% endif %}</td>
           <td>{% if w.is_active %}{% include "components/badge.html" with label="Ativo" variante="servico" %}{% else %}{% include "components/badge.html" with label="Inativo" %}{% endif %}</td>
-          <td class="text-right"><a href="{% url 'workers:editar' w.pk %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Editar</a></td>
+          <td class="whitespace-nowrap text-right">
+            {% if w.user %}<a href="{% url 'workers:pin' w.pk %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">{% if w.user.has_pin %}Repor PIN{% else %}Definir PIN{% endif %}</a>{% endif %}
+            <a href="{% url 'workers:editar' w.pk %}" class="ml-3 text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Editar</a>
+          </td>
         </tr>
         {% endfor %}
       </tbody>

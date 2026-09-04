@@ -1,0 +1,25 @@
+{% extends "base_manage.html" %}
+{% block title %}Definir PIN{% endblock %}
+{% block content %}
+{% url 'workers:editar' worker.pk as url_editar %}
+<h1 class="font-display text-2xl font-bold">Definir PIN</h1>
+<p class="mt-1 text-sm text-ardosia">{{ worker.full_name }}. O PIN dá acesso apenas à vista de equipa — ponto, histórico próprio e férias. Nunca abre o backoffice.</p>
+
+{% if worker.user %}
+<form method="post" class="mt-6 max-w-sm space-y-5">
+  {% csrf_token %}
+  <div class="cartao space-y-4 p-6">
+    {% include "components/campo.html" with field=form.pin ajuda="4 a 6 algarismos. Substitui qualquer PIN anterior." %}
+  </div>
+  <div class="flex justify-end gap-3">
+    {% include "components/botao.html" with label="Cancelar" variante="fantasma" href="/gestao/trabalhadores/" %}
+    {% include "components/botao.html" with label="Definir PIN" %}
+  </div>
+</form>
+{% else %}
+<div class="mt-6 max-w-md cartao p-6 text-sm text-ardosia">
+  <p>Este trabalhador ainda não tem conta de acesso. Associe uma no formulário do trabalhador antes de definir o PIN.</p>
+  <p class="mt-4">{% include "components/botao.html" with label="Editar trabalhador" href=url_editar %}</p>
+</div>
+{% endif %}
+{% endblock %}

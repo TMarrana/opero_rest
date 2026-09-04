@@ -1,0 +1,12 @@
+{% extends "base_staff.html" %}
+{% block title %}Sem ficha{% endblock %}
+{% block content %}
+<div class="flex flex-1 flex-col items-center justify-center text-center">
+  <p class="font-display text-xl font-bold">Falta a ficha de trabalhador</p>
+  <p class="mt-3 max-w-xs text-sm text-ardosia">A sua conta ainda não está ligada a uma ficha de trabalhador. Peça ao gerente para a associar em Trabalhadores.</p>
+</div>
+<form method="post" action="{% url 'accounts:logout' %}" class="mt-6 text-center">
+  {% csrf_token %}
+  <button type="submit" class="min-h-toque text-xs text-ardosia underline underline-offset-2">Sair</button>
+</form>
+{% endblock %}

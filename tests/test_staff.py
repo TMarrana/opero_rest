@@ -1,0 +1,184 @@
+"""Fase 3: login por PIN, ecrã de ponto do colaborador e fila offline."""
+import datetime
+
+import pytest
+from django.urls import reverse
+from django.utils import timezone
+
+from attendance.services import open_shift
+from core.mixins import PIN_SESSION_KEY
+from vacations.models import VacationRequest
+from workers.models import Worker
+
+pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture
+def worker_com_pin(restaurant, staff_user):
+    staff_user.set_staff_pin("2468")
+    return Worker.objects.create(
+        restaurant=restaurant, full_name="Marta Silva", job_title="sala", user=staff_user
+    )
+
+
+def _ativar_dispositivo(client, manager):
+    client.force_login(manager)
+    client.post(reverse("accounts:dispositivo"))
+    client.post(reverse("accounts:logout"))
+
+
+class TestPinLogin:
+    def test_dispositivo_nao_ativado_bloqueia(self, client, worker_com_pin):
+        resp = client.get(reverse("staff:pin_login"))
+        assert resp.status_code == 403
+        assert "não está ativado" in resp.content.decode()
+
+    def test_login_por_pin_em_dispositivo_ativado(self, client, manager, worker_com_pin):
+        _ativar_dispositivo(client, manager)
+        resp = client.get(reverse("staff:pin_login"))
+        assert resp.status_code == 200
+        assert "Marta Silva" in resp.content.decode()
+        resp = client.post(
+            reverse("staff:pin_login"), {"worker": worker_com_pin.pk, "pin": "2468"}
+        )
+        assert resp.status_code == 302
+        assert resp.url == reverse("staff:home")
+        assert client.session.get(PIN_SESSION_KEY) is True
+
+    def test_pin_errado_rejeitado(self, client, manager, worker_com_pin):
+        _ativar_dispositivo(client, manager)
+        resp = client.post(
+            reverse("staff:pin_login"), {"worker": worker_com_pin.pk, "pin": "0000"}
+        )
+        assert resp.status_code == 200
+        assert "PIN errado" in resp.content.decode()
+
+    def test_throttling_apos_cinco_falhas(self, client, manager, worker_com_pin):
+        _ativar_dispositivo(client, manager)
+        for _ in range(5):
+            client.post(reverse("staff:pin_login"), {"worker": worker_com_pin.pk, "pin": "0000"})
+        resp = client.post(
+            reverse("staff:pin_login"), {"worker": worker_com_pin.pk, "pin": "2468"}
+        )
+        assert "Demasiadas tentativas" in resp.content.decode()
+
+    def test_sessao_pin_real_nao_abre_backoffice(self, client, manager_com_pin_e_worker):
+        """A fronteira da secção 7 com um login PIN verdadeiro: o titular
+        é gerente, mas a sessão criada por PIN não abre o backoffice."""
+        worker, gerente = manager_com_pin_e_worker
+        resp = client.post(reverse("staff:pin_login"), {"worker": worker.pk, "pin": "1357"})
+        assert resp.status_code == 302
+        assert client.get(reverse("dashboard:home")).status_code == 403
+        assert client.get(reverse("staff:home")).status_code == 200
+
+
+@pytest.fixture
+def manager_com_pin_e_worker(client, restaurant, manager):
+    manager.set_staff_pin("1357")
+    worker = Worker.objects.create(restaurant=restaurant, full_name="Gerente Chefe", user=manager)
+    _ativar_dispositivo(client, manager)
+    return worker, manager
+
+
+class TestEcraDePonto:
+    def test_home_sem_ficha(self, client, staff_user):
+        client.force_login(staff_user)
+        resp = client.get(reverse("staff:home"))
+        assert resp.status_code == 200
+        assert "Falta a ficha de trabalhador" in resp.content.decode()
+
+    def test_home_fora_de_turno_mostra_entrada(self, client, worker_com_pin, staff_user):
+        client.force_login(staff_user)
+        corpo = client.get(reverse("staff:home")).content.decode()
+        assert "Entrada" in corpo
+        assert "bg-servico" in corpo
+
+    def test_marcar_alterna_estado(self, client, worker_com_pin, staff_user):
+        client.force_login(staff_user)
+        resp = client.post(reverse("staff:marcar"), HTTP_HX_REQUEST="true")
+        corpo = resp.content.decode()
+        assert "Saída" in corpo and "bg-chama" in corpo
+        assert worker_com_pin.open_entry is not None
+        resp = client.post(reverse("staff:marcar"), HTTP_HX_REQUEST="true")
+        corpo = resp.content.decode()
+        assert "Entrada" in corpo and "bg-servico" in corpo
+        worker_com_pin.refresh_from_db()
+        assert worker_com_pin.open_entry is None
+        assert worker_com_pin.time_entries.count() == 1
+
+    def test_marcado_em_da_fila_offline(self, client, worker_com_pin, staff_user):
+        """A marcação sincronizada guarda o timestamp da marcação, não o
+        do envio (requisito da Fase 3)."""
+        client.force_login(staff_user)
+        ha_duas_horas = timezone.now() - datetime.timedelta(hours=2)
+        client.post(
+            reverse("staff:marcar"),
+            {"marcado_em": ha_duas_horas.isoformat()},
+            HTTP_HX_REQUEST="true",
+        )
+        entry = worker_com_pin.open_entry
+        assert entry is not None
+        assert abs((entry.check_in - ha_duas_horas).total_seconds()) < 1
+
+    def test_marcado_em_no_futuro_e_recusado(self, client, worker_com_pin, staff_user):
+        client.force_login(staff_user)
+        futuro = timezone.now() + datetime.timedelta(hours=3)
+        client.post(
+            reverse("staff:marcar"), {"marcado_em": futuro.isoformat()}, HTTP_HX_REQUEST="true"
+        )
+        entry = worker_com_pin.open_entry
+        assert entry.check_in <= timezone.now()
+
+    def test_totais_do_dia(self, client, worker_com_pin, staff_user):
+        agora = timezone.now()
+        open_shift(worker=worker_com_pin, at=agora - datetime.timedelta(hours=3, minutes=10))
+        client.force_login(staff_user)
+        corpo = client.get(reverse("staff:home")).content.decode()
+        assert "3h1" in corpo  # 3h10 ou 3h11 conforme o segundo
+
+
+class TestHistoricoEFerias:
+    def test_historico_proprio(self, client, worker_com_pin, staff_user):
+        open_shift(worker=worker_com_pin)
+        client.force_login(staff_user)
+        corpo = client.get(reverse("staff:historico")).content.decode()
+        assert "em turno" in corpo
+
+    def test_pedido_de_ferias_em_tres_campos(self, client, worker_com_pin, staff_user):
+        client.force_login(staff_user)
+        resp = client.post(
+            reverse("staff:ferias"),
+            {"start_date": "2026-10-01", "end_date": "2026-10-07", "request_note": "casamento"},
+        )
+        assert resp.status_code == 302
+        pedido = VacationRequest.objects.get()
+        assert pedido.worker == worker_com_pin
+        assert pedido.status == VacationRequest.Status.PENDENTE
+
+    def test_lista_so_mostra_os_proprios_pedidos(self, client, restaurant, worker_com_pin, staff_user):
+        outro = Worker.objects.create(restaurant=restaurant, full_name="Rui Gomes")
+        VacationRequest.objects.create(
+            worker=outro,
+            start_date=datetime.date(2026, 10, 1),
+            end_date=datetime.date(2026, 10, 7),
+            request_note="segredo do rui",
+        )
+        client.force_login(staff_user)
+        corpo = client.get(reverse("staff:ferias")).content.decode()
+        assert "segredo do rui" not in corpo
+
+
+class TestPWA:
+    def test_sw_servido_na_raiz(self, client):
+        resp = client.get("/sw.js")
+        assert resp.status_code == 200
+        assert "javascript" in resp["Content-Type"]
+        assert "opero-shell" in resp.content.decode()
+
+    def test_manifest_disponivel(self, client, settings):
+        import pathlib
+
+        manifest = pathlib.Path(settings.BASE_DIR) / "static" / "manifest.webmanifest"
+        assert manifest.exists()
+        conteudo = manifest.read_text(encoding="utf-8")
+        assert '"start_url": "/equipa/"' in conteudo

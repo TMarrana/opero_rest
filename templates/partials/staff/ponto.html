@@ -1,0 +1,28 @@
+{% comment %}O botão é o ecrã (secção 5). Um hx-post devolve este bloco
+já no novo estado. data-* usados pela fila offline em app.js.{% endcomment %}
+<div id="bloco-ponto" data-em-turno="{{ em_turno|yesno:'1,0' }}">
+  <form hx-post="{% url 'staff:marcar' %}" hx-target="#bloco-ponto" hx-swap="outerHTML" id="form-ponto">
+    {% if em_turno %}
+    <button type="submit"
+            class="min-h-[40vh] w-full rounded-lg bg-chama font-display uppercase tracking-wide text-superficie transition-colors hover:bg-chama/90">
+      <span class="block font-dados text-2xl font-semibold"
+            x-data="{ inicio: new Date('{{ entry.check_in.isoformat }}'), agora: new Date() }"
+            x-init="setInterval(() => agora = new Date(), 30000)"
+            x-text="(() => { const m = Math.max(0, Math.floor((agora - inicio) / 60000)); return Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0'); })()"></span>
+      <span class="mt-2 block text-4xl font-extrabold">Saída</span>
+      <span class="htmx-indicator mt-2 text-base" aria-hidden="true">a registar…</span>
+    </button>
+    {% else %}
+    <button type="submit"
+            class="min-h-[40vh] w-full rounded-lg bg-servico font-display text-4xl font-extrabold uppercase tracking-wide text-carvao transition-colors hover:bg-servico/90">
+      Entrada
+      <span class="htmx-indicator mt-2 block text-base font-semibold" aria-hidden="true">a registar…</span>
+    </button>
+    {% endif %}
+  </form>
+
+  <dl class="mt-8 space-y-2 font-dados text-base">
+    <div class="flex justify-between"><dt class="text-ardosia">Hoje</dt><dd>{{ totais.hoje }}</dd></div>
+    <div class="flex justify-between"><dt class="text-ardosia">Semana</dt><dd>{{ totais.semana }}</dd></div>
+  </dl>
+</div>

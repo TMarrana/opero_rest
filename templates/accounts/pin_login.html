@@ -1,0 +1,41 @@
+{% extends "base_staff.html" %}
+{% block title %}Entrar com PIN{% endblock %}
+{% block content %}
+<div class="flex flex-1 flex-col justify-center"
+     x-data="{ escolhido: '{{ worker_escolhido }}', pin: '' }">
+  <p class="font-display text-3xl font-extrabold tracking-tight text-superficie">OPERO</p>
+  <p class="mt-1 text-sm text-ardosia">Quem está a marcar?</p>
+
+  {% if erro %}
+  <p class="mt-4 rounded-md bg-chama/15 px-4 py-3 text-sm font-medium text-chama">{{ erro }}</p>
+  {% endif %}
+
+  <form method="post" class="mt-6 space-y-5">
+    {% csrf_token %}
+    <input type="hidden" name="worker" x-model="escolhido">
+    <div class="grid grid-cols-2 gap-3">
+      {% for w in workers %}
+      <button type="button" x-on:click="escolhido = '{{ w.pk }}'"
+              x-bind:class="escolhido === '{{ w.pk }}' ? 'border-servico bg-servico/10 text-superficie' : 'border-ardosia/40 text-aco/80'"
+              class="min-h-toque rounded-md border px-3 py-3 text-sm font-semibold">
+        {{ w.full_name }}
+      </button>
+      {% empty %}
+      <p class="col-span-2 text-sm text-ardosia">Nenhum trabalhador tem PIN definido. O gerente define os PINs em Trabalhadores.</p>
+      {% endfor %}
+    </div>
+
+    <div x-show="escolhido" x-cloak class="space-y-3">
+      <label for="pin" class="block text-sm font-medium text-aco">PIN</label>
+      <input id="pin" name="pin" type="password" inputmode="numeric" autocomplete="off"
+             maxlength="6" x-model="pin"
+             class="campo-input font-dados text-center text-2xl tracking-[0.5em]">
+      <button type="submit"
+              class="w-full min-h-toque rounded-md bg-servico px-5 py-3 font-display text-base font-bold uppercase tracking-wide text-carvao hover:bg-servico/90">
+        Entrar
+      </button>
+    </div>
+  </form>
+  <p class="mt-8 text-center text-xs text-ardosia"><a href="{% url 'accounts:login' %}" class="underline underline-offset-2">Entrar com email e palavra-passe</a></p>
+</div>
+{% endblock %}

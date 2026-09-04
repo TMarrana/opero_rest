@@ -27,7 +27,7 @@ def outro_worker(restaurant):
 
 class TestTurnos:
     def test_entrada_e_saida(self, worker):
-        entry = open_shift(worker=worker)
+        entry = open_shift(worker=worker, at=timezone.now() - datetime.timedelta(hours=1))
         assert entry.is_open
         fechado = close_shift(worker=worker)
         assert fechado.pk == entry.pk

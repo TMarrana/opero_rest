@@ -1,4 +1,6 @@
 from django import forms
+from django.conf import settings
+from django.http import HttpResponse
 from django.contrib import messages
 from django.views.generic import TemplateView
 
@@ -44,3 +46,10 @@ class ComponentsView(RoleRequiredMixin, TemplateView):
     def post(self, request, *args, **kwargs):
         messages.success(request, "Entrada registada")
         return self.get(request, *args, **kwargs)
+
+
+def service_worker(request):
+    """Serve /sw.js na raiz: o service worker precisa de scope / para
+    controlar /equipa/ (Fase 3)."""
+    caminho = settings.BASE_DIR / "static" / "sw.js"
+    return HttpResponse(caminho.read_text(encoding="utf-8"), content_type="application/javascript")

@@ -5,9 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#14171C">
   <title>{% block title %}Opero{% endblock %} · Opero</title>
+  <link rel="manifest" href="{% static 'manifest.webmanifest' %}">
+  <link rel="apple-touch-icon" href="{% static 'icons/apple-touch-icon.png' %}">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <script src="{% static 'js/htmx.min.js' %}" defer></script>
   <script src="{% static 'js/alpine.min.js' %}" defer></script>
+  <script src="{% static 'js/app.js' %}" defer></script>
 </head>
 {# Shell escuro, coluna única, ação na zona do polegar (secção 5). #}
 <body class="min-h-screen bg-carvao text-aco"

@@ -43,6 +43,25 @@ class User(AbstractUser):
     def __str__(self):
         return self.get_full_name() or self.email
 
+    def set_staff_pin(self, raw_pin):
+        from django.contrib.auth.hashers import make_password
+        from django.utils import timezone
+
+        self.staff_pin = make_password(raw_pin)
+        self.pin_set_at = timezone.now()
+        self.save(update_fields=["staff_pin", "pin_set_at"])
+
+    def check_staff_pin(self, raw_pin):
+        from django.contrib.auth.hashers import check_password
+
+        if not self.staff_pin:
+            return False
+        return check_password(raw_pin, self.staff_pin)
+
+    @property
+    def has_pin(self):
+        return bool(self.staff_pin)
+
     @property
     def is_backoffice(self):
         """Perfis com acesso ao backoffice (a vista staff é para todos)."""

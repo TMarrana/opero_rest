@@ -1,0 +1,21 @@
+{% extends "base_manage.html" %}
+{% block title %}Dispositivo{% endblock %}
+{% block content %}
+<h1 class="font-display text-2xl font-bold">Dispositivo do restaurante</h1>
+<div class="mt-6 max-w-xl cartao p-6">
+  {% if ativo %}
+  <p class="text-sm">{% include "components/badge.html" with label="Ativado" variante="servico" %}</p>
+  <p class="mt-3 text-sm text-ardosia">Este navegador já está ativado: o ecrã de login por PIN funciona em <span class="font-dados">/equipa/entrar/</span>. A ativação dura 180 dias.</p>
+  {% else %}
+  <p class="text-sm text-ardosia">Ativar este navegador como dispositivo do restaurante permite à equipa entrar com PIN em <span class="font-dados">/equipa/entrar/</span>. Faça-o no tablet ou telemóvel que fica no restaurante — não em computadores pessoais.</p>
+  {% endif %}
+  <form method="post" class="mt-5">
+    {% csrf_token %}
+    {% if ativo %}
+    {% include "components/botao.html" with label="Renovar ativação" variante="fantasma" %}
+    {% else %}
+    {% include "components/botao.html" with label="Ativar este dispositivo" %}
+    {% endif %}
+  </form>
+</div>
+{% endblock %}

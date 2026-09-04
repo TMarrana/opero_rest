@@ -1,0 +1,33 @@
+{% extends "base_staff.html" %}
+{% block title %}Histórico{% endblock %}
+{% block content %}
+<header class="flex items-baseline justify-between">
+  <h1 class="font-display text-xl font-bold">Histórico</h1>
+  <a href="{% url 'staff:home' %}" class="text-sm text-aco/70 underline underline-offset-4 hover:text-superficie">Voltar</a>
+</header>
+
+<dl class="mt-4 space-y-1 font-dados text-sm">
+  <div class="flex justify-between"><dt class="text-ardosia">Hoje</dt><dd>{{ totais.hoje }}</dd></div>
+  <div class="flex justify-between"><dt class="text-ardosia">Semana</dt><dd>{{ totais.semana }}</dd></div>
+</dl>
+
+<div class="mt-6">
+  {% if entries %}
+  <div class="rail-taloes border-ardosia/40">
+    {% for e in entries %}
+    <article class="talao talao-escuro">
+      <time class="block text-xs text-ardosia">{{ e.check_in|date:"d M Y"|upper }}</time>
+      <p class="mt-1 font-semibold uppercase tracking-wide">
+        {{ e.check_in|date:"H:i" }} &rarr;
+        {% if e.check_out %}{{ e.check_out|date:"H:i" }}{% else %}em turno{% endif %}
+      </p>
+      {% if e.check_out %}<p class="mt-0.5">{{ e.duration }}</p>{% endif %}
+      {% if e.corrected_by %}<p class="mt-1 text-xs text-aco/50">corrigido por {{ e.corrected_by }} · {{ e.correction_reason }}</p>{% endif %}
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="mt-10 text-center text-sm text-ardosia">Ainda não há registos. Marque a primeira entrada no ecrã de ponto.</p>
+  {% endif %}
+</div>
+{% endblock %}
