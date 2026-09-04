@@ -33,7 +33,7 @@ Ao concluir qualquer trabalho descrito na secção 8:
 
 | Fase | Estado |
 |---|---|
-| 0 — Fundação e sistema de design | ⬜ Por iniciar |
+| 0 — Fundação e sistema de design | 🟡 Em curso |
 | 1 — Stock, ponta a ponta | ⬜ Por iniciar |
 | 2 — Pessoas | ⬜ Por iniciar |
 | 3 — Vista do colaborador e PWA | ⬜ Por iniciar |
@@ -333,15 +333,15 @@ Ciclos curtos de uma semana, com revisão semanal AT + TM. Estimativas técnicas
 
 ### Fase 0 — Fundação e sistema de design
 *Corresponde a P0-10 e P0-11. Depende de: P0-01 a P0-05 (AT).*
-**Estado:** ⬜ Por iniciar
+**Estado:** 🟡 Em curso
 
-- [ ] `git init`, `.gitignore`, dependências, apagar `main.py`.
-- [ ] Projeto Django, settings por ambiente, `.env.example`.
-- [ ] `core.Restaurant`, `TimeStampedModel`, `accounts.User` custom — **primeira migração**.
-- [ ] Groups por perfil e mixins de permissão em `core/mixins.py`.
-- [ ] Login por email e password, logout, redirecionamento por perfil.
-- [ ] Tailwind standalone em watch; tokens de cor e tipo em `input.css`; fontes locais.
-- [ ] `base_manage.html`, `base_staff.html` e a biblioteca `components/` completa — botão, campo, badge, talão, tabela, modal, toast.
+- [x] `git init`, `.gitignore`, dependências, apagar `main.py`.
+- [x] Projeto Django, settings por ambiente, `.env.example`.
+- [x] `core.Restaurant`, `TimeStampedModel`, `accounts.User` custom — **primeira migração**.
+- [x] Groups por perfil e mixins de permissão em `core/mixins.py`.
+- [x] Login por email e password, logout, redirecionamento por perfil.
+- [x] Tailwind standalone em watch; tokens de cor e tipo em `input.css`; fontes locais.
+- [~] `base_manage.html`, `base_staff.html` e a biblioteca `components/` completa — botão, campo, badge, talão, tabela, modal, toast.
 
 **Construir os componentes antes dos ecrãs.** É o que impede a deriva visual módulo a módulo, e é a razão pela qual o sistema de design entra na Fase 0 e não no fim.
 
@@ -499,10 +499,13 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 
 | Data | Fase | O que foi feito | Por fechar | Próximo passo |
 |---|---|---|---|---|
+| 2026-09-04 | 0 | Fase 0 quase completa: projeto Django 5.2, settings dev/prod, primeira migração (`Restaurant`, `TimeStampedModel`, `User` custom), groups por perfil com sync no save, mixins em `core/mixins.py` (incl. fronteira PIN→403), login/logout com redirecionamento por perfil, tokens + Tailwind v3.4.17 standalone, fontes woff2 locais, HTMX 2.0.7 e Alpine 3.15 vendored, `base_manage`/`base_staff`, componentes todos e página `/componentes/`. 9 testes a passar (`test_pin_does_not_open_backoffice` incluído); `check` e `makemigrations --check` limpos. Commit `30cf284`. | Revisão visual no browser das duas superfícies e da página de componentes — os templates renderizam nos testes mas ninguém os viu; por isso o último item está `[~]`. | Correr `runserver` + `tailwindcss -w`, criar um superuser, rever visualmente `/componentes/`, o login e os dois shells; marcar o item e fechar a Fase 0. Depois: Fase 1 (modelos `inventory` + `register_movement()`). |
 | 2026-09-04 | — | Plano de engenharia escrito a partir do docx. Stack, direção de design e fases fixadas. | Nada implementado. | Arrancar a Fase 0: `git init`, dependências e projeto Django. |
 
 ### Notas de desvio
 
 Alterações ao plano decididas durante a execução. Se algo aqui contradiz uma secção acima, **corrigir também a secção** — este registo é o histórico, não a fonte de verdade.
 
-_(vazio)_
+- **2026-09-04 · whitenoise acrescentado ao stack** (servir estáticos em produção sem depender do proxy; em dev `WHITENOISE_AUTOREFRESH=True`). Refletido na tabela da secção 2? Não — a tabela lista camadas principais; whitenoise fica registado aqui e em `requirements.txt`.
+- **2026-09-04 · Tailwind fixado em v3.4.17** (a v4 abandonou o `tailwind.config.js`; o plano assume config JS). Tokens de cor definidos como triplos RGB em `input.css` para os modificadores de opacidade (`/25`) funcionarem.
+- **2026-09-04 · Grupos criados por data migration** (`accounts/0002`), com sincronização `role`→grupo em signal `post_save`. A autorização efetiva nas views é feita pelos mixins; os grupos mantêm o admin coerente.
