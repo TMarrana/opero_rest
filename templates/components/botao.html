@@ -1,0 +1,34 @@
+{% comment %}
+Botão. Parâmetros:
+  label      — texto (obrigatório)
+  variante   — primario (default) | perigo | servico | fantasma
+  type       — atributo type (default "submit")
+  href       — se presente, renderiza <a> em vez de <button>
+  hx_post / hx_target / hx_swap — atributos HTMX opcionais
+Regra: `perigo` (chama) só em ações irreversíveis; `servico` só em estados
+de turno/aprovação. Um ecrã com dois elementos chama tem um a mais.
+Todos os botões mostram indicador de loading durante pedidos HTMX.
+{% endcomment %}
+{% if variante == "perigo" %}
+  {% firstof "bg-chama text-superficie hover:bg-chama/90" as classes_variante %}
+{% elif variante == "servico" %}
+  {% firstof "bg-servico text-carvao hover:bg-servico/90" as classes_variante %}
+{% elif variante == "fantasma" %}
+  {% firstof "bg-transparent text-carvao border border-ardosia/40 hover:bg-carvao/5" as classes_variante %}
+{% else %}
+  {% firstof "bg-carvao text-superficie hover:bg-carvao/85" as classes_variante %}
+{% endif %}
+{% if href %}
+<a href="{{ href }}"
+   class="inline-flex min-h-toque items-center justify-center gap-2 rounded-md px-5 py-2.5 font-corpo text-sm font-semibold transition-colors {{ classes_variante }} {{ classes_extra }}">{{ label }}</a>
+{% else %}
+<button type="{{ type|default:'submit' }}"
+        {% if hx_post %}hx-post="{{ hx_post }}"{% endif %}
+        {% if hx_target %}hx-target="{{ hx_target }}"{% endif %}
+        {% if hx_swap %}hx-swap="{{ hx_swap }}"{% endif %}
+        {% if desativado %}disabled{% endif %}
+        class="inline-flex min-h-toque items-center justify-center gap-2 rounded-md px-5 py-2.5 font-corpo text-sm font-semibold transition-colors disabled:opacity-50 disabled:pointer-events-none {{ classes_variante }} {{ classes_extra }}">
+  <span class="quando-parado">{{ label }}</span>
+  <span class="htmx-indicator" aria-hidden="true">···</span>
+</button>
+{% endif %}

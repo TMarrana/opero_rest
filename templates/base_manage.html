@@ -1,0 +1,50 @@
+{% load static %}<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Opero{% endblock %} · Opero</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="{% static 'js/htmx.min.js' %}" defer></script>
+  <script src="{% static 'js/alpine.min.js' %}" defer></script>
+</head>
+<body class="min-h-screen bg-aco text-carvao"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+
+  <div class="flex min-h-screen">
+    {# ---- Rail de navegação fixo: as seis áreas do docx (secção 5) ---- #}
+    <aside class="w-56 shrink-0 bg-carvao text-aco flex flex-col">
+      <div class="px-5 py-6">
+        <span class="font-display font-extrabold text-xl tracking-tight">OPERO</span>
+        <span class="block text-xs text-ardosia mt-0.5">{{ request.user.restaurant|default:"—" }}</span>
+      </div>
+      <nav class="flex-1 px-2 space-y-1 text-sm font-medium" aria-label="Navegação principal">
+        {% url 'dashboard:home' as url_dash %}
+        <a href="{{ url_dash }}" class="block rounded px-3 py-2.5 {% if request.path == url_dash %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Dashboard</a>
+        <span class="block px-3 py-2.5 text-aco/30 cursor-default" title="Fase 2">Trabalhadores</span>
+        <span class="block px-3 py-2.5 text-aco/30 cursor-default" title="Fase 2">Ponto</span>
+        <span class="block px-3 py-2.5 text-aco/30 cursor-default" title="Fase 2">Férias</span>
+        <span class="block px-3 py-2.5 text-aco/30 cursor-default" title="Fase 1">Stock</span>
+        <span class="block px-3 py-2.5 text-aco/30 cursor-default" title="Fase 4">Configuração</span>
+      </nav>
+      <div class="px-5 py-4 border-t border-aco/10 text-xs">
+        <p class="truncate text-aco/80">{{ request.user }}</p>
+        <p class="text-ardosia">{{ request.user.get_role_display }}</p>
+        <form method="post" action="{% url 'accounts:logout' %}" class="mt-2">
+          {% csrf_token %}
+          <button type="submit" class="text-aco/60 hover:text-superficie underline underline-offset-2">Sair</button>
+        </form>
+      </div>
+    </aside>
+
+    <div class="flex-1 flex flex-col min-w-0">
+      <main class="flex-1 px-8 py-8 max-w-6xl w-full">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+  {% include "components/toast.html" %}
+  {% block scripts %}{% endblock %}
+</body>
+</html>

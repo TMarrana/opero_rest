@@ -1,0 +1,28 @@
+{% extends "base_staff.html" %}
+{% block title %}Entrar{% endblock %}
+{% block content %}
+<div class="flex flex-1 flex-col justify-center">
+  <p class="font-display text-3xl font-extrabold tracking-tight text-superficie">OPERO</p>
+  <p class="mt-1 text-sm text-ardosia">Backoffice do restaurante</p>
+
+  <form method="post" class="mt-10 space-y-5">
+    {% csrf_token %}
+    {% for erro in form.non_field_errors %}
+      <p class="rounded-md bg-chama/15 px-4 py-3 text-sm font-medium text-chama">{{ erro }}</p>
+    {% endfor %}
+    <div class="space-y-1.5">
+      <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-aco">{{ form.username.label }}</label>
+      {{ form.username }}
+    </div>
+    <div class="space-y-1.5">
+      <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-aco">{{ form.password.label }}</label>
+      {{ form.password }}
+    </div>
+    <button type="submit"
+            class="w-full min-h-toque rounded-md bg-servico px-5 py-3 font-display text-base font-bold uppercase tracking-wide text-carvao hover:bg-servico/90">
+      Entrar
+    </button>
+  </form>
+  <p class="mt-8 text-center text-xs text-ardosia">Marcação de ponto por PIN — disponível na Fase 3.</p>
+</div>
+{% endblock %}

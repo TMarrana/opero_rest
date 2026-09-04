@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+
+# Django
+db.sqlite3
+/static/css/app.css
+/staticfiles/
+media/
+
+# Env / segredos
+.env
+
+# Ferramentas locais
+/tools/tailwindcss.exe
+
+# IDE / SO
+.idea/
+.DS_Store
+Thumbs.db
+
+# Testes
+.pytest_cache/
+.coverage
+htmlcov/

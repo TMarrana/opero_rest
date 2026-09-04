@@ -1,0 +1,83 @@
+{% extends "base_manage.html" %}
+{% block title %}Componentes{% endblock %}
+{% block content %}
+<h1 class="font-display text-2xl font-bold">Sistema de design</h1>
+<p class="mt-1 text-sm text-ardosia">Todos os componentes nos seus estados. Uma cor quente, uma cor de estado; se um ecrã tem duas coisas cor de laranja, uma delas está errada.</p>
+
+<section class="mt-8 space-y-3">
+  <h2 class="font-display text-lg font-bold">Botão</h2>
+  <div class="flex flex-wrap items-center gap-3">
+    {% include "components/botao.html" with label="Registar entrada" type="button" %}
+    {% include "components/botao.html" with label="Recusar pedido" variante="perigo" type="button" %}
+    {% include "components/botao.html" with label="Marcar entrada" variante="servico" type="button" %}
+    {% include "components/botao.html" with label="Cancelar" variante="fantasma" type="button" %}
+    {% include "components/botao.html" with label="Desativado" type="button" desativado=True %}
+    {% include "components/botao.html" with label="Ver histórico" href="#" %}
+  </div>
+</section>
+
+<section class="mt-10 space-y-3">
+  <h2 class="font-display text-lg font-bold">Campo</h2>
+  <div class="grid max-w-3xl gap-6 sm:grid-cols-2">
+    <div class="cartao p-5 space-y-5">
+      <p class="text-xs font-semibold uppercase tracking-wide text-ardosia">Normal</p>
+      {% include "components/campo.html" with field=form_ok.nome %}
+      {% include "components/campo.html" with field=form_ok.quantidade %}
+    </div>
+    <div class="cartao p-5 space-y-5">
+      <p class="text-xs font-semibold uppercase tracking-wide text-ardosia">Com erro</p>
+      {% include "components/campo.html" with field=form_erro.nome %}
+      {% include "components/campo.html" with field=form_erro.quantidade %}
+    </div>
+  </div>
+</section>
+
+<section class="mt-10 space-y-3">
+  <h2 class="font-display text-lg font-bold">Badge</h2>
+  <div class="flex flex-wrap gap-3">
+    {% include "components/badge.html" with label="Stock baixo" variante="chama" %}
+    {% include "components/badge.html" with label="Em serviço" variante="servico" %}
+    {% include "components/badge.html" with label="Aprovado" variante="servico" %}
+    {% include "components/badge.html" with label="Pendente" %}
+  </div>
+</section>
+
+<section class="mt-10 space-y-3">
+  <h2 class="font-display text-lg font-bold">Talão</h2>
+  <div class="grid max-w-4xl gap-6 sm:grid-cols-2">
+    <div class="rail-taloes">
+      {% include "components/talao.html" with timestamp="04 SET 2026 · 11:42" titulo="Entrada · Tomate chucha" detalhe="+12,500 KG → 34,200 KG" autor="registado por Rui Gomes" %}
+      {% include "components/talao.html" with timestamp="04 SET 2026 · 09:15" titulo="Saída · Azeite virgem extra" detalhe="−1,000 L → 2,000 L" autor="registado por Rui Gomes" %}
+      {% include "components/talao.html" with timestamp="03 SET 2026 · 18:03" titulo="Ajuste − · Guardanapos 33×33" detalhe="−2 EMB → 18 EMB · contagem física" autor="registado por Ana Torres" %}
+    </div>
+    <div class="rail-taloes border-carvao bg-carvao">
+      {% include "components/talao.html" with escuro=True timestamp="04 SET 2026 · 09:02" titulo="Entrada" detalhe="turno aberto" autor="Marta Silva" %}
+      {% include "components/talao.html" with escuro=True timestamp="03 SET 2026 · 17:31" titulo="Saída" detalhe="8h12 de turno" autor="Marta Silva" %}
+    </div>
+  </div>
+</section>
+
+<section class="mt-10 space-y-3">
+  <h2 class="font-display text-lg font-bold">Tabela</h2>
+  <div class="max-w-4xl">{% include "components/tabela.html" %}</div>
+</section>
+
+<section class="mt-10 space-y-3">
+  <h2 class="font-display text-lg font-bold">Modal</h2>
+  <button type="button" x-data
+          x-on:click="$dispatch('abrir-modal', { id: 'demo-modal' })"
+          class="inline-flex min-h-toque items-center rounded-md bg-chama px-5 py-2.5 text-sm font-semibold text-superficie hover:bg-chama/90">
+    Abrir confirmação
+  </button>
+  {% include "components/modal.html" with id="demo-modal" titulo="Recusar este pedido de férias?" corpo="O trabalhador vai ver o pedido como recusado. Esta decisão fica no histórico e não se apaga." confirmar_label="Recusar pedido" form_action="." %}
+</section>
+
+<section class="mt-10 space-y-3">
+  <h2 class="font-display text-lg font-bold">Toast</h2>
+  <form method="post">
+    {% csrf_token %}
+    {% include "components/botao.html" with label="Registar entrada" %}
+  </form>
+  <p class="text-xs text-ardosia">Submeter mostra o toast com o mesmo verbo do botão (secção 9).</p>
+</section>
+{% endblock %}

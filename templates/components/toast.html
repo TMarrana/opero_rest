@@ -1,0 +1,15 @@
+{% comment %}
+Toasts de confirmação (secção 9): mensagens Django renderizadas como
+toasts com auto-dismiss; a região aria-live também recebe futuros toasts
+HTMX. O verbo do toast é o do botão que o despoletou.
+{% endcomment %}
+<div aria-live="polite" class="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex flex-col items-center gap-2 px-4">
+  {% for message in messages %}
+  <div x-data="{ visivel: true }" x-show="visivel" x-init="setTimeout(() => visivel = false, 4000)"
+       class="pointer-events-auto flex items-center gap-3 rounded-md px-4 py-3 text-sm font-semibold shadow-lg
+              {% if message.tags == 'error' %}bg-chama text-superficie{% elif message.tags == 'success' %}bg-servico text-carvao{% else %}bg-carvao text-aco{% endif %}">
+    <span>{{ message }}</span>
+    <button type="button" x-on:click="visivel = false" class="opacity-60 hover:opacity-100" aria-label="Fechar">✕</button>
+  </div>
+  {% endfor %}
+</div>

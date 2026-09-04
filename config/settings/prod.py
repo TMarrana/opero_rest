@@ -1,0 +1,12 @@
+from .base import *  # noqa: F401,F403
+
+DEBUG = False
+
+SECRET_KEY = env("DJANGO_SECRET_KEY")  # noqa: F405 — obrigatório em produção
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS")  # noqa: F405
+
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+SECURE_SSL_REDIRECT = True
+SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True

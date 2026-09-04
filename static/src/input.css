@@ -1,0 +1,165 @@
+/* Fonte Tailwind do Opero Rest. Gera static/css/app.css via tools/tailwindcss.exe.
+   Direção de design: secção 4 do plan.md. Uma cor quente, uma cor de estado,
+   o resto neutro. Todos os números do sistema em mono tabular. */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* --- Fontes locais (static/fonts/), sem chamadas externas --- */
+  @font-face {
+    font-family: "Archivo";
+    font-weight: 500;
+    font-display: swap;
+    src: url("../fonts/archivo-v25-latin-500.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "Archivo";
+    font-weight: 700;
+    font-display: swap;
+    src: url("../fonts/archivo-v25-latin-700.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "Archivo";
+    font-weight: 800;
+    font-display: swap;
+    src: url("../fonts/archivo-v25-latin-800.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "IBM Plex Sans";
+    font-weight: 400;
+    font-display: swap;
+    src: url("../fonts/ibm-plex-sans-v23-latin-regular.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "IBM Plex Sans";
+    font-weight: 500;
+    font-display: swap;
+    src: url("../fonts/ibm-plex-sans-v23-latin-500.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "IBM Plex Sans";
+    font-weight: 600;
+    font-display: swap;
+    src: url("../fonts/ibm-plex-sans-v23-latin-600.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "IBM Plex Mono";
+    font-weight: 400;
+    font-display: swap;
+    src: url("../fonts/ibm-plex-mono-v20-latin-regular.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "IBM Plex Mono";
+    font-weight: 600;
+    font-display: swap;
+    src: url("../fonts/ibm-plex-mono-v20-latin-600.woff2") format("woff2");
+  }
+
+  /* Triplos RGB para o Tailwind poder aplicar opacidade (/25 etc.).
+     Hex de referência: carvao #14171C · aco #E8ECEF · superficie #FFFFFF
+     · chama #FF4D14 · servico #00C27A · ardosia #5A6672 */
+  :root {
+    --cor-carvao: 20 23 28;
+    --cor-aco: 232 236 239;
+    --cor-superficie: 255 255 255;
+    --cor-chama: 255 77 20;
+    --cor-servico: 0 194 122;
+    --cor-ardosia: 90 102 114;
+  }
+
+  body {
+    @apply font-corpo antialiased;
+  }
+
+  /* Regra transversal: números do sistema em mono com figuras tabulares. */
+  .font-dados {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  /* Foco de teclado visível no backoffice (secção 4). */
+  :focus-visible {
+    @apply outline-none ring-2 ring-carvao ring-offset-2 ring-offset-aco;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* --- Talão de serviço: elemento de assinatura (secção 4). Um bloco
+     mono e um filete tracejado; sem texturas nem bordas rasgadas. --- */
+  .talao {
+    @apply font-dados bg-superficie px-4 py-3 text-sm text-carvao;
+  }
+  .talao + .talao {
+    border-top: 1.5px dashed rgb(var(--cor-ardosia));
+  }
+  .rail-taloes {
+    @apply rounded-md border border-ardosia/25 overflow-hidden;
+  }
+  /* Variante para o shell escuro da vista staff. */
+  .talao-escuro {
+    @apply bg-carvao text-aco;
+  }
+  .talao-escuro + .talao-escuro {
+    border-top: 1.5px dashed rgb(90 102 114 / 0.6);
+  }
+
+  /* Indicador de loading HTMX: visível só durante o pedido. */
+  .htmx-indicator {
+    @apply hidden;
+  }
+  .htmx-request .htmx-indicator,
+  .htmx-request.htmx-indicator {
+    @apply inline-block;
+  }
+  .htmx-request .quando-parado {
+    @apply hidden;
+  }
+}
+
+@layer components {
+  /* --- Cartão e tabela do backoffice (padrão em components/tabela.html) --- */
+  .cartao {
+    @apply overflow-hidden rounded-md border border-ardosia/25 bg-superficie;
+  }
+  .tabela {
+    @apply w-full text-sm;
+  }
+  .tabela thead th {
+    @apply border-b border-ardosia/15 px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-ardosia;
+  }
+  .tabela tbody td {
+    @apply border-b border-ardosia/10 px-4 py-2.5;
+  }
+  .tabela tbody tr:last-child td {
+    @apply border-b-0;
+  }
+  .tabela tbody tr:hover {
+    @apply bg-aco/40;
+  }
+  .th-dados {
+    text-align: right !important;
+  }
+  .td-dados {
+    @apply font-dados text-right;
+  }
+
+  /* Inputs de formulário (widgets Django recebem estas classes nos forms). */
+  .campo-input {
+    @apply block w-full min-h-toque rounded-md border border-ardosia/40 bg-superficie px-3.5 py-2.5 text-sm text-carvao placeholder:text-ardosia/60 focus:border-carvao;
+  }
+}
+
+@layer base {
+  [x-cloak] { display: none !important; }
+}

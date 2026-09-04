@@ -1,0 +1,17 @@
+{% comment %}
+Campo de formulário Django. Parâmetros:
+  field — o BoundField (obrigatório)
+  ajuda — texto de ajuda opcional (sobrepõe field.help_text)
+Erros em português simples, junto ao campo, sem pedir desculpa (secção 9).
+{% endcomment %}
+<div class="space-y-1.5">
+  <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-carvao">
+    {{ field.label }}{% if field.field.required %}<span class="text-ardosia" aria-hidden="true"> *</span>{% endif %}
+  </label>
+  {{ field }}
+  {% firstof ajuda field.help_text as texto_ajuda %}
+  {% if texto_ajuda %}<p class="text-xs text-ardosia">{{ texto_ajuda }}</p>{% endif %}
+  {% for erro in field.errors %}
+    <p class="text-sm font-medium text-chama">{{ erro }}</p>
+  {% endfor %}
+</div>

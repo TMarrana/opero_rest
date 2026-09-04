@@ -1,0 +1,32 @@
+{% extends "base_staff.html" %}
+{% block title %}Ponto{% endblock %}
+{% block content %}
+<header>
+  <p class="text-lg">Olá, <span class="font-semibold">{{ request.user.first_name|default:request.user }}</span></p>
+  <p class="font-dados text-sm text-ardosia">{% now "H:i · l" %}</p>
+</header>
+
+{# O botão é o ecrã (secção 5). Fica funcional na Fase 3; aqui está o shell. #}
+<div class="mt-10 flex flex-1 flex-col">
+  <button type="button" disabled
+          class="min-h-[40vh] w-full rounded-lg bg-servico font-display text-4xl font-extrabold uppercase tracking-wide text-carvao opacity-40"
+          title="Marcação de ponto — Fase 3">
+    Entrada
+  </button>
+
+  <dl class="mt-8 space-y-2 font-dados text-base">
+    <div class="flex justify-between"><dt class="text-ardosia">Hoje</dt><dd>—</dd></div>
+    <div class="flex justify-between"><dt class="text-ardosia">Semana</dt><dd>—</dd></div>
+  </dl>
+
+  <nav class="mt-auto flex justify-center gap-8 pt-10 text-sm font-medium text-aco/60">
+    <span title="Fase 3">Histórico</span>
+    <span title="Fase 3">Férias</span>
+  </nav>
+</div>
+
+<form method="post" action="{% url 'accounts:logout' %}" class="mt-6 text-center">
+  {% csrf_token %}
+  <button type="submit" class="text-xs text-ardosia underline underline-offset-2">Sair</button>
+</form>
+{% endblock %}
