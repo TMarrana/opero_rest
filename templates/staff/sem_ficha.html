@@ -7,6 +7,7 @@
 </div>
 <form method="post" action="{% url 'accounts:logout' %}" class="mt-6 text-center">
   {% csrf_token %}
+  <input type="hidden" name="next" value="{% url 'staff:pin_login' %}">
   <button type="submit" class="min-h-toque text-xs text-ardosia underline underline-offset-2">Sair</button>
 </form>
 {% endblock %}

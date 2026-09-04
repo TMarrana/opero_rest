@@ -1,7 +1,7 @@
 /* Service worker do Opero: shell da vista staff em cache (secção 8, Fase 3).
    Estáticos: cache-first. Páginas: network-first com fallback ao cache.
    POSTs nunca passam por aqui — a fila offline vive em app.js. */
-const CACHE = "opero-shell-v1";
+const CACHE = "opero-shell-v2";
 const SHELL = [
   "/static/css/app.css",
   "/static/js/htmx.min.js",
@@ -50,8 +50,13 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((resp) => {
-          const copia = resp.clone();
-          caches.open(CACHE).then((c) => c.put(request, copia));
+          // Nunca guardar respostas redirecionadas: servir uma delas a um
+          // pedido de navegação rebenta com "redirected response used".
+          // Sem sessão, /equipa/ redireciona para o ecrã de PIN.
+          if (!resp.redirected && resp.ok) {
+            const copia = resp.clone();
+            caches.open(CACHE).then((c) => c.put(request, copia));
+          }
           return resp;
         })
         .catch(() => caches.match(request))

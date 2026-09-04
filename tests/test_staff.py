@@ -221,3 +221,30 @@ class TestDashboard:
 
         assert Restaurant.objects.filter(slug="tasca-da-esquina").count() == 1
         assert Worker.objects.filter(full_name="Marta Silva").count() == 1
+
+
+class TestArranqueDaPWA:
+    """A PWA arranca em /equipa/ (start_url do manifest). Sem sessão, o
+    caminho tem de levar ao PIN — não ao login do backoffice."""
+
+    def test_equipa_sem_sessao_vai_para_o_pin(self, client):
+        resp = client.get(reverse("staff:home"))
+        assert resp.status_code == 302
+        assert reverse("staff:pin_login") in resp.url
+        assert reverse("accounts:login") not in resp.url
+
+    def test_todas_as_vistas_staff_vao_para_o_pin(self, client):
+        for nome in ["staff:home", "staff:historico", "staff:ferias"]:
+            resp = client.get(reverse(nome))
+            assert reverse("staff:pin_login") in resp.url, nome
+
+    def test_sair_na_vista_staff_volta_ao_pin(self, client, manager, worker_com_pin, staff_user):
+        _ativar_dispositivo(client, manager)
+        client.post(reverse("staff:pin_login"), {"worker": worker_com_pin.pk, "pin": "2468"})
+        resp = client.post(reverse("accounts:logout"), {"next": reverse("staff:pin_login")})
+        assert resp.status_code == 302
+        assert resp.url == reverse("staff:pin_login")
+
+    def test_backoffice_continua_a_usar_o_login_de_email(self, client):
+        resp = client.get(reverse("dashboard:home"))
+        assert reverse("accounts:login") in resp.url

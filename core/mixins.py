@@ -8,6 +8,7 @@ de backoffice, mesmo que o titular seja gerente.
 """
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.urls import reverse_lazy
 
 # Marcador na sessão de que a autenticação foi feita por PIN (Fase 3).
 PIN_SESSION_KEY = "auth_via_pin"
@@ -63,4 +64,12 @@ class StockRequiredMixin(RoleRequiredMixin):
 
 
 class StaffViewMixin(LoginRequiredMixin):
-    """Vista staff: qualquer utilizador autenticado, incluindo por PIN."""
+    """
+    Vista staff: qualquer utilizador autenticado, incluindo por PIN.
+
+    Sem sessão, reencaminha para o login por PIN e não para o do
+    backoffice: a PWA arranca em /equipa/ e quem a abre está a marcar
+    ponto, não a entrar na gestão.
+    """
+
+    login_url = reverse_lazy("staff:pin_login")
