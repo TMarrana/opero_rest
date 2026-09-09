@@ -1,9 +1,10 @@
 {% extends "base_staff.html" %}
+{% load static %}
 {% block title %}Entrar com PIN{% endblock %}
 {% block content %}
 <div class="flex flex-1 flex-col justify-center"
      x-data="{ escolhido: '{{ worker_escolhido }}', pin: '' }">
-  <p class="font-display text-3xl font-extrabold tracking-tight text-superficie">OPERO</p>
+  <img src="{% static 'img/logo-opero.png' %}" alt="Opero" class="block h-10 w-auto">
   <p class="mt-1 text-sm text-ardosia">Quem está a marcar?</p>
 
   {% if erro %}
