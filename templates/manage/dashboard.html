@@ -3,6 +3,8 @@
 {% block content %}
 <h1 class="font-display text-2xl font-bold">Dashboard</h1>
 
+{% if ve_pessoas %}{% include "partials/dashboard/avisos.html" %}{% endif %}
+
 <div class="mt-6 grid gap-6 lg:grid-cols-2">
 
   <section class="cartao">

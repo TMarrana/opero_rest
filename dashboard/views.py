@@ -1,7 +1,7 @@
 from django.db.models import F
 from django.views.generic import TemplateView
 
-from attendance.models import TimeEntry
+from attendance.models import CorrectionRequest, TimeEntry
 from core.mixins import RoleRequiredMixin
 from core.utils import restaurant_scope
 from inventory.models import Item, StockMovement
@@ -48,9 +48,14 @@ class DashboardView(RoleRequiredMixin, TemplateView):
                 .order_by("start_date"),
                 field="worker__restaurant",
             )[:6]
-            ctx["em_turno"] = restaurant_scope(
+            entradas = restaurant_scope(user, TimeEntry.objects.all(), field="worker__restaurant")
+            ctx["em_turno"] = (
+                entradas.filter(check_out__isnull=True).resolved().select_related("worker").order_by("check_in")
+            )
+            ctx["por_resolver"] = entradas.unresolved().count()
+            ctx["pedidos_correcao"] = restaurant_scope(
                 user,
-                TimeEntry.objects.filter(check_out__isnull=True).select_related("worker"),
+                CorrectionRequest.objects.filter(status=CorrectionRequest.Status.PENDENTE),
                 field="worker__restaurant",
-            ).order_by("check_in")
+            ).count()
         return ctx

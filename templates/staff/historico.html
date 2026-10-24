@@ -12,6 +12,23 @@
   <div class="flex justify-between"><dt class="text-ardosia">Semana</dt><dd>{{ totais.semana }}</dd></div>
 </dl>
 
+<p class="mt-4 text-sm"><a href="{% url 'staff:correcao_nova' %}" class="text-aco/70 underline underline-offset-4 hover:text-superficie">Falta um registo? Peça para o acrescentar</a></p>
+
+{% if pedidos %}
+<section class="mt-6">
+  <h2 class="text-sm font-semibold uppercase tracking-wide text-ardosia">Pedidos de correção</h2>
+  <ul class="mt-2 space-y-2 font-dados text-sm">
+    {% for p in pedidos %}
+    <li class="rounded-md border border-ardosia/40 px-3 py-2">
+      {{ p.new_check_in|date:"d/m H:i" }} &rarr; {{ p.new_check_out|date:"H:i" }}
+      <span class="float-right font-sans text-xs font-semibold uppercase {% if p.status == 'APROVADO' %}text-servico{% elif p.status == 'RECUSADO' %}text-chama{% else %}text-ardosia{% endif %}">{{ p.get_status_display }}</span>
+      {% if p.decision_note %}<span class="block font-sans text-xs text-aco/70">{{ p.decision_note }}</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
 <div class="mt-6">
   {% if entries %}
   <div class="rail-taloes border-ardosia/40">
@@ -25,6 +42,8 @@
       {% for p in e.breaks.all %}<p class="mt-0.5 text-xs text-aco/70">{{ p.break_type.name }} {{ p.start|date:"H:i" }}&ndash;{% if p.end %}{{ p.end|date:"H:i" }}{% else %}…{% endif %}{% if not p.break_type.paid %} · não paga{% endif %}</p>{% endfor %}
       {% if e.check_out %}<p class="mt-0.5">{{ e.worked|horas }}</p>{% endif %}
       {% if e.corrected_by %}<p class="mt-1 text-xs text-aco/50">corrigido por {{ e.corrected_by }} · {{ e.correction_reason }}</p>{% endif %}
+      {% if e.pk in com_pedido %}<p class="mt-1 text-xs font-semibold uppercase text-ardosia">correção pendente</p>
+      {% elif not e.is_open or e.missing_exit %}<a href="{% url 'staff:correcao' e.pk %}" class="mt-1 inline-block min-h-toque py-2 text-xs text-aco/70 underline underline-offset-2">Pedir correção</a>{% endif %}
     </article>
     {% endfor %}
   </div>

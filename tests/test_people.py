@@ -175,11 +175,11 @@ class TestPermissoesPessoas:
 
 
 class TestFluxoBackoffice:
-    def test_dia_mostra_saida_em_falta_de_dia_anterior(self, client, worker, manager):
+    def test_dia_mostra_por_resolver_de_dia_anterior(self, client, worker, manager):
         open_shift(worker=worker, at=timezone.now() - datetime.timedelta(days=1, hours=2))
         client.force_login(manager)
         corpo = client.get(reverse("attendance:dia")).content.decode()
-        assert "Saída em falta" in corpo
+        assert "Por resolver" in corpo
 
     def test_aceitacao_ponto(self, client, worker, manager):
         """Aceitação (docx): entrada e saída no mesmo dia, consultáveis

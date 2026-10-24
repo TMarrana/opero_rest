@@ -2,9 +2,30 @@ import datetime
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 from core.models import TimeStampedModel
+
+
+def unresolved_limit():
+    """Horas a partir das quais uma entrada sem saída fica por resolver
+    (R-013). Valor provisório em configuração, a decidir com a AT."""
+    return datetime.timedelta(hours=getattr(settings, "ATTENDANCE_UNRESOLVED_HOURS", 14))
+
+
+class TimeEntryQuerySet(models.QuerySet):
+    def unresolved(self, now=None):
+        """Entradas sem saída que passaram do limite, ou que já foram
+        postas de lado por uma entrada nova (`missing_exit`)."""
+        now = now or timezone.now()
+        return self.filter(check_out__isnull=True).filter(
+            Q(missing_exit=True) | Q(check_in__lt=now - unresolved_limit())
+        )
+
+    def resolved(self, now=None):
+        now = now or timezone.now()
+        return self.exclude(pk__in=self.unresolved(now).values("pk"))
 
 
 class TimeEntry(TimeStampedModel):
@@ -33,6 +54,10 @@ class TimeEntry(TimeStampedModel):
         blank=True,
         related_name="time_entries",
     )
+    # Entrada sem saída posta de lado quando o trabalhador marcou uma
+    # entrada nova. Fica por resolver até alguém indicar a saída; não conta
+    # para os totais (invariante 9) e já não bloqueia o turno aberto único.
+    missing_exit = models.BooleanField("saída em falta", default=False)
     # Vazio nos registos anteriores à Fase 5: a origem não ficou guardada.
     source = models.CharField("origem", max_length=10, choices=Source.choices, blank=True)
     # Cópia da última correção (EntryCorrection), mantida pelo serviço na
@@ -48,6 +73,8 @@ class TimeEntry(TimeStampedModel):
     correction_reason = models.CharField("motivo da correção", max_length=200, blank=True)
     corrected_at = models.DateTimeField("corrigido em", null=True, blank=True)
 
+    objects = TimeEntryQuerySet.as_manager()
+
     class Meta:
         verbose_name = "registo de ponto"
         verbose_name_plural = "registos de ponto"
@@ -55,7 +82,7 @@ class TimeEntry(TimeStampedModel):
         constraints = [
             models.UniqueConstraint(
                 fields=["worker"],
-                condition=models.Q(check_out__isnull=True),
+                condition=models.Q(check_out__isnull=True, missing_exit=False),
                 name="um_turno_aberto_por_trabalhador",
             ),
             models.CheckConstraint(
@@ -77,6 +104,12 @@ class TimeEntry(TimeStampedModel):
     @property
     def is_open(self):
         return self.check_out is None
+
+    def is_unresolved(self, now=None):
+        if self.check_out is not None:
+            return False
+        now = now or timezone.now()
+        return self.missing_exit or self.check_in < now - unresolved_limit()
 
     @property
     def duration(self):
@@ -101,8 +134,11 @@ class TimeEntry(TimeStampedModel):
 
     def worked(self, until=None):
         """Tempo trabalhado: da entrada à saída (ou a `until`, num turno
-        aberto), sem as pausas não pagas."""
+        aberto), sem as pausas não pagas. Um registo por resolver conta
+        zero (invariante 9)."""
         until = until or timezone.now()
+        if self.is_unresolved(now=until):
+            return datetime.timedelta()
         fim = self.check_out or until
         return max(fim - self.check_in - self.unpaid_break_time(until=fim), datetime.timedelta())
 
@@ -202,3 +238,66 @@ class EntryCorrection(models.Model):
 
     def __str__(self):
         return f"{self.get_kind_display()} · {self.entry} · {self.corrected_by}"
+
+
+class CorrectionRequest(TimeStampedModel):
+    """Pedido de correção feito pelo colaborador (Fase 5). O gerente
+    aprova ou recusa; a aprovação aplica a correção pelos serviços, e a
+    decisão fica no histórico de correções do registo."""
+
+    class Kind(models.TextChoices):
+        CRIAR = "CRIAR", "Acrescentar registo"
+        ALTERAR = "ALTERAR", "Alterar registo"
+
+    class Status(models.TextChoices):
+        PENDENTE = "PENDENTE", "Pendente"
+        APROVADO = "APROVADO", "Aprovado"
+        RECUSADO = "RECUSADO", "Recusado"
+
+    worker = models.ForeignKey(
+        "workers.Worker", verbose_name="trabalhador", on_delete=models.CASCADE, related_name="correction_requests"
+    )
+    entry = models.ForeignKey(
+        TimeEntry,
+        verbose_name="registo",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="correction_requests",
+    )
+    kind = models.CharField("tipo", max_length=10, choices=Kind.choices)
+    old_check_in = models.DateTimeField("entrada registada", null=True, blank=True)
+    old_check_out = models.DateTimeField("saída registada", null=True, blank=True)
+    new_check_in = models.DateTimeField("entrada proposta")
+    new_check_out = models.DateTimeField("saída proposta")
+    note = models.CharField("motivo", max_length=200)
+    status = models.CharField("estado", max_length=10, choices=Status.choices, default=Status.PENDENTE)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="decidido por",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    decided_at = models.DateTimeField("decidido em", null=True, blank=True)
+    decision_note = models.CharField("observação da decisão", max_length=300, blank=True)
+
+    class Meta:
+        verbose_name = "pedido de correção"
+        verbose_name_plural = "pedidos de correção"
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["entry"],
+                condition=models.Q(status="PENDENTE"),
+                name="um_pedido_pendente_por_registo",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(new_check_out__gt=models.F("new_check_in")),
+                name="pedido_saida_depois_da_entrada",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.get_kind_display()} · {self.worker} · {self.get_status_display()}"

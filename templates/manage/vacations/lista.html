@@ -100,27 +100,5 @@
   </div>
 </section>
 
-{# Modal de decisão: um só, parametrizado pelo evento abrir-decisao. #}
-<div x-data="{ aberto: false, id: null, acao: null }"
-     x-on:abrir-decisao.window="aberto = true; id = $event.detail.id; acao = $event.detail.acao"
-     x-show="aberto" x-cloak
-     class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-  <div class="absolute inset-0 bg-carvao/60" x-on:click="aberto = false"></div>
-  <div class="relative w-full max-w-md rounded-md bg-superficie p-6 shadow-xl" x-on:keydown.escape.window="aberto = false">
-    <h2 class="font-display text-lg font-bold text-carvao" x-text="acao === 'aprovar' ? 'Aprovar este pedido?' : 'Recusar este pedido?'"></h2>
-    <p class="mt-2 text-sm text-ardosia">A decisão fica no histórico com o seu nome e não se apaga.</p>
-    <form method="post" x-bind:action="'/gestao/ferias/' + id + '/' + acao + '/'" class="mt-4 space-y-4">
-      {% csrf_token %}
-      {% include "components/campo.html" with field=form_decisao.decision_note %}
-      <div class="flex justify-end gap-3">
-        <button type="button" x-on:click="aberto = false"
-                class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-5 py-2.5 text-sm font-semibold text-carvao hover:bg-carvao/5">Cancelar</button>
-        <button type="submit"
-                x-bind:class="acao === 'aprovar' ? 'bg-servico text-carvao hover:bg-servico/90' : 'bg-chama text-superficie hover:bg-chama/90'"
-                class="inline-flex min-h-toque items-center rounded-md px-5 py-2.5 text-sm font-semibold"
-                x-text="acao === 'aprovar' ? 'Aprovar pedido' : 'Recusar pedido'"></button>
-      </div>
-    </form>
-  </div>
-</div>
+{% include "partials/modal_decisao.html" with url_base="/gestao/ferias/" %}
 {% endblock %}

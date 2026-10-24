@@ -5,15 +5,16 @@ from django.contrib import messages
 from django.contrib.auth import logout
 from django.core.exceptions import ValidationError
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views import View
 from django.views.generic import TemplateView
 
-from attendance.models import BreakType, TimeEntry
-from attendance.services import close_shift, end_break, open_shift, start_break
+from attendance.forms import CorrectionRequestForm
+from attendance.models import BreakType, CorrectionRequest, TimeEntry
+from attendance.services import close_shift, end_break, open_shift, request_correction, start_break
 from accounts.views import KIOSK_CONFIRMATION_KEY, device_work_area
 from core.mixins import KIOSK_SESSION_KEY, StaffViewMixin
 from vacations.forms import VacationRequestForm
@@ -78,6 +79,10 @@ class StaffHomeView(StaffViewMixin, TemplateView):
             return render(request, "staff/sem_ficha.html")
         contexto = _contexto_ponto(worker)
         contexto["quiosque"] = bool(request.session.get(KIOSK_SESSION_KEY))
+        # Registos por resolver sem pedido pendente: o colaborador indica a saída.
+        contexto["por_resolver"] = worker.time_entries.unresolved().exclude(
+            correction_requests__status=CorrectionRequest.Status.PENDENTE
+        )
         return render(request, self.template_name, contexto)
 
 
@@ -191,10 +196,21 @@ class StaffHistoryView(StaffViewMixin, TemplateView):
             worker.time_entries.select_related("corrected_by", "work_area")
             .prefetch_related("breaks__break_type")[:30]
         )
+        pendentes = set(
+            worker.correction_requests.filter(status=CorrectionRequest.Status.PENDENTE).values_list(
+                "entry_id", flat=True
+            )
+        )
         return render(
             request,
             self.template_name,
-            {"worker": worker, "entries": entries, "totais": _totais(worker)},
+            {
+                "worker": worker,
+                "entries": entries,
+                "totais": _totais(worker),
+                "com_pedido": pendentes,
+                "pedidos": worker.correction_requests.select_related("decided_by")[:10],
+            },
         )
 
 
@@ -227,3 +243,49 @@ class StaffVacationsView(StaffViewMixin, View):
             messages.success(request, "Pedido enviado")
             return redirect("staff:ferias")
         return self._render(request, worker, form)
+
+
+class StaffCorrectionView(StaffViewMixin, View):
+    """Pedido de correção de um registo próprio, ou de um registo que falta
+    (sem `pk`). O gerente decide no backoffice."""
+
+    def _entry(self, worker, pk):
+        if pk is None:
+            return None
+        return get_object_or_404(worker.time_entries, pk=pk)
+
+    def _render(self, request, worker, entry, form):
+        return render(request, "staff/correcao.html", {"worker": worker, "entry": entry, "form": form})
+
+    def get(self, request, pk=None):
+        worker = _worker_for(request.user)
+        if worker is None:
+            return render(request, "staff/sem_ficha.html")
+        entry = self._entry(worker, pk)
+        inicial = {}
+        if entry is not None:
+            inicial["check_in"] = timezone.localtime(entry.check_in).strftime("%Y-%m-%dT%H:%M")
+            if entry.check_out:
+                inicial["check_out"] = timezone.localtime(entry.check_out).strftime("%Y-%m-%dT%H:%M")
+        return self._render(request, worker, entry, CorrectionRequestForm(initial=inicial))
+
+    def post(self, request, pk=None):
+        worker = _worker_for(request.user)
+        if worker is None:
+            return render(request, "staff/sem_ficha.html")
+        entry = self._entry(worker, pk)
+        form = CorrectionRequestForm(request.POST)
+        if form.is_valid():
+            try:
+                request_correction(
+                    worker=worker,
+                    entry=entry,
+                    note=form.cleaned_data["note"],
+                    check_in=form.cleaned_data["check_in"],
+                    check_out=form.cleaned_data["check_out"],
+                )
+                messages.success(request, "Pedido de correção enviado")
+                return redirect("staff:historico")
+            except ValidationError as exc:
+                form.add_error(None, exc.messages[0])
+        return self._render(request, worker, entry, form)

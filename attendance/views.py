@@ -13,9 +13,9 @@ from core.mixins import ManagerRequiredMixin
 from core.utils import restaurant_scope
 from workers.models import Worker
 
-from .forms import EntryCorrectionForm
-from .models import TimeEntry
-from .services import add_manual_entry, correct_entry
+from .forms import CorrectionDecisionForm, EntryCorrectionForm
+from .models import CorrectionRequest, TimeEntry
+from .services import add_manual_entry, correct_entry, decide_correction
 
 
 class TeamDayView(ManagerRequiredMixin, TemplateView):
@@ -50,7 +50,7 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
                     "worker": w,
                     "registos": registos,
                     "em_turno": any(r.is_open for r in registos),
-                    "saida_em_falta": any(r.is_open and r.work_date < dia for r in registos),
+                    "por_resolver": any(r.is_unresolved(now=agora) for r in registos),
                     "total": sum((r.worked(until=agora) for r in do_dia), datetime.timedelta()),
                 }
             )
@@ -59,6 +59,12 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
         ctx["dia_anterior"] = dia - datetime.timedelta(days=1)
         ctx["dia_seguinte"] = dia + datetime.timedelta(days=1)
         ctx["hoje"] = timezone.localdate()
+        ctx["pedidos_pendentes"] = _scoped_requests(self.request.user).filter(
+            status=CorrectionRequest.Status.PENDENTE
+        ).count()
+        ctx["total_por_resolver"] = (
+            TimeEntry.objects.filter(worker__in=workers).unresolved(now=agora).count()
+        )
         return ctx
 
 
@@ -143,3 +149,52 @@ class EntryAddView(ManagerRequiredMixin, View):
             except ValidationError as exc:
                 form.add_error(None, exc.messages[0])
         return render(request, "manage/attendance/acrescentar.html", {"form": form, "worker": worker})
+
+
+def _scoped_requests(user):
+    return restaurant_scope(
+        user,
+        CorrectionRequest.objects.select_related("worker", "entry", "decided_by"),
+        field="worker__restaurant",
+    )
+
+
+class CorrectionRequestListView(ManagerRequiredMixin, TemplateView):
+    """Pedidos de correção dos colaboradores: pendentes primeiro, e os
+    registos por resolver que ainda não têm pedido."""
+
+    template_name = "manage/attendance/pedidos.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        qs = _scoped_requests(self.request.user)
+        ctx["pendentes"] = qs.filter(status=CorrectionRequest.Status.PENDENTE).order_by("created_at")
+        ctx["decididos"] = qs.exclude(status=CorrectionRequest.Status.PENDENTE).order_by("-decided_at")[:30]
+        workers = restaurant_scope(self.request.user, Worker.objects.all())
+        ctx["por_resolver"] = (
+            TimeEntry.objects.filter(worker__in=workers)
+            .unresolved()
+            .exclude(correction_requests__status=CorrectionRequest.Status.PENDENTE)
+            .select_related("worker")
+            .order_by("check_in")
+        )
+        ctx["form_decisao"] = CorrectionDecisionForm()
+        return ctx
+
+
+class CorrectionDecideView(ManagerRequiredMixin, View):
+    def post(self, request, pk, acao):
+        pedido = get_object_or_404(_scoped_requests(request.user), pk=pk)
+        form = CorrectionDecisionForm(request.POST)
+        form.is_valid()
+        try:
+            decide_correction(
+                request_obj=pedido,
+                user=request.user,
+                approve=(acao == "aprovar"),
+                note=form.cleaned_data.get("decision_note", ""),
+            )
+            messages.success(request, "Pedido aprovado" if acao == "aprovar" else "Pedido recusado")
+        except ValidationError as exc:
+            messages.error(request, exc.messages[0])
+        return redirect("attendance:pedidos")

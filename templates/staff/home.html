@@ -7,6 +7,12 @@
 </header>
 
 <div class="mt-10 flex flex-1 flex-col">
+  {% for r in por_resolver %}
+  <a href="{% url 'staff:correcao' r.pk %}" class="mb-4 block rounded-md border border-chama px-4 py-3 text-sm text-aco">
+    <span class="font-semibold text-chama">Saída por indicar.</span>
+    Entrada de <span class="font-dados">{{ r.check_in|date:"d/m" }} às {{ r.check_in|date:"H:i" }}</span> sem saída: diga a que horas saiu.
+  </a>
+  {% endfor %}
   {% include "partials/staff/ponto.html" %}
 
   {# Marcações da fila offline deste colaborador; preenchido por app.js. #}

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import BreakType, EntryCorrection, TimeEntry
+from .models import BreakType, CorrectionRequest, EntryCorrection, TimeEntry
 
 
 class _SoConsulta(admin.ModelAdmin):
@@ -40,3 +40,11 @@ class BreakTypeAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(CorrectionRequest)
+class CorrectionRequestAdmin(_SoConsulta):
+    """Os pedidos decidem-se na aplicação; o admin só consulta."""
+
+    list_display = ("worker", "kind", "status", "created_at", "decided_by")
+    list_filter = ("status",)

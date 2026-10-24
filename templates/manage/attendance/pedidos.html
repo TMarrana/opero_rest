@@ -1,0 +1,88 @@
+{% extends "base_manage.html" %}
+{% block title %}Pedidos de correção{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <h1 class="font-display text-2xl font-bold">Pedidos de correção</h1>
+  <a href="{% url 'attendance:dia' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Ponto da equipa</a>
+</div>
+
+<section class="mt-6">
+  <h2 class="font-display text-lg font-bold">Por decidir
+    {% if pendentes %}<span class="font-dados text-base text-ardosia">{{ pendentes|length }}</span>{% endif %}
+  </h2>
+  <div class="mt-3 cartao">
+    {% if pendentes %}
+    <div class="overflow-x-auto">
+      <table class="tabela">
+        <thead>
+          <tr><th>Trabalhador</th><th>Pedido</th><th class="th-dados">Registado</th><th class="th-dados">Proposto</th><th>Motivo</th><th><span class="sr-only">Decisão</span></th></tr>
+        </thead>
+        <tbody>
+          {% for p in pendentes %}
+          <tr>
+            <td class="font-medium">{{ p.worker.full_name }}</td>
+            <td class="text-sm">{{ p.get_kind_display }}</td>
+            <td class="td-dados">{% if p.old_check_in %}{{ p.old_check_in|date:"d/m H:i" }} &rarr; {% if p.old_check_out %}{{ p.old_check_out|date:"H:i" }}{% else %}<span class="text-chama">sem saída</span>{% endif %}{% else %}—{% endif %}</td>
+            <td class="td-dados font-semibold">{{ p.new_check_in|date:"d/m H:i" }} &rarr; {{ p.new_check_out|date:"H:i" }}</td>
+            <td class="text-sm text-ardosia">{{ p.note }}</td>
+            <td class="whitespace-nowrap text-right">
+              <button type="button" x-data x-on:click="$dispatch('abrir-decisao', { id: {{ p.pk }}, acao: 'aprovar' })"
+                      class="text-sm font-semibold text-servico underline underline-offset-2">Aprovar</button>
+              <button type="button" x-data x-on:click="$dispatch('abrir-decisao', { id: {{ p.pk }}, acao: 'recusar' })"
+                      class="ml-3 text-sm font-semibold text-chama underline underline-offset-2">Recusar</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="px-6 py-10 text-center text-sm text-ardosia">Não há pedidos por decidir.</div>
+    {% endif %}
+  </div>
+</section>
+
+{% if por_resolver %}
+<section class="mt-10">
+  <h2 class="font-display text-lg font-bold">Registos por resolver <span class="font-dados text-base text-chama">{{ por_resolver|length }}</span></h2>
+  <p class="mt-1 text-sm text-ardosia">Entradas sem saída que passaram do limite e ainda não têm pedido do colaborador. Não contam para os totais até terem saída.</p>
+  <div class="mt-3 cartao">
+    <ul class="divide-y divide-ardosia/10">
+      {% for r in por_resolver %}
+      <li class="flex items-baseline justify-between px-4 py-2.5 text-sm">
+        <span><span class="font-medium">{{ r.worker.full_name }}</span> · <span class="font-dados">entrada {{ r.check_in|date:"d/m H:i" }}</span></span>
+        <a href="{% url 'attendance:corrigir' r.pk %}" class="font-semibold underline underline-offset-2">Indicar saída</a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+{% endif %}
+
+<section class="mt-10">
+  <h2 class="font-display text-lg font-bold">Decididos</h2>
+  <div class="mt-3 cartao">
+    {% if decididos %}
+    <div class="overflow-x-auto">
+      <table class="tabela">
+        <thead><tr><th>Trabalhador</th><th class="th-dados">Proposto</th><th>Estado</th><th>Decisão</th></tr></thead>
+        <tbody>
+          {% for p in decididos %}
+          <tr>
+            <td class="font-medium">{{ p.worker.full_name }}</td>
+            <td class="td-dados">{{ p.new_check_in|date:"d/m H:i" }} &rarr; {{ p.new_check_out|date:"H:i" }}</td>
+            <td>{% if p.status == "APROVADO" %}{% include "components/badge.html" with label="Aprovado" variante="servico" %}{% else %}{% include "components/badge.html" with label="Recusado" variante="chama" %}{% endif %}</td>
+            <td class="text-xs text-ardosia">{{ p.decided_by }} · {{ p.decided_at|date:"d M Y" }}{% if p.decision_note %} · «{{ p.decision_note }}»{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="px-6 py-10 text-center text-sm text-ardosia">Ainda não há pedidos decididos.</div>
+    {% endif %}
+  </div>
+</section>
+
+{% include "partials/modal_decisao.html" with url_base="/gestao/ponto/pedidos/" %}
+{% endblock %}

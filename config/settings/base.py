@@ -100,3 +100,8 @@ STORAGES = {
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Ponto (Fase 5). Horas a partir das quais uma entrada sem saída fica por
+# resolver e deixa de contar para os totais (R-013). Valor provisório,
+# a decidir com a AT (secção 12 do plano).
+ATTENDANCE_UNRESOLVED_HOURS = 14

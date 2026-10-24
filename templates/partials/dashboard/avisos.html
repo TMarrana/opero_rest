@@ -1,0 +1,16 @@
+{% comment %}Coisas por resolver na equipa. Cada aviso diz quantas são e
+leva até elas (secção 9).{% endcomment %}
+{% if pedidos_correcao or por_resolver %}
+<ul class="mt-4 space-y-2">
+  {% if pedidos_correcao %}
+  <li><a href="{% url 'attendance:pedidos' %}" class="flex justify-between rounded-md border border-ardosia/30 bg-superficie px-4 py-3 text-sm hover:bg-carvao/5">
+    <span><span class="font-dados font-semibold">{{ pedidos_correcao }}</span> pedido{{ pedidos_correcao|pluralize }} de correção de ponto por decidir</span>
+    <span class="font-semibold underline underline-offset-2">Decidir</span></a></li>
+  {% endif %}
+  {% if por_resolver %}
+  <li><a href="{% url 'attendance:pedidos' %}" class="flex justify-between rounded-md border border-chama/40 bg-superficie px-4 py-3 text-sm hover:bg-chama/5">
+    <span><span class="font-dados font-semibold text-chama">{{ por_resolver }}</span> registo{{ por_resolver|pluralize }} de ponto por resolver: entrada sem saída</span>
+    <span class="font-semibold underline underline-offset-2">Ver</span></a></li>
+  {% endif %}
+</ul>
+{% endif %}
