@@ -38,8 +38,8 @@ Ao concluir qualquer trabalho descrito na secção 8:
 | 2 — Pessoas | 🟡 Em curso |
 | 3 — Vista do colaborador e PWA | 🟡 Em curso |
 | 4 — Dashboard, estabilização e piloto | 🟡 Em curso |
-| 5 — Ponto e ausências, segunda iteração | 🟡 Em curso (arrancada pelo TM; âmbito ainda a validar com AT) |
-| 6 — Planeador de turnos | ⬜ Por iniciar (âmbito a validar com AT) |
+| 5 — Ponto e ausências, segunda iteração | 🟡 Código completo; falta revisão visual, teste no telemóvel e aprovação do âmbito pela AT |
+| 6 — Planeador de turnos | 🟡 Código completo; falta revisão visual do planeador e aprovação do âmbito pela AT |
 
 Legenda: ⬜ Por iniciar · 🟡 Em curso · ✅ Concluída
 
@@ -94,7 +94,7 @@ Tudo o resto neste documento deriva do docx, exceto as Fases 5 e 6. Essas vêm d
 | Estáticos (prod) | `whitenoise` | serve estáticos sem depender do proxy |
 | Testes | `pytest-django`, `pytest-cov` | |
 | Testes com tempo | `time-machine` *(Fase 5)* | fecho do mês, registos por resolver e turnos na noite da mudança de hora dependem do relógio |
-| Feriados | `holidays` *(Fase 5)* | feriados nacionais portugueses, incluindo os móveis (Sexta-feira Santa, Corpo de Deus); os municipais ficam em `vacations.Holiday` |
+| Feriados | cálculo próprio em `vacations/holidays.py` *(Fase 5)* | feriados nacionais portugueses, incluindo os móveis (Sexta-feira Santa, Páscoa, Corpo de Deus); os municipais ficam em `vacations.Holiday` (ver Notas de desvio) |
 
 ### O que as Fases 5 e 6 não acrescentam
 
@@ -311,10 +311,10 @@ Estas regras são o núcleo do sistema. Cada uma tem um teste dedicado na secç�
 5. **Cada registo guarda data, hora e utilizador.** Ponto, movimentos e decisões de férias.
 6. **Pedidos de férias aprovados não se apagam.** E o sistema avisa visualmente quando um pedido se sobrepõe a outro já aprovado do mesmo trabalhador. Um pedido já decidido não volta a ser decidido (`decide_request()` só aceita pedidos pendentes): se um pedido foi recusado, o colaborador faz um pedido novo.
 7. **Uma correção nunca apaga o valor anterior.** O histórico de correções (`attendance.EntryCorrection`) guarda o antes e o depois, com autor, motivo e data. *(Fase 5)*
-8. **Um mês aprovado não muda** sem que seja reaberto de forma explícita e auditada. *(Fase 5, por implementar)*
-9. **Um registo por resolver não conta para os totais.** *(Fase 5, por implementar)*
+8. **Um mês aprovado não muda** sem que seja reaberto de forma explícita e auditada. *(Fase 5)*
+9. **Um registo por resolver não conta para os totais.** *(Fase 5)*
 
-A Fase 6 acrescenta a invariante 10. Passa para esta lista quando a fase arrancar.
+10. **O colaborador nunca vê um turno em rascunho nem um turno em reserva.** *(Fase 6)*
 
 ---
 
@@ -457,7 +457,7 @@ Alertas são visuais. Sem email, SMS ou notificações nesta fase.
 
 ### Fase 5 — Ponto e ausências, segunda iteração
 *Fora do docx. Vem do estudo da Factorial (`re-factorial/clone/prd.md`, prioridade P1). Depende de: Fases 2 e 3, de a AT aprovar o âmbito e da validação jurídica do registo de tempos (secção 12).*
-**Estado:** 🟡 Em curso. O TM arrancou-a a 2026-10-24 sem esperar pela aprovação da AT (ver Notas de desvio). O primeiro bloco está feito; o ecrã de pausa falta verificar no telemóvel.
+**Estado:** 🟡 Código completo e testado, incluindo o critério de aceitação (`tests/test_fecho_mes.py::test_aceitacao_fase_5`). O TM arrancou-a a 2026-10-24 sem esperar pela aprovação da AT (ver Notas de desvio). Falta a revisão visual e o teste no telemóvel.
 
 O MVP regista entradas e saídas. Esta fase dá ao gerente o que precisa para fechar o mês e prová-lo ao contabilista ou a uma inspeção. A ordem dos blocos é a de construção: cada um assenta no anterior.
 
@@ -472,31 +472,31 @@ O MVP regista entradas e saídas. Esta fase dá ao gerente o que precisa para fe
 **Ecrãs do ciclo principal**
 
 - [~] Ecrã de ponto do colaborador com pausa: em turno, o ecrã mostra «Iniciar pausa» e «Saída»; em pausa, mostra «Terminar pausa». Continua a ser um único botão de estado principal (secção 5), e cumpre a aceitação da Fase 3 (5 segundos, 2 toques). *Feito e testado no servidor, incluindo pausas da fila offline. Falta ver no telemóvel e decidir se o estado «em pausa» (contorno `aco`, sem cor) se lê bem.*
-- [ ] Pedido de correção pelo colaborador (`attendance.CorrectionRequest`: `entry`, `kind` com criar, alterar ou apagar, valores antigos e novos, `status`, `decided_by`). O gerente aprova ou recusa, e a decisão fica registada no histórico de correções.
-- [ ] Registos por resolver: uma entrada sem saída que passe de um limite fixo (valor a decidir, por exemplo 14 horas) fica pendente e não conta para os totais até ser resolvida (R-013). O colaborador vê o aviso no ecrã de ponto e pode propor a hora de saída com um pedido de correção. O gerente vê o número de registos por resolver no dashboard. Na Fase 6 este limite passa a vir das horas previstas no turno.
+- [x] Pedido de correção pelo colaborador (`attendance.CorrectionRequest`: `entry`, `kind` com criar, alterar ou apagar, valores antigos e novos, `status`, `decided_by`). O gerente aprova ou recusa, e a decisão fica registada no histórico de correções.
+- [x] Registos por resolver: uma entrada sem saída que passe de um limite fixo (valor a decidir, por exemplo 14 horas) fica pendente e não conta para os totais até ser resolvida (R-013). O colaborador vê o aviso no ecrã de ponto e pode propor a hora de saída com um pedido de correção. O gerente vê o número de registos por resolver no dashboard. Na Fase 6 este limite passa a vir das horas previstas no turno.
 
 **Ausências**
 
-- [ ] Tipos de ausência (`vacations.AbsenceType`: `name`, `color`, `deducts_balance`, `requires_approval`, `requires_attachment`, `half_days`). `VacationRequest` ganha `absence_type`, `half_day` e `days_taken`. As férias passam a ser um tipo entre outros: falta justificada, baixa, licença parental, formação. Os tipos de origem vêm na data migration, e os tipos já usados arquivam-se em vez de se apagarem. Um tipo que não exige aprovação fica aprovado logo que é pedido (R-051).
-- [ ] Regras do ciclo de vida do pedido:
+- [x] Tipos de ausência (`vacations.AbsenceType`: `name`, `color`, `deducts_balance`, `requires_approval`, `requires_attachment`, `half_days`). `VacationRequest` ganha `absence_type`, `half_day` e `days_taken`. As férias passam a ser um tipo entre outros: falta justificada, baixa, licença parental, formação. Os tipos de origem vêm na data migration, e os tipos já usados arquivam-se em vez de se apagarem. Um tipo que não exige aprovação fica aprovado logo que é pedido (R-051).
+- [x] Regras do ciclo de vida do pedido:
   - Um pedido registado pelo gerente em nome de um trabalhador nasce aprovado e fica com o gerente como decisor (R-057). Isto substitui o desvio de 2026-09-04, em que esse pedido nascia pendente.
   - O colaborador pode cancelar um pedido pendente ou um pedido aprovado ainda no futuro. Usa-se o estado `CANCELADO`, que já existe no modelo mas não tem nenhum fluxo que o use. Pedidos com datas passadas o colaborador já não cancela (R-056).
   - Um pedido recusado não volta a aprovado, e a decisão chega ao colaborador com a observação do gerente (R-055, já garantido por `decide_request()`).
-- [ ] Saldo anual (`vacations.Allowance`: `worker`, `year`, `days`, `carried_over`, `carry_over_expires_on`). O saldo aparece no pedido e na decisão. O valor por defeito português (22 dias úteis) está por validar (secção 12).
+- [x] Saldo anual (`vacations.Allowance`: `worker`, `year`, `days`, `carried_over`, `carry_over_expires_on`). O saldo aparece no pedido e na decisão. O valor por defeito português (22 dias úteis) está por validar (secção 12).
   - Os dias só se descontam quando o pedido é aprovado (R-053). Os dias transitados do ano anterior gastam-se primeiro e caducam na data definida (R-066).
   - Um pedido que exceda o saldo disponível mostra um aviso a `chama` ao gerente, mas não é bloqueado: em Portugal a decisão é do gerente.
   - Ficam de fora a proporcionalidade, os escalões de antiguidade e os contadores alternativos, salvo se a validação jurídica disser o contrário (Q-008).
-- [ ] Feriados (`vacations.Holiday`: `restaurant`, nulo para os nacionais, `date`, `name`, `half_day`). Os feriados nacionais vêm de origem, os municipais são acrescentados por restaurante, e o cálculo de `days_taken` não conta feriados nem folgas.
+- [x] Feriados (`vacations.Holiday`: `restaurant`, nulo para os nacionais, `date`, `name`, `half_day`). Os feriados nacionais vêm de origem, os municipais são acrescentados por restaurante, e o cálculo de `days_taken` não conta feriados nem folgas.
   - Até haver planeador (Fase 6), `days_taken` conta os dias úteis, de segunda a sexta, sem os feriados. A partir da Fase 6, os dias sem turno planeado e as folgas também deixam de contar (R-037, R-067).
   - Num restaurante as folgas raramente calham ao fim de semana. A regra legal para quem trabalha ao sábado e ao domingo está por confirmar (Q-001).
-- [ ] Períodos bloqueados (`vacations.BlockedPeriod`: `restaurant`, `start`, `end`, `absence_types`, `exempt_workers`). Um pedido que caia num período bloqueado é recusado na submissão, com uma mensagem que diz porquê. Os períodos bloqueados aparecem no formulário de pedido antes de o colaborador escolher as datas (R-060).
+- [x] Períodos bloqueados (`vacations.BlockedPeriod`: `restaurant`, `start`, `end`, `absence_types`, `exempt_workers`). Um pedido que caia num período bloqueado é recusado na submissão, com uma mensagem que diz porquê. Os períodos bloqueados aparecem no formulário de pedido antes de o colaborador escolher as datas (R-060).
 
 **Fecho do mês**
 
-- [ ] `attendance.MonthClose` (`restaurant`, `month`, `worker`, `approved_by`, `approved_at`). O gerente aprova o mês por trabalhador, e só o pode fazer quando não restam registos por resolver nem pedidos de correção pendentes. Se faltar resolver alguma coisa, a aprovação é recusada com uma mensagem que diz quantos trabalhadores e quantos registos faltam, e com uma ligação para eles (R-016). Também se pode aprovar de uma vez todos os trabalhadores que estão prontos.
-- [ ] Aviso no dashboard: a partir do dia 1, «O mês anterior está por fechar», com o número de trabalhadores por aprovar. Não há email, de acordo com a regra da Fase 1 sobre alertas.
-- [ ] Depois de aprovado, um mês fica bloqueado: não aceita correções, registos manuais nem pedidos de correção. Para reabrir, é preciso uma ação explícita, auditada e com motivo.
-- [ ] Exportação do mês aprovado (CSV na primeira versão), num formato a acordar com o contabilista (secção 12). Conteúdo mínimo provisório: uma linha por trabalhador e por dia de trabalho, com entrada, saída, pausas não pagas, horas trabalhadas, área e ausência com o seu tipo. No fim vêm os totais do mês por trabalhador. É isto que substitui a integração com payroll (BR-005).
+- [x] `attendance.MonthClose` (`restaurant`, `month`, `worker`, `approved_by`, `approved_at`). O gerente aprova o mês por trabalhador, e só o pode fazer quando não restam registos por resolver nem pedidos de correção pendentes. Se faltar resolver alguma coisa, a aprovação é recusada com uma mensagem que diz quantos trabalhadores e quantos registos faltam, e com uma ligação para eles (R-016). Também se pode aprovar de uma vez todos os trabalhadores que estão prontos.
+- [x] Aviso no dashboard: a partir do dia 1, «O mês anterior está por fechar», com o número de trabalhadores por aprovar. Não há email, de acordo com a regra da Fase 1 sobre alertas.
+- [x] Depois de aprovado, um mês fica bloqueado: não aceita correções, registos manuais nem pedidos de correção. Para reabrir, é preciso uma ação explícita, auditada e com motivo.
+- [x] Exportação do mês aprovado (CSV na primeira versão), num formato a acordar com o contabilista (secção 12). Conteúdo mínimo provisório: uma linha por trabalhador e por dia de trabalho, com entrada, saída, pausas não pagas, horas trabalhadas, área e ausência com o seu tipo. No fim vêm os totais do mês por trabalhador. É isto que substitui a integração com payroll (BR-005).
 
 *Invariantes novas: 7, 8 e 9, já na secção 6.*
 
@@ -506,29 +506,29 @@ O MVP regista entradas e saídas. Esta fase dá ao gerente o que precisa para fe
 
 ### Fase 6 — Planeador de turnos
 *Fora do docx. Vem do estudo da Factorial (prioridade P1). Depende de: Fase 5 (áreas de trabalho, tipos de ausência) e de a AT aprovar o âmbito.*
-**Estado:** ⬜ Por iniciar
+**Estado:** 🟡 Código completo e testado, incluindo o critério de aceitação (`tests/test_turnos.py::test_aceitacao_fase_6`). Falta ver o planeador num browser: ainda ninguém o viu.
 
 Módulo novo, numa app `shifts`. É o primeiro passo do ciclo semanal do gerente: planear e publicar a semana, e depois comparar o planeado com o realizado.
 
-- [ ] `shifts.ShiftTemplate` (`restaurant`, `name`, `start`, `end`, `work_area`, `color`): turnos guardados, como «Almoço», «Jantar», «Fecho» ou «Dobra». Um restaurante tem entre 3 e 6. Arquivam-se em vez de se apagarem.
-- [ ] `shifts.Shift` (`worker`, `start_at`, `end_at`, `work_area`, `state` com rascunho, publicado ou reserva, `template`). A grelha semanal é organizada por trabalhador e pode ser filtrada por área. Os turnos da noite usam o mesmo `work_date` do ponto, isto é, contam no dia em que começam.
-- [ ] Criar turnos em lote: aplicar um turno guardado a vários trabalhadores e a vários dias de uma vez (R-034).
-- [ ] Copiar a semana anterior, com os turnos e as folgas. O que é copiado nasce em rascunho (R-038).
-- [ ] Folgas (`shifts.RestDay`: `worker`, `date`, `state`). Uma folga não desconta dias de férias (R-037).
-- [ ] Ausências no planeador:
+- [x] `shifts.ShiftTemplate` (`restaurant`, `name`, `start`, `end`, `work_area`, `color`): turnos guardados, como «Almoço», «Jantar», «Fecho» ou «Dobra». Um restaurante tem entre 3 e 6. Arquivam-se em vez de se apagarem.
+- [x] `shifts.Shift` (`worker`, `start_at`, `end_at`, `work_area`, `state` com rascunho, publicado ou reserva, `template`). A grelha semanal é organizada por trabalhador e pode ser filtrada por área. Os turnos da noite usam o mesmo `work_date` do ponto, isto é, contam no dia em que começam.
+- [x] Criar turnos em lote: aplicar um turno guardado a vários trabalhadores e a vários dias de uma vez (R-034).
+- [x] Copiar a semana anterior, com os turnos e as folgas. O que é copiado nasce em rascunho (R-038).
+- [x] Folgas (`shifts.RestDay`: `worker`, `date`, `state`). Uma folga não desconta dias de férias (R-037).
+- [x] Ausências no planeador:
   - Uma ausência pendente aparece riscada e não conta como conflito.
   - Quando se aprova uma ausência de dia inteiro, o turno desse dia passa a «reserva», que só o gerente vê. Assim o gerente fica a saber que tem um buraco no planeamento (R-033).
   - Se a ausência for cancelada, o turno volta a rascunho.
-- [ ] Conflitos a `chama`, que impedem a publicação (R-032):
+- [x] Conflitos a `chama`, que impedem a publicação (R-032):
   - dois turnos sobrepostos para a mesma pessoa;
   - um turno num dia de ausência aprovada ou de folga;
   - menos de 11 horas de descanso entre o fim de um turno e o início do seguinte. O valor está por confirmar (Q-001), e é aqui que o Opero Rest faz melhor do que a Factorial, que só aplica esta regra no plano Enterprise.
-- [ ] Publicar a semana: o colaborador só vê os turnos publicados (R-030). Antes de publicar, o gerente vê o que mudou desde a última publicação e quem é afetado. Um turno publicado pode voltar a rascunho com uma ação explícita, e editá-lo exige nova publicação. Ao contrário da Factorial, que não deixa despublicar (B-007), aqui pode-se. Na primeira versão não há push nem email: o colaborador vê a mudança da próxima vez que abre a aplicação.
-- [ ] A vista staff ganha «Os meus turnos», um quarto elemento além dos três que a secção 5 previa, o que é uma alteração a validar visualmente.
-- [ ] Planeado contra realizado: as horas previstas no turno substituem o limite fixo dos registos por resolver da Fase 5. Na vista da equipa, cada registo aparece ao lado do turno previsto, e um atraso ou uma saída fora do previsto ficam assinalados.
+- [x] Publicar a semana: o colaborador só vê os turnos publicados (R-030). Antes de publicar, o gerente vê o que mudou desde a última publicação e quem é afetado. Um turno publicado pode voltar a rascunho com uma ação explícita, e editá-lo exige nova publicação. Ao contrário da Factorial, que não deixa despublicar (B-007), aqui pode-se. Na primeira versão não há push nem email: o colaborador vê a mudança da próxima vez que abre a aplicação.
+- [~] A vista staff ganha «Os meus turnos», um quarto elemento além dos três que a secção 5 previa, o que é uma alteração a validar visualmente.
+- [x] Planeado contra realizado: as horas previstas no turno substituem o limite fixo dos registos por resolver da Fase 5. Na vista da equipa, cada registo aparece ao lado do turno previsto, e um atraso ou uma saída fora do previsto ficam assinalados.
 - [ ] Na marcação de saída, quando o colaborador já passou bastante da hora prevista, o ecrã pergunta se a saída é agora ou se foi à hora prevista e esqueceu de marcar (R-012). Fica a decidir se isto entra.
 
-*Invariante nova:* 10. **O colaborador nunca vê um turno em rascunho nem um turno em reserva.**
+*Invariante nova: 10, já na secção 6.*
 
 *Aceitação:* o gerente copia a semana anterior, ajusta dois turnos a partir dos turnos guardados, marca uma folga e vê um conflito com férias aprovadas. Depois de o resolver, publica a semana, e o colaborador vê os seus turnos no telemóvel.
 
@@ -682,6 +682,7 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 
 | Data | Fase | O que foi feito | Por fechar | Próximo passo |
 |---|---|---|---|---|
+| 2026-10-24 (5ª) | 5, 6 | **Fase 5 completa em código e Fase 6 inteira.** Commits `0764720`, `b7b9495`, `82b3aa9` e `f2d45cc`.<br>• **Por resolver e pedidos de correção:** uma entrada sem saída que passe do limite (14 h, `ATTENDANCE_UNRESOLVED_HOURS`) fica por resolver e conta zero. Já não impede a entrada seguinte: ao marcar nova entrada, a antiga fica com `missing_exit`. O colaborador pede correção no histórico ou a partir do aviso no ecrã de ponto; o gerente decide em Ponto → Pedidos, e a aprovação passa pelos serviços e fica no histórico.<br>• **Ausências:** `AbsenceType` com cinco tipos de origem, meio dia, aprovação automática, ausência do gerente já aprovada, cancelamento pelo colaborador. `Allowance` com transitados que caducam e ecrã de saldos. Feriados nacionais calculados, municipais por restaurante. `BlockedPeriod` recusa na submissão e aparece antes de pedir.<br>• **Configuração:** a entrada do rail deixou de ser um marcador. CRUD para o Admin (áreas, tipos de pausa e de ausência, feriados, períodos bloqueados) e turnos guardados para o gerente.<br>• **Fecho do mês:** `MonthClose`, aprovação por trabalhador ou de todos os prontos, recusa com contagem, bloqueio nos serviços (incluindo marcações offline atrasadas), reabertura com motivo, aviso no dashboard e CSV (`;`, BOM, só aprovados).<br>• **Planeador (app `shifts`):** turnos guardados, grelha semanal com painel por célula (HTMX), lote, cópia da semana anterior, folgas, conflitos (sobreposição, folga, ausência aprovada, menos de 11 h de descanso), publicação com resumo do que muda e despublicação. Ausência aprovada passa turnos a reserva; cancelada, volta a rascunho. «Os meus turnos» na vista staff. Na vista da equipa, o previsto ao lado do realizado, com atraso, saída fora de horas e falta de marcação. O limite dos registos por resolver passa a ser o fim do turno publicado mais 4 h. Folgas e dias sem turno em semanas planeadas não descontam férias.<br>195 testes; `check` e `makemigrations --check` limpos; migrações aplicadas ao `db.sqlite3`. | **Ninguém viu os ecrãs novos:** a extensão do Chrome não estava ligada, por isso o planeador, os pedidos, o fecho do mês, a configuração e os saldos só foram verificados pelos testes. R-012 (pergunta na saída tardia) não foi feito, como o plano deixava em aberto. Anexos nos tipos de ausência ficaram de fora (ver Notas de desvio). O `demo` não cria turnos. | Rever no browser, com `manage.py demo`, os ecrãs novos: Turnos (sobretudo a largura da grelha com o painel ao lado), Ponto → Pedidos e Fecho do mês, Férias → Saldos e Configuração. Depois levar à AT o âmbito das Fases 5 e 6 e os valores por confirmar (14 h, 22 dias, 11 h de descanso, formato do CSV). |
 | 2026-10-24 (4ª) | 5 | **Fase 5 arrancada: primeiro bloco (modelo e persistência) e ecrã de ponto com pausa.** Antes, commit `f34f92d` com o trabalho da Fase 3 que estava por commitar.<br>• **Áreas:** `core.WorkArea`, com Cozinha, Sala e Bar de origem (signal e data migration). O gerente escolhe a área ao ativar o dispositivo; o cookie guarda-a e a entrada herda-a. Uma área arquivada deixa de ser herdada.<br>• **`TimeEntry`:** `work_date` calculado no `save()` na hora local, `work_area` e `source` (tablet partilhado, telemóvel, gerente). Data migration preenche o `work_date`. A vista da equipa e os totais da vista staff agrupam por `work_date`; a vista da equipa ganhou a coluna «Trabalhado», a área e as pausas.<br>• **Pausas:** `BreakType` (Refeição não paga, Pausa curta paga, de origem) e `Break`, com constraint de uma pausa aberta por registo. Serviços `start_break` e `end_break`; `close_shift` fecha a pausa aberta. `TimeEntry.worked()` desconta as não pagas.<br>• **Ecrã de ponto:** em turno, «Saída» mais um botão por tipo de pausa; em pausa, «Terminar pausa». A fila offline (`app.js`) guarda `tipo_pausa`. Cache do service worker para v4.<br>• **Histórico de correções:** `EntryCorrection` com antes e depois. A página de correção mostra-o em talões. As correções antigas ficaram com «valor anterior não guardado».<br>• **Falha corrigida:** `correct_entry()` usava os valores da instância que recebia. Com uma instância antiga, uma correção só da entrada reabria um turno já fechado. Agora relê o registo com lock.<br>25 testes novos, 106 no total; `check` e `makemigrations --check` limpos; migração aplicada ao `db.sqlite3` de desenvolvimento (9 registos, 1 correção passada para o histórico). | Ecrã de pausa por ver num telemóvel. Áreas e tipos de pausa só se configuram no admin do Django (ver Notas de desvio). Do resto da Fase 5 falta tudo: pedidos de correção, registos por resolver, ausências, saldo, feriados, períodos bloqueados, fecho do mês e exportação. | Seguir a ordem da Fase 5: pedido de correção pelo colaborador (`CorrectionRequest`) e depois registos por resolver. Em paralelo, levar à AT a aprovação do âmbito, que continua por dar. |
 | 2026-10-24 (3ª) | 3 | **Modo quiosque e falhas de sincronização visíveis.**<br>• **Dispositivo:** o cookie passa a guardar o modo, partilhado ou pessoal, e o gerente escolhe-o na ativação.<br>• **Sessão no tablet partilhado:** expira em 5 minutos e termina a seguir a cada marcação. O HTMX recebe `HX-Redirect` para o PIN, onde aparece a confirmação com o nome e a hora. No ecrã, sai sozinha ao fim de 90 segundos sem marcação.<br>• **`MarkView`:** aceita `acao` e `trabalhador` e recusa a marcação quando a ação já não corresponde ao estado do turno ou quando é de outra pessoa. Os pedidos da fila (`X-Opero-Fila`) recebem JSON, 200 ou 409 com o motivo.<br>• **`app.js`:** a fila guarda a ação, quem marcou e o estado, e a lista «Marcações sem rede» aparece no ecrã de ponto.<br>• **Falha corrigida:** a fila marcava em nome de quem tivesse a sessão aberta no momento do envio.<br>12 testes novos, 81 no total; `check` e `makemigrations --check` limpos; `app.js` passa no `node --check`. | Os dois itens estão `[~]` porque o comportamento do `app.js` (lista da fila, dispensar, redirecionamento depois de sincronizar) não foi verificado num browser. Os dispositivos já ativados contam como partilhados: o telemóvel pessoal de um colaborador tem de ser reativado como pessoal. | Testar no telemóvel e num tablet: duas pessoas seguidas no tablet partilhado, marcação em modo avião, e uma recusa forçada (por exemplo, o gerente fecha o turno enquanto o telemóvel está offline). |
 | 2026-10-24 (2ª) | 3–6 | Revisão do plano inteiro com os dados do estudo da Factorial:<br>• **Secção 1:** posicionamento.<br>• **Secção 4:** sala limpa.<br>• **Secção 5:** dispositivo partilhado ou pessoal, e evolução do ecrã de ponto.<br>• **Secção 7:** permissões das Fases 5 e 6.<br>• **Fase 3:** dois itens novos, as falhas de sincronização visíveis e o modo quiosque.<br>• **Fase 4:** validação jurídica, PWA em iOS e RGPD como pré-requisitos do piloto.<br>• **Fases 5 e 6:** detalhadas regra a regra (R-004 a R-067).<br>• **Secções 9 a 12:** regras de feedback, P3 e lista do que não fazer, testes novos e quatro decisões novas.<br>Nenhum código alterado. | Os dois itens novos da Fase 3 são falhas reais no código atual: `app.js` deita fora em silêncio as marcações recusadas, e a sessão PIN de 12 horas fica aberta num tablet partilhado. | Corrigir os dois itens novos da Fase 3 antes do piloto. |
@@ -709,9 +710,16 @@ Alterações ao plano decididas durante a execução. Se algo aqui contradiz uma
 - **2026-09-04 · Stock não pode ficar negativo** — o plano não se pronunciava; `register_movement()` rejeita saídas e ajustes que deixem `current_stock < 0`, com mensagem a sugerir ajuste prévio. Racional: um ajuste negativo abaixo de zero implicaria uma contagem física negativa, impossível.
 - **2026-09-04 · Artigos não se apagam** — desativam-se (`is_active`), porque os movimentos os protegem (`on_delete=PROTECT`) e o histórico não se perde. O "D" do CRUD de artigos é a desativação.
 - **2026-09-04 · Grupos criados por data migration** (`accounts/0002`), com sincronização `role`→grupo em signal `post_save`. A autorização efetiva nas views é feita pelos mixins; os grupos mantêm o admin coerente.
+- **2026-10-24 · Entrada esquecida não bloqueia a seguinte.** O plano dizia que um registo por resolver não contava para os totais, mas não dizia o que acontecia à entrada seguinte, que a constraint do turno aberto único recusava. Agora, ao marcar uma entrada nova, o registo antigo fica com `missing_exit` e a constraint ignora-o. Nenhuma hora de saída é inventada.
+- **2026-10-24 · Pedido de correção sem «apagar».** O plano previa criar, alterar ou apagar. Apagar um registo apagaria também o seu histórico de correções, contra a invariante 7. Um registo a mais resolve-se com o gerente, que o corrige; se fizer falta, entra um estado «anulado» em vez de um delete.
+- **2026-10-24 · Tipos de ausência sem anexos.** `requires_attachment` ficou de fora: guardar baixas médicas obriga a ficheiros privados com acesso controlado e a uma decisão de RGPD (BR-006). Entra quando essa decisão estiver tomada.
+- **2026-10-24 · Feriados calculados, sem a biblioteca `holidays`.** São treze datas fixas ou derivadas da Páscoa, em `vacations/holidays.py`, e não se guardam na base de dados. O Carnaval não é obrigatório e fica de fora; acrescenta-se como feriado do restaurante.
+- **2026-10-24 · Pedido sem tipo é de férias.** O formulário e o modelo assumem o tipo que desconta do saldo quando não vem nenhum, para manter o pedido em três campos da Fase 3.
+- **2026-10-24 · `days_taken` calculado na submissão.** Se o planeamento mudar depois (uma folga nova, uma semana publicada), os dias de um pedido já feito não são recalculados.
+- **2026-10-24 · Alterar um turno publicado tira-o da vista do colaborador** até à publicação seguinte: editar passa-o a rascunho, apagar marca-o para remoção. Assim o colaborador nunca vê uma versão que o gerente não confirmou, à custa de deixar de ver o turno antigo entretanto.
+- **2026-10-24 · Configuração na aplicação, não no admin do Django.** Substitui a nota anterior sobre áreas e tipos de pausa. Os turnos guardados ficam na mesma área, mas abertos ao gerente.
 - **2026-10-24 · Fase 5 arrancada antes da aprovação da AT.** Decisão do TM. O primeiro bloco (áreas, dia de trabalho, pausas, histórico de correções) não muda nenhum comportamento que a AT tenha validado, mas o âmbito da fase continua por aprovar (secção 12).
 - **2026-10-24 · Campos de correção no `TimeEntry` mantidos como cópia.** O plano dizia que `corrected_by`, `correction_reason` e `corrected_at` passavam a ser derivados da última correção. Ficaram como campos, atualizados pelo serviço na mesma transação que grava a `EntryCorrection`, para não mudar templates e consultas que já os usam. A fonte de verdade é o histórico.
-- **2026-10-24 · Áreas e tipos de pausa configuram-se no admin do Django**, sem ecrã próprio em Configuração. Não se apagam no admin, arquivam-se com `archived_at`. Um ecrã próprio fica para quando houver os restantes itens de configuração da Fase 5 (tipos de ausência, feriados, períodos bloqueados).
 - **2026-10-24 · Sem `time-machine` por agora.** O teste da mudança de hora (`test_work_date_across_dst_change`) passa as horas explicitamente aos serviços. A dependência entra quando os registos por resolver e o fecho do mês precisarem de mexer no relógio.
 - **2026-10-24 · Marcação com intenção explícita.** Antes, `MarkView` alternava o estado: entrava se não houvesse turno aberto e saía se houvesse. Agora o formulário envia a ação que o botão mostrava, e o servidor recusa-a se o estado já mudou. Sem `acao`, continua a alternar, por compatibilidade com marcações antigas que estejam na fila.
 - **2026-10-24 · Cookies de dispositivo antigos contam como partilhados.** É o caso mais seguro. O telemóvel pessoal de um colaborador tem de ser reativado com o modo «Uma só pessoa».
