@@ -12,8 +12,9 @@ from django.utils.dateparse import parse_datetime
 from django.views import View
 from django.views.generic import TemplateView
 
-from attendance.services import close_shift, open_shift
-from accounts.views import KIOSK_CONFIRMATION_KEY
+from attendance.models import BreakType, TimeEntry
+from attendance.services import close_shift, end_break, open_shift, start_break
+from accounts.views import KIOSK_CONFIRMATION_KEY, device_work_area
 from core.mixins import KIOSK_SESSION_KEY, StaffViewMixin
 from vacations.forms import VacationRequestForm
 from vacations.models import VacationRequest
@@ -30,17 +31,17 @@ def _formatar(delta):
 
 
 def _totais(worker):
-    """Total trabalhado hoje e esta semana. Turnos abertos contam até
-    agora; cada turno conta no dia da entrada (simplificação assumida)."""
+    """Total trabalhado hoje e esta semana, sem as pausas não pagas.
+    Turnos abertos contam até agora; cada turno conta no seu dia de
+    trabalho, o da entrada (Fase 5)."""
     agora = timezone.now()
     hoje = timezone.localdate()
     inicio_semana = hoje - datetime.timedelta(days=hoje.weekday())
 
     def soma(desde):
-        limite = timezone.make_aware(datetime.datetime.combine(desde, datetime.time.min))
         total = datetime.timedelta()
-        for e in worker.time_entries.filter(check_in__gte=limite):
-            total += (e.check_out or agora) - e.check_in
+        for e in worker.time_entries.filter(work_date__gte=desde).prefetch_related("breaks__break_type"):
+            total += e.worked(until=agora)
         return total
 
     total_hoje = soma(hoje)
@@ -53,10 +54,15 @@ def _totais(worker):
 
 def _contexto_ponto(worker):
     entry = worker.open_entry
+    pausa = entry.open_break if entry else None
     return {
         "worker": worker,
         "entry": entry,
         "em_turno": entry is not None,
+        "pausa": pausa,
+        "tipos_pausa": BreakType.objects.filter(restaurant=worker.restaurant, archived_at__isnull=True)
+        if entry and not pausa
+        else [],
         "totais": _totais(worker),
     }
 
@@ -75,9 +81,12 @@ class StaffHomeView(StaffViewMixin, TemplateView):
         return render(request, self.template_name, contexto)
 
 
+NOMES_ACAO = {"entrada": "Entrada", "saida": "Saída", "pausa": "Início de pausa", "fim_pausa": "Fim de pausa"}
+
+
 class MarkView(StaffViewMixin, View):
-    """Marca entrada ou saída. Um único hx-post devolve o fragmento do
-    botão já no novo estado.
+    """Marca entrada, saída, início ou fim de pausa. Um único hx-post
+    devolve o fragmento do botão já no novo estado.
 
     O formulário diz a ação que o botão mostrava (`acao`), e a fila
     offline envia também `marcado_em` (o timestamp é o do momento da
@@ -115,11 +124,27 @@ class MarkView(StaffViewMixin, View):
                     "Esta marcação foi feita por outro colaborador. Só sincroniza com a sessão dele."
                 )
             if acao == "entrada" or (not acao and not worker.open_entry):
-                open_shift(worker=worker, at=momento)
+                source = (
+                    TimeEntry.Source.QUIOSQUE
+                    if request.session.get(KIOSK_SESSION_KEY)
+                    else TimeEntry.Source.TELEMOVEL
+                )
+                open_shift(worker=worker, at=momento, work_area=device_work_area(request), source=source)
                 acao, texto = "entrada", "Entrada registada"
             elif acao == "saida" or not acao:
                 close_shift(worker=worker, at=momento)
                 acao, texto = "saida", "Saída registada"
+            elif acao == "pausa":
+                tipo = BreakType.objects.filter(
+                    restaurant=worker.restaurant, pk=request.POST.get("tipo_pausa") or None
+                ).first()
+                if tipo is None:
+                    raise ValidationError("Escolha o tipo de pausa.")
+                start_break(worker=worker, break_type=tipo, at=momento)
+                texto = "Pausa iniciada"
+            elif acao == "fim_pausa":
+                end_break(worker=worker, at=momento)
+                texto = "Pausa terminada"
             else:
                 raise ValidationError("Marcação inválida.")
             ok = True
@@ -130,7 +155,7 @@ class MarkView(StaffViewMixin, View):
         if ok and request.session.get(KIOSK_SESSION_KEY):
             confirmacao = {
                 "nome": worker.full_name,
-                "acao": "Entrada" if acao == "entrada" else "Saída",
+                "acao": NOMES_ACAO[acao],
                 "hora": timezone.localtime(momento).strftime("%H:%M"),
             }
             logout(request)
@@ -162,7 +187,10 @@ class StaffHistoryView(StaffViewMixin, TemplateView):
         worker = _worker_for(request.user)
         if worker is None:
             return render(request, "staff/sem_ficha.html")
-        entries = worker.time_entries.select_related("corrected_by")[:30]
+        entries = (
+            worker.time_entries.select_related("corrected_by", "work_area")
+            .prefetch_related("breaks__break_type")[:30]
+        )
         return render(
             request,
             self.template_name,

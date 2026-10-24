@@ -8,6 +8,7 @@ from django.shortcuts import redirect, render
 from django.views import View
 
 from core.mixins import KIOSK_SESSION_KEY, PIN_SESSION_KEY, ManagerRequiredMixin
+from core.models import WorkArea
 from core.utils import restaurant_scope
 from workers.models import Worker
 
@@ -49,7 +50,8 @@ class PostLoginRedirectView(LoginRequiredMixin, View):
 def _device_info(request):
     """Conteúdo do cookie de dispositivo, ou None se não houver ou for
     inválido. Cookies anteriores ao modo quiosque não trazem `partilhado`
-    e contam como partilhados: é o caso mais seguro."""
+    e contam como partilhados: é o caso mais seguro. Os anteriores à Fase 5
+    não trazem área, e as marcações feitas neles ficam sem área."""
     valor = request.COOKIES.get(DEVICE_COOKIE)
     if not valor:
         return None
@@ -57,7 +59,15 @@ def _device_info(request):
         info = signing.loads(valor, salt=DEVICE_COOKIE, max_age=DEVICE_MAX_AGE)
     except signing.BadSignature:
         return None
-    return {"partilhado": bool(info.get("partilhado", True))}
+    return {"partilhado": bool(info.get("partilhado", True)), "area": info.get("area")}
+
+
+def device_work_area(request):
+    """Área do dispositivo onde se está a marcar, se ainda estiver em uso."""
+    info = _device_info(request)
+    if not info or not info["area"]:
+        return None
+    return WorkArea.objects.filter(pk=info["area"], archived_at__isnull=True).first()
 
 
 def _device_ok(request):
@@ -69,18 +79,30 @@ class DeviceActivateView(ManagerRequiredMixin, View):
     assinado de longa duração que dá acesso ao ecrã de login por PIN
     (secção 7 do plano)."""
 
+    def _areas(self, request):
+        return restaurant_scope(request.user, WorkArea.objects.filter(archived_at__isnull=True))
+
     def get(self, request):
         info = _device_info(request)
         return render(
             request,
             "accounts/dispositivo.html",
-            {"ativo": info is not None, "partilhado": info["partilhado"] if info else True},
+            {
+                "ativo": info is not None,
+                "partilhado": info["partilhado"] if info else True,
+                "area_atual": info["area"] if info else None,
+                "areas": self._areas(request),
+            },
         )
 
     def post(self, request):
         resp = redirect("accounts:dispositivo")
         partilhado = request.POST.get("modo", "partilhado") != "pessoal"
-        valor = signing.dumps({"por": request.user.pk, "partilhado": partilhado}, salt=DEVICE_COOKIE)
+        area = self._areas(request).filter(pk=request.POST.get("area") or None).first()
+        valor = signing.dumps(
+            {"por": request.user.pk, "partilhado": partilhado, "area": area.pk if area else None},
+            salt=DEVICE_COOKIE,
+        )
         resp.set_cookie(
             DEVICE_COOKIE,
             valor,

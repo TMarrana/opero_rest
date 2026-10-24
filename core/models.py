@@ -27,3 +27,24 @@ class Restaurant(TimeStampedModel):
 
     def __str__(self):
         return self.name
+
+
+class WorkArea(TimeStampedModel):
+    """Área de trabalho: cozinha, sala, bar (Fase 5). O dispositivo do
+    restaurante fica associado a uma área, e cada marcação herda a área
+    do dispositivo onde foi feita. Arquiva-se em vez de se apagar, porque
+    as marcações já feitas apontam para ela."""
+
+    restaurant = models.ForeignKey(
+        Restaurant, verbose_name="restaurante", on_delete=models.CASCADE, related_name="work_areas"
+    )
+    name = models.CharField("nome", max_length=60)
+    archived_at = models.DateTimeField("arquivada em", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "área de trabalho"
+        verbose_name_plural = "áreas de trabalho"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name

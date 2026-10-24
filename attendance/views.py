@@ -1,6 +1,7 @@
 import datetime
 
 from django.contrib import messages
+from django.db.models import Q
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -18,8 +19,10 @@ from .services import add_manual_entry, correct_entry
 
 
 class TeamDayView(ManagerRequiredMixin, TemplateView):
-    """Ponto da equipa num dia: quem esteve, quem está em turno e o que
-    falta — entradas sem saída ficam assinaladas."""
+    """Ponto da equipa num dia de trabalho: quem esteve, quem está em turno
+    e o que falta. Um turno que passa a meia-noite aparece só no dia da
+    entrada (Fase 5); um turno de um dia anterior ainda aberto aparece
+    também, assinalado como saída em falta."""
 
     template_name = "manage/attendance/dia.html"
 
@@ -27,29 +30,28 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
         ctx = super().get_context_data(**kwargs)
         dia = parse_date(self.request.GET.get("dia", "") or "") or timezone.localdate()
         workers = restaurant_scope(self.request.user, Worker.objects.filter(is_active=True))
-        inicio = timezone.make_aware(datetime.datetime.combine(dia, datetime.time.min))
-        fim = inicio + datetime.timedelta(days=1)
         entries = (
             TimeEntry.objects.filter(worker__in=workers)
-            .filter(check_in__lt=fim)
-            .filter(models_or_open(inicio))
-            .select_related("worker", "corrected_by")
+            .filter(Q(work_date=dia) | Q(work_date__lt=dia, check_out__isnull=True))
+            .select_related("worker", "corrected_by", "work_area")
+            .prefetch_related("breaks__break_type")
             .order_by("check_in")
         )
         por_worker = {w.pk: [] for w in workers}
         for e in entries:
             por_worker.setdefault(e.worker_id, []).append(e)
+        agora = timezone.now()
         linhas = []
         for w in workers:
             registos = por_worker.get(w.pk, [])
+            do_dia = [r for r in registos if r.work_date == dia]
             linhas.append(
                 {
                     "worker": w,
                     "registos": registos,
                     "em_turno": any(r.is_open for r in registos),
-                    "saida_em_falta": any(
-                        r.is_open and r.check_in < inicio for r in registos
-                    ),
+                    "saida_em_falta": any(r.is_open and r.work_date < dia for r in registos),
+                    "total": sum((r.worked(until=agora) for r in do_dia), datetime.timedelta()),
                 }
             )
         ctx["linhas"] = linhas
@@ -58,12 +60,6 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
         ctx["dia_seguinte"] = dia + datetime.timedelta(days=1)
         ctx["hoje"] = timezone.localdate()
         return ctx
-
-
-def models_or_open(inicio):
-    from django.db.models import Q
-
-    return Q(check_out__gte=inicio) | Q(check_out__isnull=True)
 
 
 class EntryCorrectionView(ManagerRequiredMixin, View):
@@ -78,6 +74,13 @@ class EntryCorrectionView(ManagerRequiredMixin, View):
             pk=pk,
         )
 
+    def _contexto(self, entry, form):
+        return {
+            "form": form,
+            "entry": entry,
+            "correcoes": entry.corrections.select_related("corrected_by"),
+        }
+
     def get(self, request, pk):
         entry = self._get_entry(request, pk)
         form = EntryCorrectionForm(
@@ -88,7 +91,7 @@ class EntryCorrectionView(ManagerRequiredMixin, View):
                 else "",
             }
         )
-        return render(request, "manage/attendance/corrigir.html", {"form": form, "entry": entry})
+        return render(request, "manage/attendance/corrigir.html", self._contexto(entry, form))
 
     def post(self, request, pk):
         entry = self._get_entry(request, pk)
@@ -103,11 +106,11 @@ class EntryCorrectionView(ManagerRequiredMixin, View):
                     check_out=form.cleaned_data["check_out"],
                 )
                 messages.success(request, "Registo corrigido")
-                dia = timezone.localtime(entry.check_in).date().isoformat()
+                dia = entry.work_date.isoformat()
                 return redirect(f"/gestao/ponto/?dia={dia}")
             except ValidationError as exc:
                 form.add_error(None, exc.messages[0])
-        return render(request, "manage/attendance/corrigir.html", {"form": form, "entry": entry})
+        return render(request, "manage/attendance/corrigir.html", self._contexto(entry, form))
 
 
 class EntryAddView(ManagerRequiredMixin, View):
@@ -135,7 +138,7 @@ class EntryAddView(ManagerRequiredMixin, View):
                     check_out=form.cleaned_data["check_out"],
                 )
                 messages.success(request, "Registo acrescentado")
-                dia = timezone.localtime(entry.check_in).date().isoformat()
+                dia = entry.work_date.isoformat()
                 return redirect(f"/gestao/ponto/?dia={dia}")
             except ValidationError as exc:
                 form.add_error(None, exc.messages[0])

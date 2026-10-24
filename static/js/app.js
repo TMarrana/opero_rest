@@ -64,6 +64,8 @@
   function nomeAcao(acao) {
     if (acao === "entrada") return "Entrada";
     if (acao === "saida") return "Saída";
+    if (acao === "pausa") return "Início de pausa";
+    if (acao === "fim_pausa") return "Fim de pausa";
     return "Marcação";
   }
 
@@ -141,6 +143,7 @@
     dados.append("marcado_em", item.t);
     if (item.acao) dados.append("acao", item.acao);
     if (item.trabalhador) dados.append("trabalhador", item.trabalhador);
+    if (item.tipoPausa) dados.append("tipo_pausa", item.tipoPausa);
     fetch("/equipa/marcar/", {
       method: "POST",
       headers: {
@@ -195,15 +198,17 @@
   }
 
   document.addEventListener("htmx:sendError", function (evt) {
-    var form = evt.detail.elt.closest ? evt.detail.elt.closest("#form-ponto") : null;
+    var form = evt.detail.elt.closest ? evt.detail.elt.closest("form.form-ponto") : null;
     if (!form) return;
     var acao = form.querySelector("input[name=acao]");
     var trabalhador = form.querySelector("input[name=trabalhador]");
+    var tipoPausa = form.querySelector("input[name=tipo_pausa]");
     var fila = lerFila();
     fila.push({
       t: new Date().toISOString(),
       acao: acao ? acao.value : "",
       trabalhador: trabalhador ? trabalhador.value : trabalhadorAtual(),
+      tipoPausa: tipoPausa ? tipoPausa.value : "",
       estado: POR_ENVIAR,
     });
     gravarFila(fila);

@@ -1,4 +1,5 @@
 {% extends "base_manage.html" %}
+{% load ponto %}
 {% block title %}Ponto{% endblock %}
 {% block content %}
 <div class="flex flex-wrap items-end justify-between gap-4">
@@ -20,7 +21,7 @@
   <div class="overflow-x-auto">
     <table class="tabela">
       <thead>
-        <tr><th>Trabalhador</th><th>Registos do dia</th><th>Estado</th><th><span class="sr-only">Ações</span></th></tr>
+        <tr><th>Trabalhador</th><th>Registos do dia</th><th class="text-right">Trabalhado</th><th>Estado</th><th><span class="sr-only">Ações</span></th></tr>
       </thead>
       <tbody>
         {% for linha in linhas %}
@@ -31,10 +32,14 @@
             <ul class="space-y-1">
               {% for r in linha.registos %}
               <li class="font-dados text-sm">
-                {{ r.check_in|date:"H:i" }} &rarr;
-                {% if r.check_out %}{{ r.check_out|date:"H:i" }}{% else %}<span class="font-semibold text-chama">em falta</span>{% endif %}
-                {% if r.corrected_by %}<span class="ml-1 text-xs text-ardosia" title="{{ r.correction_reason }}">(corrigido)</span>{% endif %}
-                <a href="{% url 'attendance:corrigir' r.pk %}" class="ml-2 text-xs text-ardosia underline underline-offset-2 hover:text-carvao">Corrigir</a>
+                {% if r.work_date != dia %}<span class="text-xs text-ardosia">{{ r.work_date|date:"d/m" }}</span> {% endif %}{{ r.check_in|date:"H:i" }} &rarr;
+                {% if r.check_out %}{{ r.check_out|date:"H:i" }}{% if r.check_out|date:"Y-m-d" != r.work_date|date:"Y-m-d" %}<span class="text-xs text-ardosia"> (+1)</span>{% endif %}{% elif r.work_date < dia %}<span class="font-semibold text-chama">em falta</span>{% else %}<span class="text-ardosia">em turno</span>{% endif %}
+                {% if r.work_area %}<span class="ml-1 font-sans text-xs text-ardosia">{{ r.work_area.name }}</span>{% endif %}
+                {% if r.corrected_by %}<span class="ml-1 font-sans text-xs text-ardosia" title="{{ r.correction_reason }}">(corrigido)</span>{% endif %}
+                <a href="{% url 'attendance:corrigir' r.pk %}" class="ml-2 font-sans text-xs text-ardosia underline underline-offset-2 hover:text-carvao">{% if r.corrected_by %}Corrigir · histórico{% else %}Corrigir{% endif %}</a>
+                {% for p in r.breaks.all %}
+                <span class="block pl-4 text-xs text-ardosia">{{ p.break_type.name }} {{ p.start|date:"H:i" }}&ndash;{% if p.end %}{{ p.end|date:"H:i" }}{% else %}…{% endif %}{% if not p.break_type.paid %} · não paga{% endif %}</span>
+                {% endfor %}
               </li>
               {% endfor %}
             </ul>
@@ -42,6 +47,7 @@
             <span class="text-sm text-ardosia">Sem registos</span>
             {% endif %}
           </td>
+          <td class="text-right font-dados text-sm">{% if linha.total %}{{ linha.total|horas }}{% else %}—{% endif %}</td>
           <td>
             {% if linha.saida_em_falta %}
             {% include "components/badge.html" with label="Saída em falta" variante="chama" %}

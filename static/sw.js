@@ -1,7 +1,7 @@
 /* Service worker do Opero: shell da vista staff em cache (secção 8, Fase 3).
    Estáticos: cache-first. Páginas: network-first com fallback ao cache.
    POSTs nunca passam por aqui — a fila offline vive em app.js. */
-const CACHE = "opero-shell-v3";
+const CACHE = "opero-shell-v4";
 const SHELL = [
   "/static/css/app.css",
   "/static/js/htmx.min.js",

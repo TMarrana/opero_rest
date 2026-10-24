@@ -2,7 +2,7 @@
 {% block title %}Corrigir registo{% endblock %}
 {% block content %}
 <h1 class="font-display text-2xl font-bold">Corrigir registo de ponto</h1>
-<p class="mt-1 text-sm text-ardosia">{{ entry.worker.full_name }} · registo de {{ entry.check_in|date:"d M Y" }}. A correção fica auditada: o seu nome, o motivo e a hora entram no registo.</p>
+<p class="mt-1 text-sm text-ardosia">{{ entry.worker.full_name }} · registo de {{ entry.work_date|date:"d M Y" }}. A correção fica auditada: o seu nome, o motivo, a hora e o valor anterior ficam no histórico.</p>
 
 <form method="post" class="mt-6 max-w-md space-y-5">
   {% csrf_token %}
@@ -15,13 +15,33 @@
       {% include "components/campo.html" with field=form.check_out %}
     </div>
     {% include "components/campo.html" with field=form.reason %}
-    {% if entry.corrected_by %}
-    <p class="text-xs text-ardosia">Última correção: {{ entry.corrected_by }} em {{ entry.corrected_at|date:"d M Y H:i" }} — «{{ entry.correction_reason }}»</p>
-    {% endif %}
   </div>
   <div class="flex justify-end gap-3">
     {% include "components/botao.html" with label="Cancelar" variante="fantasma" href="/gestao/ponto/" %}
     {% include "components/botao.html" with label="Corrigir registo" variante="perigo" %}
   </div>
 </form>
+
+{% if correcoes %}
+<section class="mt-10 max-w-md">
+  <h2 class="font-display text-lg font-bold">Histórico de correções</h2>
+  <div class="mt-4 rail-taloes">
+    {% for c in correcoes %}
+    <article class="talao">
+      <time class="block text-xs text-ardosia">{{ c.corrected_at|date:"d M Y · H:i"|upper }}</time>
+      <p class="mt-1 font-semibold uppercase tracking-wide">{{ c.get_kind_display }}</p>
+      {% if c.kind == "ALTERAR" %}
+      {% if c.previous_known %}
+      <p class="mt-0.5">antes {{ c.old_check_in|date:"d/m H:i" }} &rarr; {% if c.old_check_out %}{{ c.old_check_out|date:"d/m H:i" }}{% else %}sem saída{% endif %}</p>
+      {% else %}
+      <p class="mt-0.5 text-ardosia">antes: valor não guardado (correção anterior ao histórico)</p>
+      {% endif %}
+      {% endif %}
+      <p class="mt-0.5">{% if c.kind == "ALTERAR" %}depois {% endif %}{{ c.new_check_in|date:"d/m H:i" }} &rarr; {% if c.new_check_out %}{{ c.new_check_out|date:"d/m H:i" }}{% else %}sem saída{% endif %}</p>
+      <p class="mt-1 text-xs text-ardosia">{{ c.corrected_by }} · {{ c.reason }}</p>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
 {% endblock %}
