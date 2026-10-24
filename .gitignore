@@ -26,3 +26,7 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Estudo de engenharia reversa (repo git proprio)
+/re-factorial/
+/re-factorial-handoff-*.zip

@@ -38,6 +38,8 @@ Ao concluir qualquer trabalho descrito na secção 8:
 | 2 — Pessoas | 🟡 Em curso |
 | 3 — Vista do colaborador e PWA | 🟡 Em curso |
 | 4 — Dashboard, estabilização e piloto | 🟡 Em curso |
+| 5 — Ponto e ausências, segunda iteração | ⬜ Por iniciar (âmbito a validar com AT) |
+| 6 — Planeador de turnos | ⬜ Por iniciar (âmbito a validar com AT) |
 
 Legenda: ⬜ Por iniciar · 🟡 Em curso · ✅ Concluída
 
@@ -69,8 +71,9 @@ O docx trata a interface como mínima ("navegação simples", dashboard sem grá
 | Vista móvel dedicada ao colaborador, separada do backoffice | Decidido |
 | PWA instalável | Decidido |
 | Login por PIN para marcar ponto | **A validar com AT** (secção 7) |
+| Fases 5 e 6: pausas, fecho do mês, saldo de férias, planeador de turnos | **A validar com AT** (secção 12) |
 
-Tudo o resto neste documento deriva do docx.
+Tudo o resto neste documento deriva do docx, exceto as Fases 5 e 6. Essas vêm do estudo da Factorial (`re-factorial/clone/prd.md`) e incluem duas coisas que o docx deixou fora do MVP: o saldo anual de férias e o planeamento visual de equipa.
 
 ---
 
@@ -268,7 +271,7 @@ Fora do MVP, por decisão do docx: lotes, datas de validade, múltiplos armazén
 
 **`VacationRequest`** — `worker` (FK), `start_date`, `end_date`, `status` (`PENDENTE`, `APROVADO`, `RECUSADO`, `CANCELADO`), `request_note`, `decided_by` (FK User, nullable), `decided_at`, `decision_note`.
 
-Fora do MVP: contagem automática de saldo anual, integração com payroll, regras laborais, substituições, planeamento visual de equipa.
+Fora do MVP: contagem automática de saldo anual, integração com payroll, regras laborais, substituições, planeamento visual de equipa. As Fases 5 e 6 propõem trazer o saldo anual e o planeamento para depois do MVP, e as alterações ao modelo de dados estão descritas nessas fases.
 
 ### Invariantes — implementar e testar
 
@@ -406,6 +409,69 @@ Alertas são visuais. Sem email, SMS ou notificações nesta fase.
 
 ---
 
+### Fase 5 — Ponto e ausências, segunda iteração
+*Fora do docx. Vem do estudo da Factorial (`re-factorial/clone/prd.md`, prioridade P1). Depende de: Fases 2 e 3, de a AT aprovar o âmbito e da validação jurídica do registo de tempos (secção 12).*
+**Estado:** ⬜ Por iniciar
+
+O MVP regista entradas e saídas. Esta fase dá ao gerente o que precisa para fechar o mês e prová-lo ao contabilista ou a uma inspeção. A ordem dos blocos é a de construção: cada um assenta no anterior.
+
+**Modelo de dados e persistência**
+
+- [ ] `core.WorkArea` (`restaurant`, `name`, `archived_at`): cozinha, sala, bar. O dispositivo do restaurante passa a estar associado a uma área, e cada marcação herda a área do dispositivo onde foi feita.
+- [ ] `TimeEntry.work_date`: o dia de trabalho é o dia da entrada, e um turno das 19h às 2h conta todo no dia em que começou. Uma data migration preenche o campo a partir de `check_in`. Hoje os totais da vista staff já seguem esta regra (`staff/views.py::_totais`), mas a vista da equipa (`TeamDayView`) mostra o mesmo turno nos dois dias. As duas passam a agrupar por `work_date`.
+- [ ] `TimeEntry.work_area` e `TimeEntry.source` (quiosque, telemóvel, gerente).
+- [ ] Pausas: `attendance.BreakType` (`name`, `paid`, `archived_at`) e `attendance.Break` (`entry`, `start`, `end`, `break_type`). As pausas não pagas não contam para os totais. Na primeira versão as pausas são marcadas à mão; as pausas automáticas ficam para depois.
+- [ ] Histórico de correções: hoje `correct_entry()` escreve por cima do registo e o valor anterior perde-se. Cada correção passa a guardar os valores antigos e os novos, com autor, motivo e data.
+
+**Ecrãs do ciclo principal**
+
+- [ ] Ecrã de ponto do colaborador com pausa: em turno, o ecrã mostra «Iniciar pausa» e «Saída»; em pausa, mostra «Terminar pausa». Continua a ser um único botão de estado principal (secção 5), e cumpre a aceitação da Fase 3 (5 segundos, 2 toques).
+- [ ] Pedido de correção pelo colaborador (`attendance.CorrectionRequest`: `entry`, `kind` com criar, alterar ou apagar, valores antigos e novos, `status`, `decided_by`). O gerente aprova ou recusa, e a decisão fica registada no histórico de correções.
+- [ ] Registos por resolver: uma entrada sem saída que passe de um limite fixo (valor a decidir, por exemplo 14 horas) fica pendente e não conta para os totais até o gerente a resolver. Na Fase 6 este limite passa a vir das horas previstas no turno.
+
+**Ausências**
+
+- [ ] Tipos de ausência (`vacations.AbsenceType`: `name`, `color`, `deducts_balance`, `requires_approval`, `requires_attachment`, `half_days`). `VacationRequest` ganha `absence_type`, `half_day` e `days_taken`. As férias passam a ser um tipo entre outros: falta justificada, baixa, licença.
+- [ ] Saldo anual (`vacations.Allowance`: `worker`, `year`, `days`, `carried_over`, `carry_over_expires_on`). O saldo aparece no pedido e na decisão. O valor por defeito português (22 dias úteis) está por validar (secção 12).
+- [ ] Feriados (`vacations.Holiday`: `restaurant`, nulo para os nacionais, `date`, `name`, `half_day`). Os feriados nacionais vêm de origem, os municipais são acrescentados por restaurante, e o cálculo de `days_taken` não conta feriados nem folgas.
+- [ ] Períodos bloqueados (`vacations.BlockedPeriod`: `restaurant`, `start`, `end`, `absence_types`, `exempt_workers`). Um pedido que caia num período bloqueado é recusado na submissão, com uma mensagem que diz porquê.
+
+**Fecho do mês**
+
+- [ ] `attendance.MonthClose` (`restaurant`, `month`, `worker`, `approved_by`, `approved_at`). O gerente aprova o mês por trabalhador, e só o pode fazer quando não restam registos por resolver nem pedidos de correção pendentes.
+- [ ] Depois de aprovado, um mês fica bloqueado: não aceita correções, registos manuais nem pedidos de correção. Para reabrir, é preciso uma ação explícita, auditada e com motivo.
+- [ ] Exportação do mês aprovado (CSV na primeira versão), num formato a acordar com o contabilista (secção 12).
+
+*Invariantes novas, que passam para a secção 6 quando a fase arrancar:*
+
+7. **Uma correção nunca apaga o valor anterior.** O histórico de correções guarda o antes e o depois.
+8. **Um mês aprovado não muda** sem que seja reaberto de forma explícita e auditada.
+9. **Um registo por resolver não conta para os totais.**
+
+*Aceitação:* um colaborador marca entrada, uma pausa não paga e saída num turno que passa a meia-noite. O gerente vê o turno num só dia, com a pausa descontada. O colaborador pede uma correção, que o gerente aprova, e o valor anterior fica no histórico. Por fim, o gerente aprova o mês e exporta-o, e a partir daí o mês recusa alterações.
+
+---
+
+### Fase 6 — Planeador de turnos
+*Fora do docx. Vem do estudo da Factorial (prioridade P1). Depende de: Fase 5 (áreas de trabalho, tipos de ausência) e de a AT aprovar o âmbito.*
+**Estado:** ⬜ Por iniciar
+
+Módulo novo, numa app `shifts`. É o primeiro passo do ciclo semanal do gerente: planear e publicar a semana, e depois comparar o planeado com o realizado.
+
+- [ ] `shifts.ShiftTemplate` (`restaurant`, `name`, `start`, `end`, `work_area`, `color`): turnos guardados, como «Almoço» ou «Jantar».
+- [ ] `shifts.Shift` (`worker`, `start_at`, `end_at`, `work_area`, `state` com rascunho, publicado ou reserva, `template`). A grelha semanal é organizada por trabalhador e pode ser filtrada por área.
+- [ ] Copiar a semana anterior: os turnos copiados nascem em rascunho.
+- [ ] Folgas (`shifts.RestDay`: `worker`, `date`, `state`).
+- [ ] Ausências no planeador: as férias aprovadas e as outras ausências aparecem na grelha. Um turno marcado sobre uma ausência, uma folga ou outro turno é assinalado como conflito.
+- [ ] Publicar a semana: o colaborador só vê os turnos publicados. A vista staff ganha «Os meus turnos», um quarto elemento além dos três que a secção 5 previa, o que é uma alteração a validar visualmente.
+- [ ] As horas previstas no turno substituem o limite fixo dos registos por resolver da Fase 5.
+
+*Invariante nova:* 10. **O colaborador nunca vê um turno em rascunho.**
+
+*Aceitação:* o gerente copia a semana anterior, ajusta dois turnos a partir dos turnos guardados, marca uma folga e vê um conflito com férias aprovadas. Depois de o resolver, publica a semana, e o colaborador vê os seus turnos no telemóvel.
+
+---
+
 ## 9. Estados e feedback
 
 Regra transversal, aplicada em todos os ecrãs das duas superfícies.
@@ -428,6 +494,13 @@ Fornecedores, lista de compras, encomendas e receção com geração de entradas
 Integração com POS e atualização de stock por vendas. Fichas técnicas e receitas. Previsão de compras. Multi-restaurante com painel de grupo. Aplicação móvel nativa. Integrações contabilísticas. Alertas por email, SMS ou WhatsApp. Gestão de validade e lotes. Relatórios financeiros avançados.
 
 **Nada desta lista entra no MVP.** Construir agora põe em risco o prazo e a qualidade da primeira versão.
+
+### Depois das Fases 5 e 6 (estudo da Factorial, prioridades P2 e P3)
+- **P2:** trocas de turno entre colegas (precisam de notificações push na PWA; testar em iOS primeiro), uma caixa de pedidos única no dashboard (férias, correções e trocas), horas extra com um só nível de aprovação, cobertura mínima por área e hora, e horários fixos para quem não faz turnos.
+- **P3:** geolocalização na marcação, só em modo de alerta e só depois de uma avaliação de impacto (AIPD), e equipas e contratos para grupos com várias casas.
+
+### Não fazer
+Reconhecimento facial e biometria. Contadores de férias para vários países. Aprovação em vários níveis. Grupos de permissões configuráveis, porque os quatro perfis da secção 7 chegam. API pública e marketplace.
 
 ---
 
@@ -453,6 +526,19 @@ Um teste por invariante, no mínimo:
 | `test_staff_cannot_edit_items` | colaborador recebe 403 nas views de stock |
 | `test_pin_does_not_open_backoffice` | sessão criada por PIN é rejeitada em todas as views de gestão |
 | `test_vacation_overlap_flagged` | sobreposição com pedido aprovado é assinalada |
+
+Quando as Fases 5 e 6 arrancarem, juntam-se estes testes. A lista completa de testes do estudo, um por regra, está em `re-factorial/clone/parity.md`.
+
+| Teste | Verifica |
+|---|---|
+| `test_overnight_shift_counts_on_work_date` | um turno das 19h às 2h conta todo no dia da entrada, nas duas superfícies |
+| `test_unpaid_break_excluded_from_total` | as pausas não pagas não contam para os totais |
+| `test_correction_keeps_previous_values` | uma correção guarda o antes e o depois (invariante 7) |
+| `test_approved_month_is_locked` | um mês aprovado recusa correções e registos manuais (invariante 8) |
+| `test_unresolved_entry_excluded_from_total` | um registo por resolver não conta para os totais (invariante 9) |
+| `test_blocked_period_rejects_request` | um pedido de férias num período bloqueado é recusado |
+| `test_days_taken_skips_holidays` | o cálculo de dias não conta feriados nem folgas |
+| `test_staff_never_sees_draft_shift` | um turno em rascunho não aparece na vista staff (invariante 10) |
 
 ### Manual, por fase
 
@@ -482,6 +568,9 @@ Bloqueiam a Fase 4, não a Fase 0. O desenvolvimento começa sem elas.
 | Permissões do gerente sobre stock (⚠ secção 7) | AT | uma linha nos mixins |
 | PIN para o staff (⚠ secção 7) | AT | Fase 3 completa depende disto |
 | Cliente piloto e disponibilidade semanal AT/TM | AT | calendário das sprints |
+| Âmbito das Fases 5 e 6 (saldo anual e planeamento, que o docx exclui do MVP) | AT | se as fases arrancam e em que ordem face ao piloto |
+| Validação jurídica do registo de tempos, férias e descansos (Código do Trabalho; Q-001 e Q-010 do estudo) | AT, com contabilista ou jurista | pode bloquear o piloto; define os valores por defeito da Fase 5 |
+| Formato da exportação mensal | AT, com o contabilista | formato do ficheiro na Fase 5 |
 
 ---
 
@@ -499,6 +588,8 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 
 | Data | Fase | O que foi feito | Por fechar | Próximo passo |
 |---|---|---|---|---|
+| 2026-10-24 | 5, 6 | Recomendações do PRD do estudo da Factorial passadas para o plano: Fase 5 (áreas de trabalho, dia de trabalho, pausas, histórico e pedidos de correção, registos por resolver, tipos de ausência, saldo, feriados, períodos bloqueados, fecho do mês e exportação), Fase 6 (planeador de turnos), prioridades P2 e P3 e lista do que não fazer na secção 10, testes novos na secção 11 e três decisões novas na secção 12. Nenhum código alterado. | Âmbito das duas fases por aprovar pela AT, e validação jurídica pendente. | Fechar as Fases 1 a 4 (revisão visual, PWA no telemóvel) e levar à AT as decisões novas da secção 12. |
+| 2026-10-23 | — | Estudo da Factorial a partir de fontes públicas, em `re-factorial/` (ver Notas de desvio). | Recomendações por passar para as fases. | Passar o PRD para o plano (feito a 2026-10-24). |
 | 2026-09-09 | — | O `runserver` passa a arrancar em `127.0.0.1:8001` por omissão (`DEFAULT_ADDRPORT` em `manage.py`; um endereço explícito na linha de comandos continua a mandar). O túnel HTTPS para o teste da PWA passa a ser `ssh -R 80:127.0.0.1:8001 nokey@localhost.run` (o `cloudflared` continua sem funcionar nesta rede). Além disso, a palavra OPERO no rail do backoffice e nos dois ecrãs de entrada passou a ser o logo (`static/img/logo-opero.png`, recortado do PNG que estava em `media/`, que é ignorado pelo git e não é servido). 69 testes a passar. | Nada. | Retomar o teste da PWA no telemóvel, agora contra a porta 8001. |
 | 2026-09-04 (3ª sessão) | 3 | **Bug encontrado no teste real da PWA no telemóvel:** instalada a app, abrir o ícone levava ao login de email e password — a `start_url` é `/equipa/` e o `LoginRequiredMixin` usava o `LOGIN_URL` global. Sem escrever `/equipa/entrar/` à mão não havia forma de marcar ponto. Corrigido: `StaffViewMixin.login_url = staff:pin_login`, «Sair» da vista staff volta ao PIN, e o service worker deixou de guardar respostas redirecionadas (servir uma a um pedido de navegação rebenta offline), cache para v2. 4 testes novos, 69 no total. `cloudflared` não funciona nesta rede (ligação à API cortada); o túnel HTTPS usado é `ssh -R 80:127.0.0.1:8000 nokey@localhost.run`. | Retomar o guião da PWA a partir do passo da instalação, agora que o arranque leva ao PIN. Continua por verificar: marcação em modo de avião e sincronização com o timestamp original. | Reinstalar a PWA no telemóvel (limpar os dados do site primeiro, para largar o service worker v1) e completar o teste offline. |
 | 2026-09-04 (2ª sessão, cont. 3) | 4 | Dashboard do gerente com os quatro sinais do docx (áreas de pessoas escondidas ao resp. de stock) e comando `manage.py demo` — restaurante Tasca da Esquina, contas dos 4 perfis (password demo1234, PIN da Marta 2468), stock com movimentos, ponto e férias, incluindo um pedido pendente que sobrepõe um aprovado. 65 testes. Commit na sequência de `bae972d`. | Da Fase 4 falta: bugs P0/P1 do AT (depende dos testes funcionais dele) e ambiente de demonstração (bloqueado por hosting/domínio, secção 12). Das Fases 1–3: revisão visual + teste da PWA em telemóvel real. | O TM deve: correr `manage.py demo` + `runserver`, percorrer os 4 perfis, testar a PWA num telemóvel (instalar, modo avião, sincronizar) e marcar as fases ✅. Em paralelo: fechar com o AT as decisões da secção 12 (PIN, permissões do gerente, hosting). |
@@ -521,3 +612,4 @@ Alterações ao plano decididas durante a execução. Se algo aqui contradiz uma
 - **2026-09-04 · Stock não pode ficar negativo** — o plano não se pronunciava; `register_movement()` rejeita saídas e ajustes que deixem `current_stock < 0`, com mensagem a sugerir ajuste prévio. Racional: um ajuste negativo abaixo de zero implicaria uma contagem física negativa, impossível.
 - **2026-09-04 · Artigos não se apagam** — desativam-se (`is_active`), porque os movimentos os protegem (`on_delete=PROTECT`) e o histórico não se perde. O "D" do CRUD de artigos é a desativação.
 - **2026-09-04 · Grupos criados por data migration** (`accounts/0002`), com sincronização `role`→grupo em signal `post_save`. A autorização efetiva nas views é feita pelos mixins; os grupos mantêm o admin coerente.
+- **2026-10-23 · Estudo da Factorial (fontes públicas)** em `re-factorial/` (repo git próprio, fora do git deste projeto). Recomendações em `re-factorial/clone/prd.md` e `clone/implications.md`: áreas de trabalho (cozinha, sala, bar), dia de trabalho para turnos que passam a meia-noite, pausas, correções pedidas pelo colaborador com histórico, fecho do mês, tipos de ausência e saldo, e um planeador de turnos com rascunho e publicação. A 2026-10-24 entraram no plano como Fases 5 e 6, com o âmbito a validar com a AT (secção 12). Validação jurídica do registo de tempos pendente (Q-001 do estudo).
