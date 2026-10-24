@@ -1,0 +1,43 @@
+{% extends "base_manage.html" %}
+{% block title %}Publicar semana{% endblock %}
+{% block content %}
+<a href="{% url 'shifts:planeador' %}?semana={{ semana|date:'Y-m-d' }}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Turnos</a>
+<h1 class="mt-2 font-display text-2xl font-bold">Publicar a semana de {{ semana|date:"d/m/Y" }}</h1>
+<p class="mt-1 text-sm text-ardosia">Depois de publicar, cada colaborador vê os seus turnos na próxima vez que abrir a aplicação.</p>
+
+{% if com_conflito %}
+<section class="mt-6 max-w-2xl rounded-md border border-chama/40 bg-superficie p-5">
+  <h2 class="font-display text-lg font-bold">{{ com_conflito|length }} turno{{ com_conflito|pluralize }} com conflito</h2>
+  <p class="mt-1 text-sm text-ardosia">A semana só se publica depois de os resolver no planeador.</p>
+  <ul class="mt-3 space-y-2 text-sm">
+    {% for s in com_conflito %}
+    <li><span class="font-medium">{{ s.worker.full_name }}</span> · <span class="font-dados">{{ s.start_at|date:"D d/m H:i" }}&ndash;{{ s.end_at|date:"H:i" }}</span>
+      <span class="block text-chama">{{ s.conflitos|join:"; " }}</span></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section class="mt-6 max-w-2xl cartao p-5">
+  <h2 class="font-display text-lg font-bold">O que muda</h2>
+  <dl class="mt-3 grid grid-cols-2 gap-y-1 font-dados text-sm sm:grid-cols-4">
+    <div><dt class="font-sans text-ardosia">Novos</dt><dd class="text-lg font-semibold">{{ mudancas.novos|length }}</dd></div>
+    <div><dt class="font-sans text-ardosia">Alterados</dt><dd class="text-lg font-semibold">{{ mudancas.alterados|length }}</dd></div>
+    <div><dt class="font-sans text-ardosia">Removidos</dt><dd class="text-lg font-semibold">{{ mudancas.removidos|length }}</dd></div>
+    <div><dt class="font-sans text-ardosia">Folgas</dt><dd class="text-lg font-semibold">{{ mudancas.folgas|length }}</dd></div>
+  </dl>
+  {% if mudancas.afetados %}
+  <p class="mt-4 text-sm"><span class="text-ardosia">Afetados:</span> {{ mudancas.afetados|join:", " }}</p>
+  {% else %}
+  <p class="mt-4 text-sm text-ardosia">Não há nada por publicar nesta semana.</p>
+  {% endif %}
+</section>
+
+{% if not com_conflito and mudancas.afetados %}
+<form method="post" class="mt-6">
+  {% csrf_token %}
+  <input type="hidden" name="semana" value="{{ semana|date:'Y-m-d' }}">
+  {% include "components/botao.html" with label="Publicar semana" %}
+</form>
+{% endif %}
+{% endblock %}

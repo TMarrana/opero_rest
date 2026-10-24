@@ -21,7 +21,7 @@
         <tr class="{% if l.obj.archived_at %}text-ardosia{% endif %}">
           {% for v in l.valores %}
           <td class="{% if forloop.first %}font-medium{% endif %}">
-            {% if v is True %}Sim{% elif v is False %}Não{% elif v.year %}<span class="font-dados">{{ v|date:"d/m/Y" }}</span>{% else %}{{ v }}{% endif %}
+            {% if v is True %}Sim{% elif v is False %}Não{% elif v.year %}<span class="font-dados">{{ v|date:"d/m/Y" }}</span>{% elif v.minute is not None %}<span class="font-dados">{{ v|time:"H:i" }}</span>{% elif v is None %}<span class="text-ardosia">—</span>{% else %}{{ v }}{% endif %}
           </td>
           {% endfor %}
           <td>{% if l.obj.archived_at %}{% include "components/badge.html" with label="Arquivado" %}{% else %}<span class="text-sm text-ardosia">—</span>{% endif %}</td>

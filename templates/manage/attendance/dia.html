@@ -34,12 +34,16 @@
   <div class="overflow-x-auto">
     <table class="tabela">
       <thead>
-        <tr><th>Trabalhador</th><th>Registos do dia</th><th class="text-right">Trabalhado</th><th>Estado</th><th><span class="sr-only">Ações</span></th></tr>
+        <tr><th>Trabalhador</th><th>Previsto</th><th>Registos do dia</th><th class="text-right">Trabalhado</th><th>Estado</th><th><span class="sr-only">Ações</span></th></tr>
       </thead>
       <tbody>
         {% for linha in linhas %}
         <tr>
           <td class="font-medium">{{ linha.worker.full_name }}<span class="block text-xs text-ardosia">{{ linha.worker.job_title }}</span></td>
+          <td class="font-dados text-sm">
+            {% for t in linha.previstos %}<span class="block">{{ t.start_at|date:"H:i" }}&ndash;{{ t.end_at|date:"H:i" }}</span>{% empty %}<span class="text-ardosia">—</span>{% endfor %}
+            {% for d in linha.desvios %}<span class="block font-sans text-xs font-semibold text-chama">{{ d }}</span>{% endfor %}
+          </td>
           <td>
             {% if linha.registos %}
             <ul class="space-y-1">

@@ -9,7 +9,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Break, CorrectionRequest, EntryCorrection, TimeEntry, unresolved_limit, work_date_for
+from .models import Break, CorrectionRequest, EntryCorrection, TimeEntry, work_date_for
 from .month import ensure_open
 
 
@@ -32,7 +32,7 @@ def open_shift(*, worker, at=None, work_area=None, source=""):
     with transaction.atomic():
         aberto = _open_entry_for_update(worker)
         if aberto is not None:
-            if aberto.check_in < at - unresolved_limit():
+            if aberto.is_unresolved(now=at):
                 aberto.missing_exit = True
                 aberto.save(update_fields=["missing_exit", "updated_at"])
             else:
@@ -54,7 +54,7 @@ def close_shift(*, worker, at=None):
         ensure_open(worker, entry.work_date)
         if at <= entry.check_in:
             raise ValidationError("A saída tem de ser depois da entrada.")
-        if entry.check_in < at - unresolved_limit():
+        if entry.is_unresolved(now=at):
             raise ValidationError(
                 f"A entrada de {timezone.localtime(entry.check_in):%d/%m às %H:%M} ficou sem saída há demasiado "
                 "tempo. Peça uma correção com a hora a que saiu."

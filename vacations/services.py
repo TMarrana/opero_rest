@@ -26,15 +26,31 @@ def holidays_between(restaurant, start, end):
 
 
 def count_days(worker, start, end, half_day=False):
-    """Dias de ausência: os dias úteis, de segunda a sexta, sem feriados.
-    Na Fase 6 os dias sem turno planeado e as folgas também deixam de
-    contar (R-037, R-067). Meio dia conta 0,5."""
+    """Dias de ausência, sem feriados nem folgas (R-037).
+
+    Nas semanas em que o trabalhador já tem turnos publicados, contam só
+    os dias com turno (R-067). Nas outras, ainda por planear, contam os
+    dias úteis, de segunda a sexta. Meio dia conta 0,5."""
+    from shifts.models import RestDay, Shift
+
     feriados = holidays_between(worker.restaurant, start, end)
+    folgas = set(RestDay.objects.filter(worker=worker, date__range=(start, end)).values_list("date", flat=True))
+    turnos = set(
+        Shift.objects.filter(
+            worker=worker,
+            work_date__range=(start - datetime.timedelta(days=6), end + datetime.timedelta(days=6)),
+            state__in=[Shift.State.PUBLICADO, Shift.State.RESERVA],
+        ).values_list("work_date", flat=True)
+    )
+    semanas_planeadas = {d - datetime.timedelta(days=d.weekday()) for d in turnos}
     dias = 0
     dia = start
     while dia <= end:
-        if dia.weekday() < 5 and dia not in feriados:
-            dias += 1
+        if dia not in feriados and dia not in folgas:
+            if dia - datetime.timedelta(days=dia.weekday()) in semanas_planeadas:
+                dias += dia in turnos
+            elif dia.weekday() < 5:
+                dias += 1
         dia += datetime.timedelta(days=1)
     if half_day and dias:
         return Decimal("0.5")
@@ -140,6 +156,10 @@ def create_request(*, worker, absence_type, start_date, end_date, half_day=False
         pedido.decided_at = timezone.now()
         pedido.decision_note = "Tipo sem aprovação: aprovado ao registar"
     pedido.save()
+    if pedido.status == VacationRequest.Status.APROVADO:
+        from shifts.services import on_absence_approved
+
+        on_absence_approved(pedido)
     return pedido
 
 
@@ -153,6 +173,10 @@ def decide_request(*, request_obj, user, approve, note=""):
         pedido.decided_at = timezone.now()
         pedido.decision_note = note.strip()
         pedido.save()
+        if approve:
+            from shifts.services import on_absence_approved
+
+            on_absence_approved(pedido)
     request_obj.refresh_from_db()
     return pedido
 
@@ -173,7 +197,12 @@ def cancel_request(*, request_obj, worker):
             raise ValidationError("Só pode cancelar os seus pedidos.")
         if not can_cancel(pedido):
             raise ValidationError("Este pedido já não se pode cancelar: já começou ou já foi decidido.")
+        estava_aprovado = pedido.status == VacationRequest.Status.APROVADO
         pedido.status = VacationRequest.Status.CANCELADO
         pedido.cancelled_at = timezone.now()
         pedido.save(update_fields=["status", "cancelled_at", "updated_at"])
+        if estava_aprovado:
+            from shifts.services import on_absence_cancelled
+
+            on_absence_cancelled(pedido)
     return pedido

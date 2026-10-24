@@ -1,0 +1,25 @@
+{% extends "base_staff.html" %}
+{% block title %}Os meus turnos{% endblock %}
+{% block content %}
+<header class="flex items-baseline justify-between">
+  <h1 class="font-display text-xl font-bold">Os meus turnos</h1>
+  <a href="{% url 'staff:home' %}" class="text-sm text-aco/70 underline underline-offset-4 hover:text-superficie">Voltar</a>
+</header>
+<p class="mt-1 text-sm text-ardosia">Próximas duas semanas. Só aparece o que o gerente já publicou.</p>
+
+<ul class="mt-6 divide-y divide-ardosia/30">
+  {% for d in dias %}
+  <li class="flex min-h-toque items-baseline justify-between gap-4 py-3">
+    <span class="font-dados text-sm {% if d.dia == hoje %}font-semibold text-superficie{% else %}text-ardosia{% endif %}">{{ d.dia|date:"D d/m" }}</span>
+    <span class="text-right">
+      {% for t in d.turnos %}
+      <span class="block font-dados text-base font-semibold">{{ t.start_at|date:"H:i" }}&ndash;{{ t.end_at|date:"H:i" }}</span>
+      <span class="block text-xs text-aco/70">{{ t.label }}{% if t.work_area %} · {{ t.work_area.name }}{% endif %}</span>
+      {% empty %}
+      {% if d.folga %}<span class="text-sm font-semibold text-servico">Folga</span>{% else %}<span class="text-sm text-ardosia">—</span>{% endif %}
+      {% endfor %}
+    </span>
+  </li>
+  {% endfor %}
+</ul>
+{% endblock %}

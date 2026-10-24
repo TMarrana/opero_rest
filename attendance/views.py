@@ -1,5 +1,6 @@
 import datetime
 
+from django.conf import settings
 from django.contrib import messages
 from django.db.models import Q
 from django.http import HttpResponse
@@ -12,6 +13,7 @@ from django.views import View
 from django.views.generic import TemplateView
 
 from core.mixins import ManagerRequiredMixin
+from shifts.models import Shift
 from core.utils import restaurant_scope
 from workers.models import Worker
 
@@ -44,14 +46,22 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
         for e in entries:
             por_worker.setdefault(e.worker_id, []).append(e)
         agora = timezone.now()
+        previstos = {}
+        for t in Shift.objects.filter(
+            worker__in=workers, work_date=dia, state=Shift.State.PUBLICADO
+        ).select_related("template"):
+            previstos.setdefault(t.worker_id, []).append(t)
         linhas = []
         for w in workers:
             registos = por_worker.get(w.pk, [])
             do_dia = [r for r in registos if r.work_date == dia]
+            turnos = previstos.get(w.pk, [])
             linhas.append(
                 {
                     "worker": w,
                     "registos": registos,
+                    "previstos": turnos,
+                    "desvios": _desvios(turnos, do_dia, agora),
                     "em_turno": any(r.is_open for r in registos),
                     "por_resolver": any(r.is_unresolved(now=agora) for r in registos),
                     "total": sum((r.worked(until=agora) for r in do_dia), datetime.timedelta()),
@@ -152,6 +162,30 @@ class EntryAddView(ManagerRequiredMixin, View):
             except ValidationError as exc:
                 form.add_error(None, exc.messages[0])
         return render(request, "manage/attendance/acrescentar.html", {"form": form, "worker": worker})
+
+
+def _desvios(turnos, registos, agora):
+    """Planeado contra realizado (Fase 6): atraso na entrada, saída fora da
+    hora prevista, ou turno previsto sem marcação."""
+    if not turnos:
+        return []
+    tolerancia = datetime.timedelta(minutes=settings.SHIFT_TOLERANCE_MINUTES)
+    inicio = min(t.start_at for t in turnos)
+    fim = max(t.end_at for t in turnos)
+    if not registos:
+        return ["Sem marcação"] if agora > inicio + tolerancia else []
+    desvios = []
+    entrada = min(r.check_in for r in registos)
+    if entrada > inicio + tolerancia:
+        desvios.append(f"Entrou {int((entrada - inicio).total_seconds() // 60)} min depois")
+    saidas = [r.check_out for r in registos if r.check_out]
+    if saidas and all(r.check_out for r in registos):
+        saida = max(saidas)
+        if saida < fim - tolerancia:
+            desvios.append(f"Saiu {int((fim - saida).total_seconds() // 60)} min antes")
+        elif saida > fim + tolerancia:
+            desvios.append(f"Saiu {int((saida - fim).total_seconds() // 60)} min depois")
+    return desvios
 
 
 def _scoped_requests(user):

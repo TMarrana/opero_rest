@@ -11,9 +11,13 @@ from vacations.models import BlockedPeriod, Holiday
 pytestmark = pytest.mark.django_db
 
 
-def test_so_o_admin_entra(client, manager, admin_user):
-    client.force_login(manager)
+def test_so_o_admin_entra(client, manager, admin_user, stock_user):
+    client.force_login(stock_user)
     assert client.get(reverse("config:inicio")).status_code == 403
+    client.force_login(manager)
+    assert client.get(reverse("config:lista", args=["ausencias"])).status_code == 403
+    assert client.get(reverse("config:lista", args=["turnos"])).status_code == 200
+    assert "Tipos de ausência" not in client.get(reverse("config:inicio")).content.decode()
     client.force_login(admin_user)
     html = client.get(reverse("config:inicio")).content.decode()
     assert "Tipos de ausência" in html and "Períodos bloqueados" in html

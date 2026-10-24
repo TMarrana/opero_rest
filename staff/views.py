@@ -334,3 +334,32 @@ class StaffCorrectionView(StaffViewMixin, View):
             except ValidationError as exc:
                 form.add_error(None, exc.messages[0])
         return self._render(request, worker, entry, form)
+
+
+class StaffShiftsView(StaffViewMixin, TemplateView):
+    """Os meus turnos: os publicados e as folgas dos próximos 14 dias. Um
+    turno em rascunho ou em reserva nunca aparece (invariante 10)."""
+
+    template_name = "staff/turnos.html"
+
+    def get(self, request, *args, **kwargs):
+        from shifts.models import RestDay, Shift
+
+        worker = _worker_for(request.user)
+        if worker is None:
+            return render(request, "staff/sem_ficha.html")
+        hoje = timezone.localdate()
+        fim = hoje + datetime.timedelta(days=13)
+        turnos = Shift.objects.filter(
+            worker=worker, state=Shift.State.PUBLICADO, work_date__range=(hoje, fim)
+        ).select_related("template", "work_area")
+        folgas = set(
+            RestDay.objects.filter(
+                worker=worker, state=RestDay.State.PUBLICADO, date__range=(hoje, fim)
+            ).values_list("date", flat=True)
+        )
+        dias = []
+        for i in range(14):
+            dia = hoje + datetime.timedelta(days=i)
+            dias.append({"dia": dia, "turnos": [t for t in turnos if t.work_date == dia], "folga": dia in folgas})
+        return render(request, self.template_name, {"worker": worker, "dias": dias, "hoje": hoje})

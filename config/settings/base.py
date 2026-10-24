@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "workers",
     "attendance",
     "vacations",
+    "shifts",
     "inventory",
     "dashboard",
     "staff",
@@ -109,3 +110,14 @@ ATTENDANCE_UNRESOLVED_HOURS = 14
 # Dias úteis de férias por ano quando o trabalhador não tem saldo definido
 # (Fase 5). O valor do Código do Trabalho, por validar com a AT (Q-008).
 VACATION_DEFAULT_DAYS = 22
+
+# Planeador de turnos (Fase 6).
+# Descanso mínimo entre o fim de um turno e o início do seguinte. Por
+# confirmar com a AT (Q-001); a Factorial só aplica a regra no Enterprise.
+SHIFT_MIN_REST_HOURS = 11
+# Com turno publicado, uma entrada sem saída fica por resolver estas horas
+# depois do fim previsto do turno (substitui o limite fixo da Fase 5).
+SHIFT_UNRESOLVED_MARGIN_HOURS = 4
+# Minutos de tolerância antes de assinalar um atraso ou uma saída fora do
+# previsto na vista da equipa.
+SHIFT_TOLERANCE_MINUTES = 10

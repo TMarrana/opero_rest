@@ -2,7 +2,7 @@ import datetime
 
 from django.conf import settings
 from django.db import models
-from django.db.models import Q
+from django.db.models import OuterRef, Q, Subquery
 from django.utils import timezone
 
 from core.models import TimeStampedModel
@@ -14,13 +14,40 @@ def unresolved_limit():
     return datetime.timedelta(hours=getattr(settings, "ATTENDANCE_UNRESOLVED_HOURS", 14))
 
 
+def shift_margin():
+    return datetime.timedelta(hours=getattr(settings, "SHIFT_UNRESOLVED_MARGIN_HOURS", 4))
+
+
+def _planned_end():
+    """Fim do último turno publicado do trabalhador no dia de trabalho do
+    registo (Fase 6)."""
+    from django.apps import apps
+
+    Shift = apps.get_model("shifts", "Shift")
+    return Subquery(
+        Shift.objects.filter(
+            worker=OuterRef("worker"), work_date=OuterRef("work_date"), state=Shift.State.PUBLICADO
+        )
+        .order_by("-end_at")
+        .values("end_at")[:1]
+    )
+
+
 class TimeEntryQuerySet(models.QuerySet):
     def unresolved(self, now=None):
         """Entradas sem saída que passaram do limite, ou que já foram
-        postas de lado por uma entrada nova (`missing_exit`)."""
+        postas de lado por uma entrada nova (`missing_exit`). Com turno
+        publicado, o limite é o fim previsto mais a margem; sem turno, o
+        limite fixo da Fase 5."""
         now = now or timezone.now()
-        return self.filter(check_out__isnull=True).filter(
-            Q(missing_exit=True) | Q(check_in__lt=now - unresolved_limit())
+        return (
+            self.filter(check_out__isnull=True)
+            .annotate(_fim_previsto=_planned_end())
+            .filter(
+                Q(missing_exit=True)
+                | Q(_fim_previsto__isnull=False, _fim_previsto__lt=now - shift_margin())
+                | Q(_fim_previsto__isnull=True, check_in__lt=now - unresolved_limit())
+            )
         )
 
     def resolved(self, now=None):
@@ -105,11 +132,29 @@ class TimeEntry(TimeStampedModel):
     def is_open(self):
         return self.check_out is None
 
+    def planned_shift(self):
+        """O turno publicado do trabalhador neste dia de trabalho, se houver."""
+        from django.apps import apps
+
+        Shift = apps.get_model("shifts", "Shift")
+        return (
+            Shift.objects.filter(worker_id=self.worker_id, work_date=self.work_date, state=Shift.State.PUBLICADO)
+            .order_by("-end_at")
+            .first()
+        )
+
+    def deadline(self):
+        """Momento a partir do qual, sem saída, o registo fica por resolver."""
+        turno = self.planned_shift()
+        if turno is not None:
+            return turno.end_at + shift_margin()
+        return self.check_in + unresolved_limit()
+
     def is_unresolved(self, now=None):
         if self.check_out is not None:
             return False
         now = now or timezone.now()
-        return self.missing_exit or self.check_in < now - unresolved_limit()
+        return self.missing_exit or now > self.deadline()
 
     @property
     def duration(self):

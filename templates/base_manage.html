@@ -27,6 +27,8 @@
         <a href="{{ url_ponto }}" class="block rounded px-3 py-2.5 {% if '/gestao/ponto/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Ponto</a>
         {% url 'vacations:lista' as url_ferias %}
         <a href="{{ url_ferias }}" class="block rounded px-3 py-2.5 {% if '/gestao/ferias/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Férias</a>
+        {% url 'shifts:planeador' as url_turnos %}
+        <a href="{{ url_turnos }}" class="block rounded px-3 py-2.5 {% if '/gestao/turnos/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Turnos</a>
         {% url 'inventory:lista' as url_stock %}
         <a href="{{ url_stock }}" class="block rounded px-3 py-2.5 {% if '/gestao/stock/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Stock</a>
         {% url 'accounts:dispositivo' as url_disp %}

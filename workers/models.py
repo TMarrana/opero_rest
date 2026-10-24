@@ -37,12 +37,7 @@ class Worker(TimeStampedModel):
     def open_entry(self):
         """O turno em curso. Uma entrada sem saída que passou do limite
         está por resolver e já não é o turno em curso (Fase 5)."""
-        from django.utils import timezone
-
-        from attendance.models import unresolved_limit
-
-        return self.time_entries.filter(
-            check_out__isnull=True,
-            missing_exit=False,
-            check_in__gte=timezone.now() - unresolved_limit(),
-        ).first()
+        entry = self.time_entries.filter(check_out__isnull=True, missing_exit=False).first()
+        if entry is None or entry.is_unresolved():
+            return None
+        return entry

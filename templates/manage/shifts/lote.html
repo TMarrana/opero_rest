@@ -1,0 +1,30 @@
+{% extends "base_manage.html" %}
+{% block title %}Criar turnos em lote{% endblock %}
+{% block content %}
+<a href="{% url 'shifts:planeador' %}?semana={{ semana|date:'Y-m-d' }}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Turnos</a>
+<h1 class="mt-2 font-display text-2xl font-bold">Criar turnos em lote</h1>
+<p class="mt-1 text-sm text-ardosia">Um turno guardado para vários trabalhadores e dias da semana de {{ semana|date:"d/m" }}. Nascem em rascunho; um turno igual que já exista não se duplica.</p>
+
+<form method="post" class="mt-6 max-w-2xl space-y-5">
+  {% csrf_token %}
+  <input type="hidden" name="semana" value="{{ semana|date:'Y-m-d' }}">
+  <div class="cartao space-y-5 p-6">
+    {% include "components/campo.html" with field=form.template %}
+    <fieldset>
+      <legend class="text-sm font-medium">Dias</legend>
+      <div class="mt-2 flex flex-wrap gap-4 text-sm">{% for opcao in form.days %}<label class="flex items-center gap-2 font-dados">{{ opcao.tag }} {{ opcao.choice_label }}</label>{% endfor %}</div>
+      {% for erro in form.days.errors %}<p class="text-sm font-medium text-chama">{{ erro }}</p>{% endfor %}
+    </fieldset>
+    <fieldset>
+      <legend class="text-sm font-medium">Trabalhadores</legend>
+      <div class="mt-2 grid gap-1 text-sm sm:grid-cols-2">{% for opcao in form.workers %}<label class="flex items-center gap-2">{{ opcao.tag }} {{ opcao.choice_label }}</label>{% endfor %}</div>
+      {% for erro in form.workers.errors %}<p class="text-sm font-medium text-chama">{{ erro }}</p>{% endfor %}
+    </fieldset>
+  </div>
+  <div class="flex justify-end gap-3">
+    {% url 'shifts:planeador' as url_plan %}
+    {% include "components/botao.html" with label="Cancelar" variante="fantasma" href=url_plan %}
+    {% include "components/botao.html" with label="Criar turnos" %}
+  </div>
+</form>
+{% endblock %}
