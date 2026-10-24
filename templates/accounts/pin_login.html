@@ -7,6 +7,15 @@
   <img src="{% static 'img/logo-opero.png' %}" alt="Opero" class="block h-10 w-auto">
   <p class="mt-1 text-sm text-ardosia">Quem está a marcar?</p>
 
+  {% if confirmacao %}
+  {# Marcação feita no tablet partilhado: a sessão já terminou, fica só a confirmação. #}
+  <div x-data="{ visivel: true }" x-show="visivel" x-init="setTimeout(() => visivel = false, 6000)"
+       role="status" class="mt-4 rounded-md bg-servico px-4 py-4 text-carvao">
+    <p class="font-display text-lg font-extrabold">{{ confirmacao.nome }}</p>
+    <p class="font-dados text-base">{{ confirmacao.acao }} às {{ confirmacao.hora }}</p>
+  </div>
+  {% endif %}
+
   {% if erro %}
   <p class="mt-4 rounded-md bg-chama/15 px-4 py-3 text-sm font-medium text-chama">{{ erro }}</p>
   {% endif %}

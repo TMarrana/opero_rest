@@ -9,13 +9,21 @@
 <div class="mt-10 flex flex-1 flex-col">
   {% include "partials/staff/ponto.html" %}
 
+  {# Marcações da fila offline deste colaborador; preenchido por app.js. #}
+  <section id="fila-ponto" class="mt-6 hidden" aria-live="polite">
+    <h2 class="text-xs font-semibold uppercase tracking-wide text-ardosia">Marcações sem rede</h2>
+    <ul class="mt-2 space-y-2"></ul>
+  </section>
+
   <nav class="mt-auto flex justify-center gap-8 pt-10 text-sm font-medium">
     <a href="{% url 'staff:historico' %}" class="text-aco/70 underline underline-offset-4 hover:text-superficie">Histórico</a>
     <a href="{% url 'staff:ferias' %}" class="text-aco/70 underline underline-offset-4 hover:text-superficie">Férias</a>
   </nav>
 </div>
 
-<form method="post" action="{% url 'accounts:logout' %}" class="mt-6 text-center">
+{# No tablet partilhado, quem entra e não marca não deixa a sessão aberta ao seguinte. #}
+<form method="post" action="{% url 'accounts:logout' %}" class="mt-6 text-center"
+      {% if quiosque %}x-data x-init="setTimeout(() => $el.submit(), 90000)"{% endif %}>
   {% csrf_token %}
   <input type="hidden" name="next" value="{% url 'staff:pin_login' %}">
   <button type="submit" class="min-h-toque text-xs text-ardosia underline underline-offset-2">Sair</button>

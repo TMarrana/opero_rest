@@ -248,3 +248,114 @@ class TestArranqueDaPWA:
     def test_backoffice_continua_a_usar_o_login_de_email(self, client):
         resp = client.get(reverse("dashboard:home"))
         assert reverse("accounts:login") in resp.url
+
+
+def _entrar_com_pin(client, worker, pin="2468"):
+    return client.post(reverse("staff:pin_login"), {"worker": worker.pk, "pin": pin})
+
+
+class TestModoQuiosque:
+    """Tablet partilhado: a sessão PIN termina a seguir a cada marcação
+    (secção 5 do plano). Telemóvel pessoal: a sessão mantém-se."""
+
+    def test_shared_device_ends_pin_session_after_mark(self, client, manager, worker_com_pin):
+        _ativar_dispositivo(client, manager)
+        _entrar_com_pin(client, worker_com_pin)
+        resp = client.post(reverse("staff:marcar"), {"acao": "entrada"}, HTTP_HX_REQUEST="true")
+        assert resp["HX-Redirect"] == reverse("staff:pin_login")
+        assert worker_com_pin.open_entry is not None
+        # O colaborador seguinte já não herda a sessão.
+        assert client.get(reverse("staff:home")).status_code == 302
+        corpo = client.get(reverse("staff:pin_login")).content.decode()
+        assert "Marta Silva" in corpo and "Entrada às" in corpo
+
+    def test_confirmacao_so_aparece_uma_vez(self, client, manager, worker_com_pin):
+        _ativar_dispositivo(client, manager)
+        _entrar_com_pin(client, worker_com_pin)
+        client.post(reverse("staff:marcar"), {"acao": "entrada"}, HTTP_HX_REQUEST="true")
+        client.get(reverse("staff:pin_login"))
+        assert "Entrada às" not in client.get(reverse("staff:pin_login")).content.decode()
+
+    def test_dispositivo_pessoal_mantem_a_sessao(self, client, manager, worker_com_pin):
+        client.force_login(manager)
+        client.post(reverse("accounts:dispositivo"), {"modo": "pessoal"})
+        client.post(reverse("accounts:logout"))
+        _entrar_com_pin(client, worker_com_pin)
+        resp = client.post(reverse("staff:marcar"), {"acao": "entrada"}, HTTP_HX_REQUEST="true")
+        assert "HX-Redirect" not in resp
+        assert client.get(reverse("staff:home")).status_code == 200
+
+    def test_sessao_no_tablet_partilhado_expira_depressa(self, client, manager, worker_com_pin):
+        from accounts.views import KIOSK_SESSION_AGE
+
+        _ativar_dispositivo(client, manager)
+        _entrar_com_pin(client, worker_com_pin)
+        assert client.session.get_expiry_age() == KIOSK_SESSION_AGE
+
+    def test_cookie_antigo_sem_modo_conta_como_partilhado(self, client, manager, worker_com_pin):
+        from django.core import signing
+
+        from accounts.views import DEVICE_COOKIE
+
+        client.cookies[DEVICE_COOKIE] = signing.dumps({"por": manager.pk}, salt=DEVICE_COOKIE)
+        _entrar_com_pin(client, worker_com_pin)
+        resp = client.post(reverse("staff:marcar"), {"acao": "entrada"}, HTTP_HX_REQUEST="true")
+        assert resp["HX-Redirect"] == reverse("staff:pin_login")
+
+    def test_pagina_do_dispositivo_mostra_o_modo(self, client, manager):
+        client.force_login(manager)
+        client.post(reverse("accounts:dispositivo"), {"modo": "pessoal"})
+        assert "Pessoal" in client.get(reverse("accounts:dispositivo")).content.decode()
+
+
+class TestFilaOffline:
+    """Marcações da fila offline: a ação e quem marcou vão com a marcação,
+    e uma recusa devolve um motivo legível (Fase 3)."""
+
+    def _fila(self, client, dados):
+        return client.post(reverse("staff:marcar"), dados, HTTP_X_OPERO_FILA="1")
+
+    def test_marcacao_da_fila_aceite(self, client, worker_com_pin, staff_user):
+        client.force_login(staff_user)
+        resp = self._fila(client, {"acao": "entrada", "trabalhador": worker_com_pin.pk})
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+        assert worker_com_pin.open_entry is not None
+
+    def test_rejected_offline_mark_reports_reason(self, client, worker_com_pin, staff_user):
+        open_shift(worker=worker_com_pin, at=timezone.now() - datetime.timedelta(hours=1))
+        client.force_login(staff_user)
+        resp = self._fila(client, {"acao": "entrada", "trabalhador": worker_com_pin.pk})
+        assert resp.status_code == 409
+        assert "já tem um turno aberto" in resp.json()["texto"]
+
+    def test_acao_desatualizada_nao_e_aplicada_ao_contrario(self, client, worker_com_pin, staff_user):
+        """Um botão de saída carregado offline depois de o gerente ter
+        fechado o turno não abre um turno novo."""
+        client.force_login(staff_user)
+        resp = self._fila(client, {"acao": "saida", "trabalhador": worker_com_pin.pk})
+        assert resp.status_code == 409
+        assert worker_com_pin.open_entry is None
+        assert worker_com_pin.time_entries.count() == 0
+
+    def test_marcacao_de_outro_colaborador_recusada(self, client, restaurant, worker_com_pin, staff_user):
+        outro = Worker.objects.create(restaurant=restaurant, full_name="Rui Costa")
+        client.force_login(staff_user)
+        resp = self._fila(client, {"acao": "entrada", "trabalhador": outro.pk})
+        assert resp.status_code == 409
+        assert "outro colaborador" in resp.json()["texto"]
+        assert worker_com_pin.open_entry is None
+
+    def test_fila_no_tablet_partilhado_termina_a_sessao(self, client, manager, worker_com_pin):
+        _ativar_dispositivo(client, manager)
+        _entrar_com_pin(client, worker_com_pin)
+        resp = self._fila(client, {"acao": "entrada", "trabalhador": worker_com_pin.pk})
+        assert resp.json()["sessao_terminada"] is True
+        assert client.get(reverse("staff:home")).status_code == 302
+
+    def test_formulario_leva_acao_e_trabalhador(self, client, worker_com_pin, staff_user):
+        client.force_login(staff_user)
+        corpo = client.get(reverse("staff:home")).content.decode()
+        assert 'name="acao" value="entrada"' in corpo
+        assert f'name="trabalhador" value="{worker_com_pin.pk}"' in corpo
+        assert f'data-trabalhador="{worker_com_pin.pk}"' in corpo

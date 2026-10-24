@@ -7,7 +7,7 @@ from django.core import signing
 from django.shortcuts import redirect, render
 from django.views import View
 
-from core.mixins import PIN_SESSION_KEY, ManagerRequiredMixin
+from core.mixins import KIOSK_SESSION_KEY, PIN_SESSION_KEY, ManagerRequiredMixin
 from core.utils import restaurant_scope
 from workers.models import Worker
 
@@ -17,6 +17,12 @@ from .forms import LoginForm
 DEVICE_COOKIE = "opero_dispositivo"
 DEVICE_MAX_AGE = 60 * 60 * 24 * 180  # 180 dias
 PIN_SESSION_AGE = 60 * 60 * 12  # sessões por PIN expiram em 12 horas
+# No tablet partilhado a sessão termina a seguir a cada marcação; este
+# limite só apanha quem entra e não marca nem sai.
+KIOSK_SESSION_AGE = 60 * 5
+# Chave da confirmação mostrada no ecrã de PIN depois de uma marcação no
+# tablet partilhado (a sessão do colaborador já terminou).
+KIOSK_CONFIRMATION_KEY = "quiosque_confirmacao"
 
 
 class LoginView(auth_views.LoginView):
@@ -40,15 +46,22 @@ class PostLoginRedirectView(LoginRequiredMixin, View):
         return redirect("staff:home")
 
 
-def _device_ok(request):
+def _device_info(request):
+    """Conteúdo do cookie de dispositivo, ou None se não houver ou for
+    inválido. Cookies anteriores ao modo quiosque não trazem `partilhado`
+    e contam como partilhados: é o caso mais seguro."""
     valor = request.COOKIES.get(DEVICE_COOKIE)
     if not valor:
-        return False
+        return None
     try:
-        signing.loads(valor, salt=DEVICE_COOKIE, max_age=DEVICE_MAX_AGE)
-        return True
+        info = signing.loads(valor, salt=DEVICE_COOKIE, max_age=DEVICE_MAX_AGE)
     except signing.BadSignature:
-        return False
+        return None
+    return {"partilhado": bool(info.get("partilhado", True))}
+
+
+def _device_ok(request):
+    return _device_info(request) is not None
 
 
 class DeviceActivateView(ManagerRequiredMixin, View):
@@ -57,11 +70,17 @@ class DeviceActivateView(ManagerRequiredMixin, View):
     (secção 7 do plano)."""
 
     def get(self, request):
-        return render(request, "accounts/dispositivo.html", {"ativo": _device_ok(request)})
+        info = _device_info(request)
+        return render(
+            request,
+            "accounts/dispositivo.html",
+            {"ativo": info is not None, "partilhado": info["partilhado"] if info else True},
+        )
 
     def post(self, request):
         resp = redirect("accounts:dispositivo")
-        valor = signing.dumps({"por": request.user.pk}, salt=DEVICE_COOKIE)
+        partilhado = request.POST.get("modo", "partilhado") != "pessoal"
+        valor = signing.dumps({"por": request.user.pk, "partilhado": partilhado}, salt=DEVICE_COOKIE)
         resp.set_cookie(
             DEVICE_COOKIE,
             valor,
@@ -85,10 +104,18 @@ class StaffLoginView(View):
     def get(self, request):
         if not _device_ok(request):
             return render(request, "accounts/pin_dispositivo_em_falta.html", status=403)
-        return render(request, "accounts/pin_login.html", {"workers": self._workers(request)})
+        return render(
+            request,
+            "accounts/pin_login.html",
+            {
+                "workers": self._workers(request),
+                "confirmacao": request.session.pop(KIOSK_CONFIRMATION_KEY, None),
+            },
+        )
 
     def post(self, request):
-        if not _device_ok(request):
+        device = _device_info(request)
+        if device is None:
             return render(request, "accounts/pin_dispositivo_em_falta.html", status=403)
         workers = self._workers(request)
         worker = workers.filter(pk=request.POST.get("worker", "")).first()
@@ -115,7 +142,11 @@ class StaffLoginView(View):
         auth_login(request, worker.user)
         # Marcar a sessão como PIN DEPOIS do login (login faz flush da sessão).
         request.session[PIN_SESSION_KEY] = True
-        request.session.set_expiry(PIN_SESSION_AGE)
+        if device["partilhado"]:
+            request.session[KIOSK_SESSION_KEY] = True
+            request.session.set_expiry(KIOSK_SESSION_AGE)
+        else:
+            request.session.set_expiry(PIN_SESSION_AGE)
         return redirect("staff:home")
 
 

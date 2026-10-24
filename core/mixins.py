@@ -12,6 +12,9 @@ from django.urls import reverse_lazy
 
 # Marcador na sessão de que a autenticação foi feita por PIN (Fase 3).
 PIN_SESSION_KEY = "auth_via_pin"
+# Marcador de sessão PIN aberta num dispositivo partilhado (modo quiosque):
+# a sessão termina a seguir a cada marcação.
+KIOSK_SESSION_KEY = "pin_quiosque"
 
 
 class RoleRequiredMixin(LoginRequiredMixin):

@@ -1,7 +1,10 @@
 {% comment %}O botão é o ecrã (secção 5). Um hx-post devolve este bloco
-já no novo estado. data-* usados pela fila offline em app.js.{% endcomment %}
+já no novo estado. Os campos escondidos dizem a ação que o botão mostra
+e quem marca: a fila offline em app.js guarda-os com a marcação.{% endcomment %}
 <div id="bloco-ponto" data-em-turno="{{ em_turno|yesno:'1,0' }}">
   <form hx-post="{% url 'staff:marcar' %}" hx-target="#bloco-ponto" hx-swap="outerHTML" id="form-ponto">
+    <input type="hidden" name="acao" value="{{ em_turno|yesno:'saida,entrada' }}">
+    <input type="hidden" name="trabalhador" value="{{ worker.pk }}">
     {% if em_turno %}
     <button type="submit"
             class="min-h-[40vh] w-full rounded-lg bg-chama font-display uppercase tracking-wide text-superficie transition-colors hover:bg-chama/90">
