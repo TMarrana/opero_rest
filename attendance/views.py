@@ -2,8 +2,10 @@ import datetime
 
 from django.contrib import messages
 from django.db.models import Q
+from django.http import HttpResponse
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views import View
@@ -14,7 +16,8 @@ from core.utils import restaurant_scope
 from workers.models import Worker
 
 from .forms import CorrectionDecisionForm, EntryCorrectionForm
-from .models import CorrectionRequest, TimeEntry
+from . import month as mes
+from .models import CorrectionRequest, MonthClose, TimeEntry
 from .services import add_manual_entry, correct_entry, decide_correction
 
 
@@ -198,3 +201,98 @@ class CorrectionDecideView(ManagerRequiredMixin, View):
         except ValidationError as exc:
             messages.error(request, exc.messages[0])
         return redirect("attendance:pedidos")
+
+
+def _mes_pedido(request):
+    """Mês escolhido em ?mes=AAAA-MM; por defeito, o mês anterior."""
+    valor = request.GET.get("mes") or request.POST.get("mes") or ""
+    try:
+        return datetime.datetime.strptime(valor, "%Y-%m").date()
+    except ValueError:
+        return mes.previous_month(timezone.localdate())
+
+
+class MonthView(ManagerRequiredMixin, View):
+    """Fecho do mês: horas por trabalhador, o que falta resolver,
+    aprovação (uma a uma ou todos os prontos), reabertura com motivo e
+    exportação CSV."""
+
+    def _workers(self, request):
+        return restaurant_scope(request.user, Worker.objects.filter(is_active=True))
+
+    def _url(self, mes_escolhido):
+        return f"{reverse('attendance:mes')}?mes={mes_escolhido:%Y-%m}"
+
+    def get(self, request):
+        escolhido = _mes_pedido(request)
+        workers = self._workers(request)
+        if request.GET.get("exportar"):
+            conteudo = mes.export_csv(workers, escolhido)
+            resp = HttpResponse(conteudo, content_type="text/csv; charset=utf-8")
+            resp["Content-Disposition"] = f'attachment; filename="ponto-{escolhido:%Y-%m}.csv"'
+            return resp
+        fechos = {
+            f.worker_id: f
+            for f in MonthClose.objects.filter(worker__in=workers, month=escolhido, reopened_at__isnull=True)
+            .select_related("approved_by")
+        }
+        linhas = []
+        for w in workers:
+            _, total = mes.month_rows(w, escolhido)
+            falta = mes.pending_items(w, escolhido)
+            linhas.append(
+                {
+                    "worker": w,
+                    "total": total,
+                    "falta": falta,
+                    "pronto": not falta["por_resolver"] and not falta["pedidos"],
+                    "fecho": fechos.get(w.pk),
+                }
+            )
+        atual = mes.month_start(timezone.localdate())
+        return render(
+            request,
+            "manage/attendance/mes.html",
+            {
+                "mes": escolhido,
+                "mes_anterior": mes.previous_month(escolhido),
+                "mes_seguinte": mes.next_month(escolhido),
+                "pode_aprovar": escolhido < atual,
+                "pode_avancar": mes.next_month(escolhido) < atual,
+                "linhas": linhas,
+                "aprovados": sum(1 for l in linhas if l["fecho"]),
+                "reaberturas": MonthClose.objects.filter(
+                    worker__in=workers, month=escolhido, reopened_at__isnull=False
+                ).select_related("worker", "reopened_by"),
+            },
+        )
+
+    def post(self, request):
+        escolhido = _mes_pedido(request)
+        workers = self._workers(request)
+        acao = request.POST.get("acao")
+        try:
+            if acao == "aprovar_todos":
+                aprovados, recusados = mes.approve_ready(workers=workers, month=escolhido, user=request.user)
+                if aprovados:
+                    messages.success(request, f"{len(aprovados)} trabalhador(es) aprovado(s)")
+                if recusados:
+                    messages.error(
+                        request,
+                        f"Ficaram {len(recusados)} por aprovar: " + "; ".join(m for _, m in recusados),
+                    )
+                if not aprovados and not recusados:
+                    messages.success(request, "Todos os trabalhadores já estavam aprovados")
+            else:
+                worker = get_object_or_404(workers, pk=request.POST.get("worker"))
+                if acao == "aprovar":
+                    mes.approve_month(worker=worker, month=escolhido, user=request.user)
+                    messages.success(request, f"Mês de {worker.full_name} aprovado")
+                elif acao == "reabrir":
+                    mes.reopen_month(
+                        worker=worker, month=escolhido, user=request.user, reason=request.POST.get("motivo", "")
+                    )
+                    messages.success(request, f"Mês de {worker.full_name} reaberto")
+        except ValidationError as exc:
+            messages.error(request, exc.messages[0])
+        return redirect(self._url(escolhido))

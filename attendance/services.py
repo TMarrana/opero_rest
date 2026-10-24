@@ -9,7 +9,8 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Break, CorrectionRequest, EntryCorrection, TimeEntry, unresolved_limit
+from .models import Break, CorrectionRequest, EntryCorrection, TimeEntry, unresolved_limit, work_date_for
+from .month import ensure_open
 
 
 def _open_entry_for_update(worker):
@@ -27,6 +28,7 @@ def open_shift(*, worker, at=None, work_area=None, source=""):
     limite, fica por resolver (R-013) e não impede a entrada nova: o
     colaborador indica depois a hora de saída com um pedido de correção."""
     at = at or timezone.now()
+    ensure_open(worker, work_date_for(at))
     with transaction.atomic():
         aberto = _open_entry_for_update(worker)
         if aberto is not None:
@@ -49,6 +51,7 @@ def close_shift(*, worker, at=None):
             raise ValidationError(
                 f"{worker.full_name} não tem turno aberto. Marque primeiro a entrada."
             )
+        ensure_open(worker, entry.work_date)
         if at <= entry.check_in:
             raise ValidationError("A saída tem de ser depois da entrada.")
         if entry.check_in < at - unresolved_limit():
@@ -78,6 +81,7 @@ def start_break(*, worker, break_type, at=None):
         entry = _open_entry_for_update(worker)
         if entry is None:
             raise ValidationError("Marque primeiro a entrada. Só se começa uma pausa durante o turno.")
+        ensure_open(worker, entry.work_date)
         if entry.breaks.filter(end__isnull=True).exists():
             raise ValidationError("Já está em pausa. Termine-a antes de começar outra.")
         if at <= entry.check_in:
@@ -92,6 +96,7 @@ def end_break(*, worker, at=None):
         pausa = entry.breaks.select_for_update().filter(end__isnull=True).first() if entry else None
         if pausa is None:
             raise ValidationError("Não está em pausa.")
+        ensure_open(worker, entry.work_date)
         if at <= pausa.start:
             raise ValidationError("O fim da pausa tem de ser depois do início.")
         pausa.end = at
@@ -132,6 +137,7 @@ def correct_entry(*, entry, user, reason, check_in=None, check_out=None):
         entry.refresh_from_db()
         new_in = check_in or entry.check_in
         new_out = check_out if check_out is not None else entry.check_out
+        ensure_open(entry.worker, entry.work_date, work_date_for(new_in))
         if new_out is not None and new_out <= new_in:
             raise ValidationError("A saída tem de ser depois da entrada.")
         if new_out is None and entry.missing_exit:
@@ -167,6 +173,7 @@ def add_manual_entry(*, worker, user, reason, check_in, check_out=None, work_are
         raise ValidationError("O motivo é obrigatório num registo manual.")
     if check_out is not None and check_out <= check_in:
         raise ValidationError("A saída tem de ser depois da entrada.")
+    ensure_open(worker, work_date_for(check_in))
     with transaction.atomic():
         if check_out is None and _open_entry_for_update(worker) is not None:
             raise ValidationError(f"{worker.full_name} já tem um turno aberto.")
@@ -190,6 +197,7 @@ def request_correction(*, worker, note, check_in, check_out, entry=None):
         raise ValidationError("A saída tem de ser depois da entrada.")
     if check_out > timezone.now():
         raise ValidationError("A saída proposta não pode ser no futuro.")
+    ensure_open(worker, entry.work_date if entry else None, work_date_for(check_in))
     if entry is not None:
         if entry.worker_id != worker.pk:
             raise ValidationError("Só pode pedir correções dos seus registos.")

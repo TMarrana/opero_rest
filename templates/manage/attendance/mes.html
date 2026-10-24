@@ -1,0 +1,106 @@
+{% extends "base_manage.html" %}
+{% load ponto %}
+{% block title %}Fecho do mês{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <div class="flex items-baseline gap-4">
+    <h1 class="font-display text-2xl font-bold">Fecho do mês</h1>
+    <a href="{% url 'attendance:dia' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Ponto da equipa</a>
+  </div>
+  <div class="flex items-center gap-2">
+    <a href="?mes={{ mes_anterior|date:'Y-m' }}" class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-3 py-2 text-sm font-semibold hover:bg-carvao/5" aria-label="Mês anterior">&larr;</a>
+    <span class="font-dados text-sm font-semibold">{{ mes|date:"m/Y" }}</span>
+    {% if pode_avancar %}
+    <a href="?mes={{ mes_seguinte|date:'Y-m' }}" class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-3 py-2 text-sm font-semibold hover:bg-carvao/5" aria-label="Mês seguinte">&rarr;</a>
+    {% endif %}
+  </div>
+</div>
+<p class="mt-1 text-sm text-ardosia">Um mês aprovado fica bloqueado: não aceita correções, registos manuais nem pedidos de correção até ser reaberto.</p>
+
+<div class="mt-6 flex flex-wrap items-center gap-4">
+  {% if pode_aprovar %}
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="mes" value="{{ mes|date:'Y-m' }}">
+    <input type="hidden" name="acao" value="aprovar_todos">
+    {% include "components/botao.html" with label="Aprovar todos os prontos" %}
+  </form>
+  {% else %}
+  <p class="text-sm text-ardosia">O mês ainda não terminou: aprova-se a partir do dia 1 do mês seguinte.</p>
+  {% endif %}
+  {% if aprovados %}
+  <a href="?mes={{ mes|date:'Y-m' }}&amp;exportar=1" class="text-sm font-semibold underline underline-offset-2">Exportar CSV ({{ aprovados }} aprovado{{ aprovados|pluralize }})</a>
+  {% endif %}
+</div>
+
+<div class="mt-6 cartao">
+  {% if linhas %}
+  <div class="overflow-x-auto">
+    <table class="tabela">
+      <thead>
+        <tr><th>Trabalhador</th><th class="th-dados">Horas</th><th>Por resolver</th><th>Estado</th><th><span class="sr-only">Ações</span></th></tr>
+      </thead>
+      <tbody>
+        {% for l in linhas %}
+        <tr>
+          <td class="font-medium">{{ l.worker.full_name }}</td>
+          <td class="td-dados">{{ l.total|horas }}</td>
+          <td class="text-sm">
+            {% if l.pronto %}<span class="text-ardosia">—</span>{% else %}
+            <a href="{% url 'attendance:pedidos' %}" class="text-chama underline underline-offset-2">
+              {% if l.falta.por_resolver %}{{ l.falta.por_resolver }} registo{{ l.falta.por_resolver|pluralize }}{% endif %}{% if l.falta.por_resolver and l.falta.pedidos %} · {% endif %}{% if l.falta.pedidos %}{{ l.falta.pedidos }} pedido{{ l.falta.pedidos|pluralize }}{% endif %}
+            </a>{% endif %}
+          </td>
+          <td class="text-sm">
+            {% if l.fecho %}
+            {% include "components/badge.html" with label="Aprovado" variante="servico" %}
+            <span class="block text-xs text-ardosia">{{ l.fecho.approved_by }} · {{ l.fecho.approved_at|date:"d/m H:i" }}</span>
+            {% elif l.pronto %}<span class="text-ardosia">Pronto</span>{% else %}<span class="text-ardosia">Por resolver</span>{% endif %}
+          </td>
+          <td class="whitespace-nowrap text-right">
+            {% if l.fecho %}
+            <form method="post" class="inline-flex items-center gap-2" x-data="{ aberto: false }">
+              {% csrf_token %}
+              <input type="hidden" name="mes" value="{{ mes|date:'Y-m' }}">
+              <input type="hidden" name="worker" value="{{ l.worker.pk }}">
+              <input type="hidden" name="acao" value="reabrir">
+              <button type="button" x-show="!aberto" x-on:click="aberto = true" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Reabrir</button>
+              <input x-show="aberto" x-cloak type="text" name="motivo" required maxlength="200" placeholder="Motivo da reabertura" class="campo-input w-56">
+              <button x-show="aberto" x-cloak type="submit" class="text-sm font-semibold text-chama underline underline-offset-2">Reabrir mês</button>
+            </form>
+            {% elif pode_aprovar and l.pronto %}
+            <form method="post" class="inline">
+              {% csrf_token %}
+              <input type="hidden" name="mes" value="{{ mes|date:'Y-m' }}">
+              <input type="hidden" name="worker" value="{{ l.worker.pk }}">
+              <input type="hidden" name="acao" value="aprovar">
+              <button type="submit" class="text-sm font-semibold text-servico underline underline-offset-2">Aprovar</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="px-6 py-12 text-center text-sm text-ardosia">Ainda não há trabalhadores ativos. Crie-os primeiro em Trabalhadores.</div>
+  {% endif %}
+</div>
+
+{% if reaberturas %}
+<section class="mt-10 max-w-xl">
+  <h2 class="font-display text-lg font-bold">Reaberturas</h2>
+  <div class="mt-4 rail-taloes">
+    {% for f in reaberturas %}
+    <article class="talao">
+      <time class="block text-xs text-ardosia">{{ f.reopened_at|date:"d M Y · H:i"|upper }}</time>
+      <p class="mt-1 font-semibold uppercase tracking-wide">{{ f.worker.full_name }}</p>
+      <p class="mt-0.5">aprovado por {{ f.approved_by }} em {{ f.approved_at|date:"d/m" }}</p>
+      <p class="mt-1 text-xs text-ardosia">{{ f.reopened_by }} · {{ f.reopen_reason }}</p>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,4 +1,5 @@
 from django.db.models import F
+from django.utils import timezone
 from django.views.generic import TemplateView
 
 from attendance.models import CorrectionRequest, TimeEntry
@@ -53,6 +54,19 @@ class DashboardView(RoleRequiredMixin, TemplateView):
                 entradas.filter(check_out__isnull=True).resolved().select_related("worker").order_by("check_in")
             )
             ctx["por_resolver"] = entradas.unresolved().count()
+            # Aviso de mês por fechar: a partir do dia 1, até todos os
+            # trabalhadores ativos terem o mês anterior aprovado.
+            from attendance.models import MonthClose
+            from attendance.month import previous_month
+            from workers.models import Worker
+
+            anterior = previous_month(timezone.localdate())
+            ativos = restaurant_scope(user, Worker.objects.filter(is_active=True))
+            aprovados = MonthClose.objects.filter(
+                worker__in=ativos, month=anterior, reopened_at__isnull=True
+            ).count()
+            ctx["mes_por_fechar"] = anterior
+            ctx["por_aprovar"] = ativos.count() - aprovados
             ctx["pedidos_correcao"] = restaurant_scope(
                 user,
                 CorrectionRequest.objects.filter(status=CorrectionRequest.Status.PENDENTE),

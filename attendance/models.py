@@ -301,3 +301,47 @@ class CorrectionRequest(TimeStampedModel):
 
     def __str__(self):
         return f"{self.get_kind_display()} · {self.worker} · {self.get_status_display()}"
+
+
+class MonthClose(TimeStampedModel):
+    """Aprovação do mês de um trabalhador (Fase 5). Invariante 8: um mês
+    aprovado não muda sem ser reaberto de forma explícita e auditada. A
+    reabertura não apaga a aprovação: fica nela, com autor e motivo, e o
+    mês aprova-se de novo com uma linha nova."""
+
+    restaurant = models.ForeignKey(
+        "core.Restaurant", verbose_name="restaurante", on_delete=models.CASCADE, related_name="month_closes"
+    )
+    worker = models.ForeignKey(
+        "workers.Worker", verbose_name="trabalhador", on_delete=models.CASCADE, related_name="month_closes"
+    )
+    month = models.DateField("mês")  # sempre o dia 1
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name="aprovado por", on_delete=models.PROTECT, related_name="+"
+    )
+    approved_at = models.DateTimeField("aprovado em", default=timezone.now)
+    reopened_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="reaberto por",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    reopened_at = models.DateTimeField("reaberto em", null=True, blank=True)
+    reopen_reason = models.CharField("motivo da reabertura", max_length=200, blank=True)
+
+    class Meta:
+        verbose_name = "fecho do mês"
+        verbose_name_plural = "fechos do mês"
+        ordering = ["-month", "worker__full_name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["worker", "month"],
+                condition=models.Q(reopened_at__isnull=True),
+                name="um_fecho_ativo_por_mes",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.worker} · {self.month:%m/%Y}"

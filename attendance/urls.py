@@ -9,5 +9,6 @@ urlpatterns = [
     path("registo/<int:pk>/corrigir/", views.EntryCorrectionView.as_view(), name="corrigir"),
     path("trabalhador/<int:pk>/acrescentar/", views.EntryAddView.as_view(), name="acrescentar"),
     path("pedidos/", views.CorrectionRequestListView.as_view(), name="pedidos"),
+    path("mes/", views.MonthView.as_view(), name="mes"),
     path("pedidos/<int:pk>/<str:acao>/", views.CorrectionDecideView.as_view(), name="decidir_pedido"),
 ]

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import BreakType, CorrectionRequest, EntryCorrection, TimeEntry
+from .models import BreakType, CorrectionRequest, EntryCorrection, MonthClose, TimeEntry
 
 
 class _SoConsulta(admin.ModelAdmin):
@@ -48,3 +48,10 @@ class CorrectionRequestAdmin(_SoConsulta):
 
     list_display = ("worker", "kind", "status", "created_at", "decided_by")
     list_filter = ("status",)
+
+
+@admin.register(MonthClose)
+class MonthCloseAdmin(_SoConsulta):
+    """Aprovar e reabrir fazem-se na aplicação, com motivo."""
+
+    list_display = ("worker", "month", "approved_by", "approved_at", "reopened_at")

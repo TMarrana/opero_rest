@@ -3,7 +3,11 @@
 {% block title %}Ponto{% endblock %}
 {% block content %}
 <div class="flex flex-wrap items-end justify-between gap-4">
-  <h1 class="font-display text-2xl font-bold">Ponto da equipa</h1>
+  <div class="flex items-baseline gap-4">
+    <h1 class="font-display text-2xl font-bold">Ponto da equipa</h1>
+    <a href="{% url 'attendance:mes' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Fecho do mês</a>
+    <a href="{% url 'attendance:pedidos' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Pedidos</a>
+  </div>
   <div class="flex items-center gap-2">
     <a href="?dia={{ dia_anterior|date:'Y-m-d' }}" class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-3 py-2 text-sm font-semibold hover:bg-carvao/5" aria-label="Dia anterior">&larr;</a>
     <span class="font-dados text-sm font-semibold">{{ dia|date:"D, d M Y" }}</span>
