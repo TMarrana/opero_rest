@@ -10,6 +10,7 @@ urlpatterns = [
     path("gestao/trabalhadores/", include("workers.urls")),
     path("gestao/ponto/", include("attendance.urls")),
     path("gestao/ferias/", include("vacations.urls")),
+    path("gestao/configuracao/", include("core.config_urls")),
     path("equipa/", include("staff.urls")),
     path("", include("core.urls")),
     path("", lambda request: redirect("accounts:pos_login"), name="root"),

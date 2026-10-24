@@ -2,12 +2,35 @@
 {% block title %}Férias{% endblock %}
 {% block content %}
 <header class="flex items-baseline justify-between">
-  <h1 class="font-display text-xl font-bold">Férias</h1>
+  <h1 class="font-display text-xl font-bold">Férias e ausências</h1>
   <a href="{% url 'staff:home' %}" class="text-sm text-aco/70 underline underline-offset-4 hover:text-superficie">Voltar</a>
 </header>
 
+<dl class="mt-4 space-y-1 font-dados text-sm">
+  <div class="flex justify-between"><dt class="text-ardosia">Férias {{ ano }}: disponíveis</dt><dd class="font-semibold">{{ saldo.disponiveis }} de {{ saldo.total }}</dd></div>
+  {% if saldo.caducados %}<div class="flex justify-between"><dt class="text-ardosia">Transitados caducados</dt><dd>{{ saldo.caducados }}</dd></div>{% endif %}
+</dl>
+
+{% if bloqueios %}
+<section class="mt-4 rounded-md border border-ardosia/40 px-3 py-2 text-sm">
+  <h2 class="text-xs font-semibold uppercase tracking-wide text-ardosia">Sem pedidos nestas datas</h2>
+  <ul class="mt-1 space-y-1">
+    {% for b in bloqueios %}
+    <li><span class="font-dados">{{ b.start|date:"d/m" }}&ndash;{{ b.end|date:"d/m" }}</span> · {{ b.name }}{% if b.absence_types.all %} <span class="text-aco/70">({% for t in b.absence_types.all %}{{ t.name }}{% if not forloop.last %}, {% endif %}{% endfor %})</span>{% endif %}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
 <form method="post" class="mt-6 space-y-4">
   {% csrf_token %}
+  {% for erro in form.non_field_errors %}
+  <p class="rounded-md border border-chama px-4 py-3 text-sm font-medium text-chama">{{ erro }}</p>
+  {% endfor %}
+  <div class="space-y-1.5">
+    <label for="{{ form.absence_type.id_for_label }}" class="block text-sm font-medium text-aco">Tipo</label>
+    {{ form.absence_type }}
+  </div>
   <div class="grid grid-cols-2 gap-4">
     <div class="space-y-1.5">
       <label for="{{ form.start_date.id_for_label }}" class="block text-sm font-medium text-aco">Início</label>
@@ -20,13 +43,16 @@
       {% for erro in form.end_date.errors %}<p class="text-sm font-medium text-chama">{{ erro }}</p>{% endfor %}
     </div>
   </div>
+  {% if form.half_day %}
+  <label class="flex min-h-toque items-center gap-3 text-sm text-aco">{{ form.half_day }} Só meio dia (início e fim no mesmo dia)</label>
+  {% endif %}
   <div class="space-y-1.5">
     <label for="{{ form.request_note.id_for_label }}" class="block text-sm font-medium text-aco">Observação</label>
     {{ form.request_note }}
   </div>
   <button type="submit"
           class="w-full min-h-toque rounded-md bg-servico px-5 py-3 font-display text-base font-bold uppercase tracking-wide text-carvao hover:bg-servico/90">
-    Pedir férias
+    Pedir
   </button>
 </form>
 
@@ -36,14 +62,25 @@
   <div class="mt-3 rail-taloes border-ardosia/40">
     {% for p in pedidos %}
     <article class="talao talao-escuro">
-      <time class="block text-xs text-ardosia">PEDIDO EM {{ p.created_at|date:"d M Y"|upper }}</time>
-      <p class="mt-1 font-semibold uppercase tracking-wide">{{ p.start_date|date:"d M" }} &rarr; {{ p.end_date|date:"d M Y" }}</p>
+      <time class="block text-xs text-ardosia">{{ p.absence_type.name|upper }} · PEDIDO EM {{ p.created_at|date:"d M Y"|upper }}</time>
+      <p class="mt-1 font-semibold uppercase tracking-wide">{{ p.start_date|date:"d M" }}{% if p.end_date != p.start_date %} &rarr; {{ p.end_date|date:"d M Y" }}{% else %} {{ p.start_date|date:"Y" }}{% endif %}{% if p.half_day %} · meio dia{% endif %}</p>
+      <p class="mt-0.5">{{ p.days_taken }} dia{{ p.days_taken|pluralize }}</p>
       <p class="mt-0.5 {% if p.status == 'APROVADO' %}text-servico{% elif p.status == 'RECUSADO' %}text-chama{% endif %}">{{ p.get_status_display }}{% if p.decision_note %} · {{ p.decision_note }}{% endif %}</p>
+      {% if p.cancelavel %}
+      <form method="post" action="{% url 'staff:cancelar_ferias' p.pk %}" x-data="{ confirmar: false }">
+        {% csrf_token %}
+        <button type="button" x-show="!confirmar" x-on:click="confirmar = true" class="mt-1 min-h-toque text-xs text-aco/70 underline underline-offset-2">Cancelar pedido</button>
+        <span x-show="confirmar" x-cloak class="mt-1 flex items-center gap-4 text-xs">
+          <button type="submit" class="min-h-toque font-semibold text-chama underline underline-offset-2">Sim, cancelar</button>
+          <button type="button" x-on:click="confirmar = false" class="min-h-toque text-aco/70 underline underline-offset-2">Não</button>
+        </span>
+      </form>
+      {% endif %}
     </article>
     {% endfor %}
   </div>
   {% else %}
-  <p class="mt-3 text-sm text-ardosia">Ainda não pediu férias.</p>
+  <p class="mt-3 text-sm text-ardosia">Ainda não fez pedidos.</p>
   {% endif %}
 </div>
 {% endblock %}

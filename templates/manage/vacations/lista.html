@@ -2,8 +2,11 @@
 {% block title %}Férias{% endblock %}
 {% block content %}
 <div class="flex flex-wrap items-end justify-between gap-4">
-  <h1 class="font-display text-2xl font-bold">Férias</h1>
-  {% include "components/botao.html" with label="Novo pedido" href="/gestao/ferias/novo/" %}
+  <h1 class="font-display text-2xl font-bold">Férias e ausências</h1>
+  <div class="flex items-center gap-4">
+    <a href="{% url 'vacations:saldos' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Saldos</a>
+    {% include "components/botao.html" with label="Registar ausência" href="/gestao/ferias/novo/" %}
+  </div>
 </div>
 
 <section class="mt-6">
@@ -15,18 +18,22 @@
     <div class="overflow-x-auto">
       <table class="tabela">
         <thead>
-          <tr><th>Trabalhador</th><th class="th-dados">Início</th><th class="th-dados">Fim</th><th>Observação</th><th>Aviso</th><th><span class="sr-only">Decisão</span></th></tr>
+          <tr><th>Trabalhador</th><th>Tipo</th><th class="th-dados">Início</th><th class="th-dados">Fim</th><th class="th-dados">Dias</th><th>Observação</th><th>Aviso</th><th><span class="sr-only">Decisão</span></th></tr>
         </thead>
         <tbody>
           {% for p in pendentes %}
           <tr>
             <td class="font-medium">{{ p.worker.full_name }}</td>
+            <td class="text-sm">{{ p.absence_type.name }}</td>
             <td class="td-dados">{{ p.start_date|date:"d M Y" }}</td>
-            <td class="td-dados">{{ p.end_date|date:"d M Y" }}</td>
+            <td class="td-dados">{{ p.end_date|date:"d M Y" }}{% if p.half_day %} <span class="text-xs text-ardosia">meio dia</span>{% endif %}</td>
+            <td class="td-dados">{{ p.days_taken }}{% if p.saldo is not None %}<span class="block text-xs text-ardosia">saldo {{ p.saldo }}</span>{% endif %}</td>
             <td class="text-ardosia">{{ p.request_note|default:"—" }}</td>
-            <td>
+            <td class="space-y-1">
               {% if p.has_overlap %}
               {% include "components/badge.html" with label="Sobrepõe aprovado" variante="chama" %}
+              {% elif p.excede_saldo %}
+              {% include "components/badge.html" with label="Acima do saldo" variante="chama" %}
               {% else %}
               <span class="text-sm text-ardosia">—</span>
               {% endif %}
@@ -69,14 +76,16 @@
     <div class="overflow-x-auto">
       <table class="tabela">
         <thead>
-          <tr><th>Trabalhador</th><th class="th-dados">Início</th><th class="th-dados">Fim</th><th>Estado</th><th>Decisão</th></tr>
+          <tr><th>Trabalhador</th><th>Tipo</th><th class="th-dados">Início</th><th class="th-dados">Fim</th><th class="th-dados">Dias</th><th>Estado</th><th>Decisão</th></tr>
         </thead>
         <tbody>
           {% for p in historico %}
           <tr>
             <td class="font-medium">{{ p.worker.full_name }}</td>
+            <td class="text-sm">{{ p.absence_type.name }}</td>
             <td class="td-dados">{{ p.start_date|date:"d M Y" }}</td>
             <td class="td-dados">{{ p.end_date|date:"d M Y" }}</td>
+            <td class="td-dados">{{ p.days_taken }}</td>
             <td>
               {% if p.status == "APROVADO" %}
               {% include "components/badge.html" with label="Aprovado" variante="servico" %}

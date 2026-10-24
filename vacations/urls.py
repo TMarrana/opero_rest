@@ -7,5 +7,6 @@ app_name = "vacations"
 urlpatterns = [
     path("", views.VacationListView.as_view(), name="lista"),
     path("novo/", views.VacationCreateView.as_view(), name="novo"),
+    path("saldos/", views.AllowanceListView.as_view(), name="saldos"),
     path("<int:pk>/<str:acao>/", views.VacationDecideView.as_view(), name="decidir"),
 ]

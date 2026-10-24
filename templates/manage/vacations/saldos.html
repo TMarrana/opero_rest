@@ -1,0 +1,48 @@
+{% extends "base_manage.html" %}
+{% block title %}Saldos de férias{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <h1 class="font-display text-2xl font-bold">Saldos de férias</h1>
+  <div class="flex items-center gap-2">
+    <a href="?ano={{ ano_anterior }}" class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-3 py-2 text-sm font-semibold hover:bg-carvao/5" aria-label="Ano anterior">&larr;</a>
+    <span class="font-dados text-sm font-semibold">{{ ano }}</span>
+    <a href="?ano={{ ano_seguinte }}" class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-3 py-2 text-sm font-semibold hover:bg-carvao/5" aria-label="Ano seguinte">&rarr;</a>
+  </div>
+</div>
+<p class="mt-1 text-sm text-ardosia">Só as ausências aprovadas que descontam do saldo contam. Os dias transitados gastam-se primeiro e caducam na data indicada.</p>
+
+<div class="mt-6 cartao">
+  {% if linhas %}
+  <div class="overflow-x-auto">
+    <table class="tabela">
+      <thead>
+        <tr><th>Trabalhador</th><th class="th-dados">Dias do ano</th><th class="th-dados">Transitados</th><th>Caducam em</th><th class="th-dados">Usados</th><th class="th-dados">Disponíveis</th><th><span class="sr-only">Guardar</span></th></tr>
+      </thead>
+      <tbody>
+        {% for l in linhas %}
+        <tr>
+          <td class="font-medium">{{ l.worker.full_name }}</td>
+          <td class="td-dados">{{ l.form.days }}</td>
+          <td class="td-dados">{{ l.form.carried_over }}</td>
+          <td>{{ l.form.carry_over_expires_on }}</td>
+          <td class="td-dados">{{ l.saldo.usados }}</td>
+          <td class="td-dados font-semibold {% if l.saldo.disponiveis < 0 %}text-chama{% endif %}">{{ l.saldo.disponiveis }}{% if l.saldo.caducados %}<span class="block text-xs font-normal text-ardosia">{{ l.saldo.caducados }} caducados</span>{% endif %}</td>
+          <td class="text-right">
+            <input type="hidden" name="worker" value="{{ l.worker.pk }}" form="saldo-{{ l.worker.pk }}">
+            <input type="hidden" name="ano" value="{{ ano }}" form="saldo-{{ l.worker.pk }}">
+            <button type="submit" form="saldo-{{ l.worker.pk }}" class="text-sm font-semibold underline underline-offset-2">Guardar</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {# Um formulário por linha, ligado pelos atributos form= dos campos. #}
+  {% for l in linhas %}
+  <form method="post" id="saldo-{{ l.worker.pk }}" class="hidden">{% csrf_token %}</form>
+  {% endfor %}
+  {% else %}
+  <div class="px-6 py-12 text-center text-sm text-ardosia">Ainda não há trabalhadores ativos. Crie-os primeiro em Trabalhadores.</div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "base_manage.html" %}
+{% block title %}Configuração{% endblock %}
+{% block content %}
+<h1 class="font-display text-2xl font-bold">Configuração</h1>
+<p class="mt-1 text-sm text-ardosia">Regras do restaurante para o ponto, as ausências e o planeamento.</p>
+
+<ul class="mt-6 grid gap-4 sm:grid-cols-2">
+  {% for secao, total in secoes %}
+  <li>
+    <a href="{% url 'config:lista' secao.slug %}" class="cartao block p-5 hover:bg-carvao/5">
+      <span class="flex items-baseline justify-between">
+        <span class="font-display text-base font-bold">{{ secao.titulo }}</span>
+        <span class="font-dados text-sm text-ardosia">{{ total }}</span>
+      </span>
+      <span class="mt-1 block text-sm text-ardosia">{{ secao.ajuda }}</span>
+    </a>
+  </li>
+  {% endfor %}
+  <li>
+    <a href="{% url 'accounts:dispositivo' %}" class="cartao block p-5 hover:bg-carvao/5">
+      <span class="font-display text-base font-bold">Dispositivo</span>
+      <span class="mt-1 block text-sm text-ardosia">Ativar este navegador para a equipa entrar com PIN.</span>
+    </a>
+  </li>
+</ul>
+{% endblock %}

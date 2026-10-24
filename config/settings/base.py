@@ -105,3 +105,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # resolver e deixa de contar para os totais (R-013). Valor provisório,
 # a decidir com a AT (secção 12 do plano).
 ATTENDANCE_UNRESOLVED_HOURS = 14
+
+# Dias úteis de férias por ano quando o trabalhador não tem saldo definido
+# (Fase 5). O valor do Código do Trabalho, por validar com a AT (Q-008).
+VACATION_DEFAULT_DAYS = 22

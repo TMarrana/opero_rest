@@ -1,0 +1,33 @@
+{% extends "base_manage.html" %}
+{% block title %}{{ secao.titulo }}{% endblock %}
+{% block content %}
+<a href="{% url 'config:lista' secao.slug %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">{{ secao.titulo }}</a>
+<h1 class="mt-2 font-display text-2xl font-bold">{% if novo %}Acrescentar {{ secao.singular }}{% else %}Editar {{ secao.singular }}{% endif %}</h1>
+
+<form method="post" class="mt-6 max-w-lg space-y-5">
+  {% csrf_token %}
+  {% for erro in form.non_field_errors %}
+  <p class="rounded-md bg-chama/10 px-4 py-3 text-sm font-medium text-chama">{{ erro }}</p>
+  {% endfor %}
+  <div class="cartao space-y-5 p-6">
+    {% for field in form %}
+    {% if field.widget_type == "checkbox" %}
+    <label class="flex items-center gap-2 text-sm">{{ field }} {{ field.label|capfirst }}</label>
+    {% elif field.widget_type == "checkboxselectmultiple" %}
+    <fieldset>
+      <legend class="text-sm font-medium">{{ field.label|capfirst }}</legend>
+      <div class="mt-2 grid gap-1 text-sm sm:grid-cols-2">{% for opcao in field %}<label class="flex items-center gap-2">{{ opcao.tag }} {{ opcao.choice_label }}</label>{% endfor %}</div>
+      {% for erro in field.errors %}<p class="text-sm font-medium text-chama">{{ erro }}</p>{% endfor %}
+    </fieldset>
+    {% else %}
+    {% include "components/campo.html" with field=field %}
+    {% endif %}
+    {% endfor %}
+  </div>
+  <div class="flex justify-end gap-3">
+    {% url 'config:lista' secao.slug as url_lista %}
+    {% include "components/botao.html" with label="Cancelar" variante="fantasma" href=url_lista %}
+    {% include "components/botao.html" with label="Guardar" %}
+  </div>
+</form>
+{% endblock %}

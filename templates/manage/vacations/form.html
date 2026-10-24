@@ -1,22 +1,29 @@
 {% extends "base_manage.html" %}
-{% block title %}Novo pedido de férias{% endblock %}
+{% block title %}Registar ausência{% endblock %}
 {% block content %}
-<h1 class="font-display text-2xl font-bold">Novo pedido de férias</h1>
-<p class="mt-1 text-sm text-ardosia">Registado em nome do trabalhador. Depois de criado, aprova-se ou recusa-se na lista de pendentes.</p>
+<h1 class="font-display text-2xl font-bold">Registar ausência</h1>
+<p class="mt-1 text-sm text-ardosia">Em nome do trabalhador. Fica aprovada logo, com o seu nome como decisor.</p>
 
 <form method="post" class="mt-6 max-w-md space-y-5">
   {% csrf_token %}
+  {% for erro in form.non_field_errors %}
+  <p class="rounded-md bg-chama/10 px-4 py-3 text-sm font-medium text-chama">{{ erro }}</p>
+  {% endfor %}
   <div class="cartao space-y-5 p-6">
     {% include "components/campo.html" with field=form.worker %}
+    {% include "components/campo.html" with field=form.absence_type %}
     <div class="grid grid-cols-2 gap-4">
       {% include "components/campo.html" with field=form.start_date %}
       {% include "components/campo.html" with field=form.end_date %}
     </div>
+    {% if form.half_day %}
+    <label class="flex items-center gap-2 text-sm">{{ form.half_day }} {{ form.half_day.label }}</label>
+    {% endif %}
     {% include "components/campo.html" with field=form.request_note %}
   </div>
   <div class="flex justify-end gap-3">
     {% include "components/botao.html" with label="Cancelar" variante="fantasma" href="/gestao/ferias/" %}
-    {% include "components/botao.html" with label="Registar pedido" %}
+    {% include "components/botao.html" with label="Registar ausência" %}
   </div>
 </form>
 {% endblock %}

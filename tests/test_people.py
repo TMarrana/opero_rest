@@ -193,8 +193,9 @@ class TestFluxoBackoffice:
         assert "em falta" not in corpo
 
     def test_aceitacao_ferias(self, client, worker, manager):
-        """Aceitação (docx): pedido criado, decidido pelo gerente e tudo
-        em histórico."""
+        """Aceitação (docx): pedido decidido pelo gerente e tudo em
+        histórico. Desde a Fase 5, uma ausência registada pelo gerente
+        nasce aprovada (R-057); o pedido do colaborador fica pendente."""
         client.force_login(manager)
         resp = client.post(
             reverse("vacations:novo"),
@@ -206,7 +207,14 @@ class TestFluxoBackoffice:
             },
         )
         assert resp.status_code == 302
-        pedido = VacationRequest.objects.get()
+        registado = VacationRequest.objects.get()
+        assert registado.status == VacationRequest.Status.APROVADO
+        assert registado.decided_by == manager
+        assert registado.days_taken == 4  # 1 a 7 de outubro: sem o fim de semana nem o 5 de outubro
+
+        pedido = VacationRequest.objects.create(
+            worker=worker, start_date=datetime.date(2026, 11, 2), end_date=datetime.date(2026, 11, 3)
+        )
         resp = client.post(
             reverse("vacations:decidir", args=[pedido.pk, "aprovar"]),
             {"decision_note": "aprovado com gosto"},

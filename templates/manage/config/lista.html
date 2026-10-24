@@ -1,0 +1,61 @@
+{% extends "base_manage.html" %}
+{% block title %}{{ secao.titulo }}{% endblock %}
+{% block content %}
+<a href="{% url 'config:inicio' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Configuração</a>
+<div class="mt-2 flex flex-wrap items-end justify-between gap-4">
+  <h1 class="font-display text-2xl font-bold">{{ secao.titulo }}</h1>
+  {% url 'config:novo' secao.slug as url_novo %}
+  {% include "components/botao.html" with label="Acrescentar" href=url_novo %}
+</div>
+<p class="mt-1 text-sm text-ardosia">{{ secao.ajuda }}</p>
+
+<div class="mt-6 cartao">
+  {% if linhas %}
+  <div class="overflow-x-auto">
+    <table class="tabela">
+      <thead>
+        <tr>{% for _, cabecalho in secao.colunas %}<th>{{ cabecalho }}</th>{% endfor %}<th>Estado</th><th><span class="sr-only">Ações</span></th></tr>
+      </thead>
+      <tbody>
+        {% for l in linhas %}
+        <tr class="{% if l.obj.archived_at %}text-ardosia{% endif %}">
+          {% for v in l.valores %}
+          <td class="{% if forloop.first %}font-medium{% endif %}">
+            {% if v is True %}Sim{% elif v is False %}Não{% elif v.year %}<span class="font-dados">{{ v|date:"d/m/Y" }}</span>{% else %}{{ v }}{% endif %}
+          </td>
+          {% endfor %}
+          <td>{% if l.obj.archived_at %}{% include "components/badge.html" with label="Arquivado" %}{% else %}<span class="text-sm text-ardosia">—</span>{% endif %}</td>
+          <td class="whitespace-nowrap text-right">
+            <a href="{% url 'config:editar' secao.slug l.obj.pk %}" class="text-sm underline underline-offset-2">Editar</a>
+            <form method="post" action="{% url 'config:remover' secao.slug l.obj.pk %}" class="ml-3 inline" x-data="{ confirmar: false }">
+              {% csrf_token %}
+              {% if secao.arquiva %}
+              <button type="submit" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">{% if l.obj.archived_at %}Repor{% else %}Arquivar{% endif %}</button>
+              {% else %}
+              <button type="button" x-show="!confirmar" x-on:click="confirmar = true" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Apagar</button>
+              <button type="submit" x-show="confirmar" x-cloak class="text-sm font-semibold text-chama underline underline-offset-2">Confirmar</button>
+              {% endif %}
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="px-6 py-12 text-center text-sm text-ardosia">Ainda não há nada aqui. Comece por acrescentar {{ secao.singular }}.</div>
+  {% endif %}
+</div>
+
+{% if nacionais %}
+<section class="mt-10">
+  <h2 class="font-display text-lg font-bold">Feriados nacionais de {{ ano }}</h2>
+  <p class="mt-1 text-sm text-ardosia">Já incluídos na contagem de dias de ausência.</p>
+  <ul class="mt-3 cartao divide-y divide-ardosia/10">
+    {% for data, nome in nacionais %}
+    <li class="flex justify-between px-4 py-2 text-sm"><span>{{ nome }}</span><span class="font-dados">{{ data|date:"d/m" }}</span></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

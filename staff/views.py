@@ -18,7 +18,8 @@ from attendance.services import close_shift, end_break, open_shift, request_corr
 from accounts.views import KIOSK_CONFIRMATION_KEY, device_work_area
 from core.mixins import KIOSK_SESSION_KEY, StaffViewMixin
 from vacations.forms import VacationRequestForm
-from vacations.models import VacationRequest
+from vacations.models import BlockedPeriod
+from vacations.services import balance, can_cancel, cancel_request, create_request
 
 
 def _worker_for(user):
@@ -215,34 +216,78 @@ class StaffHistoryView(StaffViewMixin, TemplateView):
 
 
 class StaffVacationsView(StaffViewMixin, View):
-    """Pedido de férias em três campos e lista dos pedidos próprios."""
+    """Pedido de ausência e lista dos pedidos próprios, com o saldo de
+    férias e os períodos bloqueados à vista antes de escolher as datas
+    (R-060)."""
 
     def _render(self, request, worker, form):
-        pedidos = worker.vacation_requests.select_related("decided_by")[:20]
-        return render(request, "staff/ferias.html", {"worker": worker, "form": form, "pedidos": pedidos})
+        hoje = timezone.localdate()
+        pedidos = list(worker.vacation_requests.select_related("decided_by", "absence_type")[:20])
+        for p in pedidos:
+            p.cancelavel = can_cancel(p, today=hoje)
+        bloqueios = (
+            BlockedPeriod.objects.filter(restaurant=worker.restaurant, end__gte=hoje)
+            .exclude(exempt_workers=worker)
+            .prefetch_related("absence_types")
+        )
+        return render(
+            request,
+            "staff/ferias.html",
+            {
+                "worker": worker,
+                "form": form,
+                "pedidos": pedidos,
+                "saldo": balance(worker, hoje.year),
+                "ano": hoje.year,
+                "bloqueios": bloqueios,
+            },
+        )
 
     def get(self, request):
         worker = _worker_for(request.user)
         if worker is None:
             return render(request, "staff/sem_ficha.html")
-        form = VacationRequestForm(restaurant=worker.restaurant)
-        form.fields.pop("worker")
+        form = VacationRequestForm(restaurant=worker.restaurant, with_worker=False)
         return self._render(request, worker, form)
 
     def post(self, request):
         worker = _worker_for(request.user)
         if worker is None:
             return render(request, "staff/sem_ficha.html")
-        form = VacationRequestForm(request.POST, restaurant=worker.restaurant)
-        form.fields.pop("worker")
+        form = VacationRequestForm(request.POST, restaurant=worker.restaurant, with_worker=False)
         if form.is_valid():
-            pedido = form.save(commit=False)
-            pedido.worker = worker
-            pedido.status = VacationRequest.Status.PENDENTE
-            pedido.save()
-            messages.success(request, "Pedido enviado")
-            return redirect("staff:ferias")
+            try:
+                pedido = create_request(
+                    worker=worker,
+                    absence_type=form.cleaned_data["absence_type"],
+                    start_date=form.cleaned_data["start_date"],
+                    end_date=form.cleaned_data["end_date"],
+                    half_day=form.cleaned_data.get("half_day", False),
+                    note=form.cleaned_data["request_note"],
+                )
+                messages.success(
+                    request, "Ausência registada" if pedido.status == pedido.Status.APROVADO else "Pedido enviado"
+                )
+                return redirect("staff:ferias")
+            except ValidationError as exc:
+                form.add_error(None, exc.messages[0])
         return self._render(request, worker, form)
+
+
+class StaffVacationCancelView(StaffViewMixin, View):
+    """Cancelar um pedido pendente, ou aprovado e ainda no futuro (R-056)."""
+
+    def post(self, request, pk):
+        worker = _worker_for(request.user)
+        if worker is None:
+            return render(request, "staff/sem_ficha.html")
+        pedido = get_object_or_404(worker.vacation_requests, pk=pk)
+        try:
+            cancel_request(request_obj=pedido, worker=worker)
+            messages.success(request, "Pedido cancelado")
+        except ValidationError as exc:
+            messages.error(request, exc.messages[0])
+        return redirect("staff:ferias")
 
 
 class StaffCorrectionView(StaffViewMixin, View):
