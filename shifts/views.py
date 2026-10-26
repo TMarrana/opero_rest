@@ -10,7 +10,7 @@ from django.utils.dateparse import parse_date
 from django.views import View
 
 from core.mixins import ManagerRequiredMixin
-from core.models import Restaurant, WorkArea
+from core.models import WorkArea
 from core.utils import restaurant_scope
 from vacations.models import VacationRequest
 from workers.models import Worker
@@ -19,10 +19,6 @@ from . import services
 from .models import RestDay, Shift, ShiftTemplate, WeekPublication
 
 _HORA = {"class": "campo-input font-dados", "type": "time"}
-
-
-def _restaurant(user):
-    return user.restaurant or Restaurant.objects.first()
 
 
 def _semana(request):
@@ -83,11 +79,11 @@ class PlannerView(ManagerRequiredMixin, View):
     ausências pendentes riscadas; conflitos a chama."""
 
     def get(self, request):
-        restaurant = _restaurant(request.user)
+        restaurant = request.restaurant
         semana = _semana(request)
         dias = services.week_days(semana)
         area = request.GET.get("area", "")
-        workers = restaurant_scope(request.user, Worker.objects.filter(is_active=True))
+        workers = restaurant_scope(request, Worker.objects.filter(is_active=True))
         turnos = Shift.objects.filter(restaurant=restaurant, work_date__range=(dias[0], dias[-1])).select_related(
             "template", "work_area"
         )
@@ -152,7 +148,7 @@ class CellView(ManagerRequiredMixin, View):
     ou tirar a folga, apagar ou despublicar um turno."""
 
     def _contexto(self, request, worker, dia, form=None):
-        restaurant = _restaurant(request.user)
+        restaurant = request.restaurant
         return {
             "worker": worker,
             "dia": dia,
@@ -163,14 +159,14 @@ class CellView(ManagerRequiredMixin, View):
         }
 
     def _worker(self, request, pk):
-        return get_object_or_404(restaurant_scope(request.user, Worker.objects.all()), pk=pk)
+        return get_object_or_404(restaurant_scope(request, Worker.objects.all()), pk=pk)
 
     def get(self, request, worker, dia):
         dia = parse_date(dia)
         return render(request, "partials/shifts/celula.html", self._contexto(request, self._worker(request, worker), dia))
 
     def post(self, request, worker, dia):
-        restaurant = _restaurant(request.user)
+        restaurant = request.restaurant
         worker = self._worker(request, worker)
         dia = parse_date(dia)
         acao = request.POST.get("acao")
@@ -210,13 +206,13 @@ class BulkView(ManagerRequiredMixin, View):
     vários dias da semana (R-034)."""
 
     def get(self, request):
-        restaurant = _restaurant(request.user)
+        restaurant = request.restaurant
         semana = _semana(request)
         form = BulkForm(restaurant=restaurant, semana=semana)
         return render(request, "manage/shifts/lote.html", {"form": form, "semana": semana})
 
     def post(self, request):
-        restaurant = _restaurant(request.user)
+        restaurant = request.restaurant
         semana = _semana(request)
         form = BulkForm(request.POST, restaurant=restaurant, semana=semana)
         if not form.is_valid():
@@ -237,7 +233,7 @@ class CopyWeekView(ManagerRequiredMixin, View):
     def post(self, request):
         semana = _semana(request)
         turnos, folgas = services.copy_week(
-            restaurant=_restaurant(request.user), source=semana - datetime.timedelta(days=7), target=semana
+            restaurant=request.restaurant, source=semana - datetime.timedelta(days=7), target=semana
         )
         if turnos or folgas:
             messages.success(request, f"Copiados {turnos} turno(s) e {folgas} folga(s), em rascunho")
@@ -251,7 +247,7 @@ class PublishView(ManagerRequiredMixin, View):
     conflitos, a publicação é recusada (R-032)."""
 
     def get(self, request):
-        restaurant = _restaurant(request.user)
+        restaurant = request.restaurant
         semana = _semana(request)
         conflitos = services.conflicts(restaurant, semana)
         com_conflito = Shift.objects.filter(pk__in=conflitos).select_related("worker", "template")
@@ -266,7 +262,7 @@ class PublishView(ManagerRequiredMixin, View):
     def post(self, request):
         semana = _semana(request)
         try:
-            services.publish_week(restaurant=_restaurant(request.user), week=semana, user=request.user)
+            services.publish_week(restaurant=request.restaurant, week=semana, user=request.user)
             messages.success(request, "Semana publicada")
             return redirect(_url_semana(semana))
         except ValidationError as exc:

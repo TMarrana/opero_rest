@@ -8,8 +8,9 @@ from django.views import View
 from django.views.generic import TemplateView
 
 from core.mixins import ManagerRequiredMixin
-from core.models import Restaurant
 from core.utils import restaurant_scope
+
+from accounts.services import dar_acesso, perfil_na_casa
 
 from .forms import AccountCreateForm, AccountRoleForm, KioskCodeForm, WorkerForm, roles_que_gere
 from .models import Worker
@@ -24,7 +25,7 @@ class WorkerListView(ManagerRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        qs = restaurant_scope(self.request.user, Worker.objects.select_related("user"))
+        qs = restaurant_scope(self.request, Worker.objects.select_related("user"))
         q = self.request.GET.get("q", "").strip()
         if q:
             qs = qs.filter(Q(full_name__icontains=q) | Q(job_title__icontains=q))
@@ -44,17 +45,17 @@ class WorkerFormView(ManagerRequiredMixin, View):
     def _get_worker(self, request, pk):
         if pk is None:
             return None
-        return get_object_or_404(restaurant_scope(request.user, Worker.objects.all()), pk=pk)
+        return get_object_or_404(restaurant_scope(request, Worker.objects.all()), pk=pk)
 
     def get(self, request, pk=None):
         worker = self._get_worker(request, pk)
-        restaurant = request.user.restaurant or Restaurant.objects.first()
+        restaurant = request.restaurant
         form = WorkerForm(instance=worker, restaurant=restaurant)
         return render(request, "manage/workers/form.html", {"form": form, "worker": worker})
 
     def post(self, request, pk=None):
         worker = self._get_worker(request, pk)
-        restaurant = request.user.restaurant or Restaurant.objects.first()
+        restaurant = request.restaurant
         if restaurant is None:
             messages.error(request, "Ainda não há restaurante configurado. Crie-o no admin primeiro.")
             return redirect("workers:lista")
@@ -69,7 +70,7 @@ class WorkerFormView(ManagerRequiredMixin, View):
 
 
 def _worker_do_gerente(request, pk):
-    return get_object_or_404(restaurant_scope(request.user, Worker.objects.select_related("user")), pk=pk)
+    return get_object_or_404(restaurant_scope(request, Worker.objects.select_related("user")), pk=pk)
 
 
 def password_provisoria():
@@ -107,16 +108,16 @@ class WorkerAccountView(ManagerRequiredMixin, View):
     template_name = "manage/workers/conta.html"
 
     def _pode_gerir(self, request, conta):
-        return conta != request.user and conta.role in roles_que_gere(request.user)
+        return conta != request.user and perfil_na_casa(conta, request.restaurant) in roles_que_gere(request.role)
 
     def _render(self, request, worker, **extra):
         contexto = {"worker": worker, "conta": worker.user}
         if worker.user is None:
-            contexto["form"] = extra.pop("form", None) or AccountCreateForm(gestor=request.user)
+            contexto["form"] = extra.pop("form", None) or AccountCreateForm(gestor=request.role)
         else:
             contexto["pode_gerir"] = self._pode_gerir(request, worker.user)
             contexto["form_perfil"] = extra.pop("form_perfil", None) or AccountRoleForm(
-                gestor=request.user, initial={"role": worker.user.role}
+                gestor=request.role, initial={"role": perfil_na_casa(worker.user, request.restaurant)}
             )
         contexto.update(extra)
         return render(request, self.template_name, contexto)
@@ -135,7 +136,7 @@ class WorkerAccountView(ManagerRequiredMixin, View):
         conta = worker.user
 
         if conta is None:
-            form = AccountCreateForm(request.POST, gestor=request.user)
+            form = AccountCreateForm(request.POST, gestor=request.role)
             if not form.is_valid():
                 return self._render(request, worker, form=form)
             password = password_provisoria()
@@ -162,11 +163,10 @@ class WorkerAccountView(ManagerRequiredMixin, View):
             conta.save(update_fields=["password", "must_change_password"])
             return self._mostrar_provisoria(request, worker, password)
         if acao == "perfil":
-            form = AccountRoleForm(request.POST, gestor=request.user)
+            form = AccountRoleForm(request.POST, gestor=request.role)
             if not form.is_valid():
                 return self._render(request, worker, form_perfil=form)
-            conta.role = form.cleaned_data["role"]
-            conta.save(update_fields=["role"])
+            dar_acesso(conta, worker.restaurant, form.cleaned_data["role"])
             messages.success(request, "Perfil guardado")
             return redirect("workers:conta", pk=worker.pk)
         messages.error(request, "Ação inválida.")

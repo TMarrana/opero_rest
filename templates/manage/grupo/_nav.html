@@ -1,0 +1,7 @@
+{# Separadores da área do grupo (Fase 9). #}
+<nav class="mt-4 flex gap-4 border-b border-ardosia/20 text-sm" aria-label="Grupo">
+  {% url 'grupo:painel' as url_painel %}
+  {% url 'grupo:casas' as url_casas %}
+  <a href="{{ url_painel }}" class="-mb-px border-b-2 px-1 pb-2 {% if request.path == url_painel %}border-carvao font-semibold{% else %}border-transparent text-ardosia hover:text-carvao{% endif %}">Painel</a>
+  <a href="{{ url_casas }}" class="-mb-px border-b-2 px-1 pb-2 {% if request.path != url_painel %}border-carvao font-semibold{% else %}border-transparent text-ardosia hover:text-carvao{% endif %}">Casas e acessos</a>
+</nav>

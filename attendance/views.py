@@ -34,7 +34,7 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         dia = parse_date(self.request.GET.get("dia", "") or "") or timezone.localdate()
-        workers = restaurant_scope(self.request.user, Worker.objects.filter(is_active=True))
+        workers = restaurant_scope(self.request, Worker.objects.filter(is_active=True))
         entries = (
             TimeEntry.objects.filter(worker__in=workers)
             .filter(Q(work_date=dia) | Q(work_date__lt=dia, check_out__isnull=True))
@@ -72,7 +72,7 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
         ctx["dia_anterior"] = dia - datetime.timedelta(days=1)
         ctx["dia_seguinte"] = dia + datetime.timedelta(days=1)
         ctx["hoje"] = timezone.localdate()
-        ctx["pedidos_pendentes"] = _scoped_requests(self.request.user).filter(
+        ctx["pedidos_pendentes"] = _scoped_requests(self.request).filter(
             status=CorrectionRequest.Status.PENDENTE
         ).count()
         ctx["total_por_resolver"] = (
@@ -88,7 +88,7 @@ class EntryCorrectionView(ManagerRequiredMixin, View):
     def _get_entry(self, request, pk):
         return get_object_or_404(
             restaurant_scope(
-                request.user, TimeEntry.objects.select_related("worker"), field="worker__restaurant"
+                request, TimeEntry.objects.select_related("worker"), field="worker__restaurant"
             ),
             pk=pk,
         )
@@ -136,7 +136,7 @@ class EntryAddView(ManagerRequiredMixin, View):
     """Acrescentar um registo em falta — nasce já como correção auditada."""
 
     def _get_worker(self, request, pk):
-        return get_object_or_404(restaurant_scope(request.user, Worker.objects.all()), pk=pk)
+        return get_object_or_404(restaurant_scope(request, Worker.objects.all()), pk=pk)
 
     def get(self, request, pk):
         worker = self._get_worker(request, pk)
@@ -188,9 +188,9 @@ def _desvios(turnos, registos, agora):
     return desvios
 
 
-def _scoped_requests(user):
+def _scoped_requests(request):
     return restaurant_scope(
-        user,
+        request,
         CorrectionRequest.objects.select_related("worker", "entry", "decided_by"),
         field="worker__restaurant",
     )
@@ -204,10 +204,10 @@ class CorrectionRequestListView(ManagerRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        qs = _scoped_requests(self.request.user)
+        qs = _scoped_requests(self.request)
         ctx["pendentes"] = qs.filter(status=CorrectionRequest.Status.PENDENTE).order_by("created_at")
         ctx["decididos"] = qs.exclude(status=CorrectionRequest.Status.PENDENTE).order_by("-decided_at")[:30]
-        workers = restaurant_scope(self.request.user, Worker.objects.all())
+        workers = restaurant_scope(self.request, Worker.objects.all())
         ctx["por_resolver"] = (
             TimeEntry.objects.filter(worker__in=workers)
             .unresolved()
@@ -221,7 +221,7 @@ class CorrectionRequestListView(ManagerRequiredMixin, TemplateView):
 
 class CorrectionDecideView(ManagerRequiredMixin, View):
     def post(self, request, pk, acao):
-        pedido = get_object_or_404(_scoped_requests(request.user), pk=pk)
+        pedido = get_object_or_404(_scoped_requests(request), pk=pk)
         form = CorrectionDecisionForm(request.POST)
         form.is_valid()
         try:
@@ -252,7 +252,7 @@ class MonthView(ManagerRequiredMixin, View):
     exportação CSV."""
 
     def _workers(self, request):
-        return restaurant_scope(request.user, Worker.objects.filter(is_active=True))
+        return restaurant_scope(request, Worker.objects.filter(is_active=True))
 
     def _url(self, mes_escolhido):
         return f"{reverse('attendance:mes')}?mes={mes_escolhido:%Y-%m}"

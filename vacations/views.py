@@ -11,7 +11,6 @@ from django.views import View
 from django.views.generic import TemplateView
 
 from core.mixins import ManagerRequiredMixin
-from core.models import Restaurant
 from core.utils import restaurant_scope
 from workers.models import Worker
 
@@ -28,16 +27,12 @@ from .services import (
 )
 
 
-def _scoped_requests(user):
+def _scoped_requests(request):
     return restaurant_scope(
-        user,
+        request,
         VacationRequest.objects.select_related("worker", "decided_by", "absence_type"),
         field="worker__restaurant",
     )
-
-
-def _restaurant(user):
-    return user.restaurant or Restaurant.objects.first()
 
 
 class VacationListView(ManagerRequiredMixin, TemplateView):
@@ -48,7 +43,7 @@ class VacationListView(ManagerRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        qs = _scoped_requests(self.request.user)
+        qs = _scoped_requests(self.request)
         trabalhador = self.request.GET.get("trabalhador", "")
         estado = self.request.GET.get("estado", "")
         historico = qs.exclude(status=VacationRequest.Status.PENDENTE)
@@ -65,7 +60,7 @@ class VacationListView(ManagerRequiredMixin, TemplateView):
                 p.excede_saldo = p.days_taken > p.saldo
         ctx["pendentes"] = pendentes
         ctx["historico"] = historico[:100]
-        ctx["workers"] = restaurant_scope(self.request.user, Worker.objects.filter(is_active=True))
+        ctx["workers"] = restaurant_scope(self.request, Worker.objects.filter(is_active=True))
         ctx["estados"] = [
             (v, l) for v, l in VacationRequest.Status.choices if v != VacationRequest.Status.PENDENTE
         ]
@@ -79,11 +74,11 @@ class VacationCreateView(ManagerRequiredMixin, View):
     aprovada, com o gerente como decisor (R-057)."""
 
     def get(self, request):
-        form = VacationRequestForm(restaurant=_restaurant(request.user))
+        form = VacationRequestForm(restaurant=request.restaurant)
         return render(request, "manage/vacations/form.html", {"form": form})
 
     def post(self, request):
-        form = VacationRequestForm(request.POST, restaurant=_restaurant(request.user))
+        form = VacationRequestForm(request.POST, restaurant=request.restaurant)
         if form.is_valid():
             try:
                 create_request(
@@ -104,7 +99,7 @@ class VacationCreateView(ManagerRequiredMixin, View):
 
 class VacationDecideView(ManagerRequiredMixin, View):
     def post(self, request, pk, acao):
-        pedido = get_object_or_404(_scoped_requests(request.user), pk=pk)
+        pedido = get_object_or_404(_scoped_requests(request), pk=pk)
         form = DecisionForm(request.POST)
         form.is_valid()
         try:
@@ -132,7 +127,7 @@ class AllowanceListView(ManagerRequiredMixin, View):
 
     def get(self, request):
         ano = self._ano(request)
-        workers = restaurant_scope(request.user, Worker.objects.filter(is_active=True))
+        workers = restaurant_scope(request, Worker.objects.filter(is_active=True))
         linhas = []
         for w in workers:
             form = AllowanceForm(instance=allowance_for(w, ano), prefix=f"w{w.pk}")
@@ -148,7 +143,7 @@ class AllowanceListView(ManagerRequiredMixin, View):
     def post(self, request):
         ano = self._ano(request)
         worker = get_object_or_404(
-            restaurant_scope(request.user, Worker.objects.all()), pk=request.POST.get("worker")
+            restaurant_scope(request, Worker.objects.all()), pk=request.POST.get("worker")
         )
         saldo = Allowance.objects.filter(worker=worker, year=ano).first() or Allowance(worker=worker, year=ano)
         form = AllowanceForm(request.POST, instance=saldo, prefix=f"w{worker.pk}")
@@ -191,7 +186,7 @@ class CalendarView(ManagerRequiredMixin, View):
     Clicar numa célula abre o painel, como no planeador de turnos."""
 
     def get(self, request):
-        restaurant = _restaurant(request.user)
+        restaurant = request.restaurant
         inicio = _mes(request)
         fim = inicio.replace(day=calendar.monthrange(inicio.year, inicio.month)[1])
         dias = [inicio + datetime.timedelta(days=i) for i in range(fim.day)]
@@ -218,7 +213,7 @@ class CalendarView(ManagerRequiredMixin, View):
             por_trabalhador.setdefault(a.worker_id, []).append(a)
         fora = {d: 0 for d in dias}
         linhas = []
-        for w in restaurant_scope(request.user, Worker.objects.filter(is_active=True)):
+        for w in restaurant_scope(request, Worker.objects.filter(is_active=True)):
             ausencias = por_trabalhador.get(w.pk, [])
             celulas = []
             for col in colunas:
@@ -251,7 +246,7 @@ class CalendarView(ManagerRequiredMixin, View):
                 "linhas": linhas,
                 "fora": [fora[d] for d in dias],
                 "tipos": AbsenceType.objects.filter(restaurant=restaurant, archived_at__isnull=True),
-                "pendentes": _scoped_requests(request.user).filter(status=VacationRequest.Status.PENDENTE).count(),
+                "pendentes": _scoped_requests(request).filter(status=VacationRequest.Status.PENDENTE).count(),
             },
         )
 
@@ -262,10 +257,10 @@ class CalendarCellView(ManagerRequiredMixin, View):
     cancelar uma ausência aprovada que ainda não acabou."""
 
     def _worker(self, request, pk):
-        return get_object_or_404(restaurant_scope(request.user, Worker.objects.all()), pk=pk)
+        return get_object_or_404(restaurant_scope(request, Worker.objects.all()), pk=pk)
 
     def get(self, request, worker, dia):
-        restaurant = _restaurant(request.user)
+        restaurant = request.restaurant
         worker = self._worker(request, worker)
         dia = parse_date(dia)
         ausencias = list(
@@ -295,7 +290,7 @@ class CalendarCellView(ManagerRequiredMixin, View):
         )
 
     def post(self, request, worker, dia):
-        restaurant = _restaurant(request.user)
+        restaurant = request.restaurant
         worker = self._worker(request, worker)
         dia = parse_date(dia)
         acao = request.POST.get("acao")

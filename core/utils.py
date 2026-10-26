@@ -1,9 +1,9 @@
-def restaurant_scope(user, qs, field="restaurant"):
+def restaurant_scope(request, qs, field="restaurant"):
     """
-    Restringe um queryset ao restaurante do utilizador. Um utilizador sem
-    restaurante (superuser de instância) vê tudo — o MVP serve um
-    restaurante por instância (secção 2).
+    Restringe um queryset à casa ativa do pedido (Fase 9). Sem casa ativa
+    não devolve nada: um utilizador sem acesso a nenhuma casa não vê os
+    dados de todas.
     """
-    if user.restaurant_id:
-        return qs.filter(**{field: user.restaurant_id})
-    return qs
+    if request.restaurant is None:
+        return qs.none()
+    return qs.filter(**{field: request.restaurant.pk})

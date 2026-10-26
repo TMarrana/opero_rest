@@ -1,0 +1,26 @@
+{% extends "base_manage.html" %}
+{% block title %}{% if casa %}{{ casa.name }}{% else %}Nova casa{% endif %}{% endblock %}
+{% block content %}
+<a href="{% url 'grupo:casas' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Casas e acessos</a>
+<h1 class="mt-2 font-display text-2xl font-bold">{% if casa %}Editar {{ casa.name }}{% else %}Acrescentar casa{% endif %}</h1>
+{% if not casa %}<p class="mt-1 text-sm text-ardosia">A casa nova começa com as áreas, as categorias de stock e os tipos de ausência de origem. Os acessos dão-se a seguir.</p>{% endif %}
+
+<form method="post" class="mt-6 max-w-lg space-y-5">
+  {% csrf_token %}
+  <div class="cartao space-y-5 p-6">
+    {% include "components/campo.html" with field=form.name %}
+    {% include "components/campo.html" with field=form.nif %}
+    {% include "components/campo.html" with field=form.address %}
+    {% include "components/campo.html" with field=form.municipality %}
+    <div>
+      <label class="flex items-center gap-2 text-sm">{{ form.is_active }} {{ form.is_active.label }}</label>
+      <p class="mt-1 text-xs text-ardosia">{{ form.is_active.help_text }}</p>
+    </div>
+  </div>
+  <div class="flex justify-end gap-3">
+    {% url 'grupo:casas' as url_casas %}
+    {% include "components/botao.html" with label="Cancelar" variante="fantasma" href=url_casas %}
+    {% include "components/botao.html" with label="Guardar" %}
+  </div>
+</form>
+{% endblock %}

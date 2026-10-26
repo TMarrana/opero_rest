@@ -1,11 +1,17 @@
 from django.contrib import admin
 
-from .models import Restaurant, WorkArea
+from .models import Organization, Restaurant, WorkArea
+
+
+@admin.register(Organization)
+class OrganizationAdmin(admin.ModelAdmin):
+    list_display = ("name", "is_active")
 
 
 @admin.register(Restaurant)
 class RestaurantAdmin(admin.ModelAdmin):
-    list_display = ("name", "slug", "is_active")
+    list_display = ("name", "organization", "nif", "slug", "is_active")
+    list_filter = ("organization",)
     prepopulated_fields = {"slug": ("name",)}
 
 

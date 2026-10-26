@@ -62,6 +62,36 @@ class Item(TimeStampedModel):
         return self.current_stock <= self.minimum_stock
 
 
+class StockTransfer(TimeStampedModel):
+    """Transferência de stock entre duas casas do mesmo grupo (Fase 9): uma
+    saída numa casa e uma entrada na outra, criadas juntas por
+    inventory/services.py::transfer_stock() e ligadas a esta linha."""
+
+    source_item = models.ForeignKey(
+        Item, verbose_name="artigo de origem", on_delete=models.PROTECT, related_name="transfers_out"
+    )
+    destination_item = models.ForeignKey(
+        Item, verbose_name="artigo de destino", on_delete=models.PROTECT, related_name="transfers_in"
+    )
+    quantity = models.DecimalField("quantidade", max_digits=12, decimal_places=3)
+    occurred_at = models.DateTimeField("ocorreu em")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name="registado por", on_delete=models.PROTECT, related_name="stock_transfers"
+    )
+    note = models.CharField("observação", max_length=200, blank=True)
+
+    class Meta:
+        verbose_name = "transferência de stock"
+        verbose_name_plural = "transferências de stock"
+        ordering = ["-occurred_at", "-id"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(quantity__gt=0), name="transferencia_quantidade_positiva"),
+        ]
+
+    def __str__(self):
+        return f"{self.source_item.restaurant} → {self.destination_item.restaurant}: {self.quantity} {self.source_item}"
+
+
 class StockMovement(TimeStampedModel):
     """
     Imutável e sem delete (invariante 2): correções fazem-se com novos
@@ -75,6 +105,14 @@ class StockMovement(TimeStampedModel):
         AJUSTE_POS = "AJUSTE_POS", "Ajuste +"
         AJUSTE_NEG = "AJUSTE_NEG", "Ajuste −"
 
+    class Origin(models.TextChoices):
+        """De onde vem o movimento (Fase 9), para os relatórios separarem uma
+        quebra de uma venda. As fases seguintes juntam compra, consumo
+        interno e venda."""
+
+        MANUAL = "MANUAL", "Registo manual"
+        TRANSFERENCIA = "TRANSFERENCIA", "Transferência entre casas"
+
     item = models.ForeignKey(Item, verbose_name="artigo", on_delete=models.PROTECT, related_name="movements")
     movement_type = models.CharField("tipo", max_length=10, choices=Type.choices)
     quantity = models.DecimalField("quantidade", max_digits=12, decimal_places=3)
@@ -84,6 +122,15 @@ class StockMovement(TimeStampedModel):
     )
     reason = models.CharField("motivo", max_length=200, blank=True)
     reference = models.CharField("referência", max_length=80, blank=True)
+    origin = models.CharField("origem", max_length=20, choices=Origin.choices, default=Origin.MANUAL)
+    transfer = models.ForeignKey(
+        StockTransfer,
+        verbose_name="transferência",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="movements",
+    )
 
     class Meta:
         verbose_name = "movimento de stock"

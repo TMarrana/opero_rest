@@ -44,14 +44,14 @@ class KioskMixin:
 
     def dispatch(self, request, *args, **kwargs):
         self.device = device_info(request)
-        if self.device is None:
+        # Um tablet sem casa mostraria a equipa de todas (Fase 9): tem de
+        # ser ativado de novo.
+        if self.device is None or not self.device["restaurante"]:
             return render(request, "kiosk/nao_ativado.html", status=403)
         return super().dispatch(request, *args, **kwargs)
 
     def workers(self):
-        qs = Worker.objects.filter(is_active=True, kiosk_code__isnull=False)
-        if self.device["restaurante"]:
-            qs = qs.filter(restaurant_id=self.device["restaurante"])
+        qs = Worker.objects.filter(is_active=True, kiosk_code__isnull=False, restaurant_id=self.device["restaurante"])
         return qs.order_by("full_name")
 
 

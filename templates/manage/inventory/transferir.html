@@ -1,0 +1,45 @@
+{% extends "base_manage.html" %}
+{% block title %}Transferir {{ item.name }}{% endblock %}
+{% block content %}
+{% comment %}Transferência para outra casa do grupo (Fase 9). A casa de destino
+escolhe-se primeiro (GET), porque os artigos possíveis são os dessa casa.{% endcomment %}
+<a href="{% url 'inventory:lista' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Stock</a>
+<h1 class="mt-2 font-display text-2xl font-bold">Transferir {{ item.name }}</h1>
+<p class="mt-1 text-sm text-ardosia">
+  Stock em {{ request.restaurant }}: <span class="font-dados font-semibold text-carvao">{{ item.current_stock }} {{ item.unit }}</span>.
+  Sai daqui e entra na outra casa, no mesmo momento, e fica no histórico das duas.
+</p>
+
+<div class="mt-6 max-w-lg space-y-5">
+  {% if casas|length > 1 %}
+  <form method="get" class="cartao p-6">
+    <label for="destino" class="block text-sm font-medium">Casa de destino</label>
+    <div class="mt-1.5 flex gap-3">
+      <select id="destino" name="destino" class="campo-input" onchange="this.form.submit()">
+        {% for c in casas %}<option value="{{ c.pk }}"{% if c == destino %} selected{% endif %}>{{ c.name }}</option>{% endfor %}
+      </select>
+      <noscript><button type="submit" class="text-sm underline">Escolher</button></noscript>
+    </div>
+  </form>
+  {% endif %}
+
+  <form method="post" class="space-y-5">
+    {% csrf_token %}
+    <input type="hidden" name="destino" value="{{ destino.pk }}">
+    {% for erro in form.non_field_errors %}
+    <p class="rounded-md bg-chama/10 px-4 py-3 text-sm font-medium text-chama">{{ erro }}</p>
+    {% endfor %}
+    <div class="cartao space-y-5 p-6">
+      {% if casas|length == 1 %}<p class="text-sm">Para <span class="font-semibold">{{ destino }}</span></p>{% endif %}
+      {% include "components/campo.html" with field=form.destination_item ajuda="Só aparecem os artigos com a mesma unidade, porque não há conversão de unidades." %}
+      {% include "components/campo.html" with field=form.quantity %}
+      {% include "components/campo.html" with field=form.note %}
+    </div>
+    <div class="flex justify-end gap-3">
+      {% url 'inventory:lista' as url_lista %}
+      {% include "components/botao.html" with label="Cancelar" variante="fantasma" href=url_lista %}
+      {% include "components/botao.html" with label="Transferir" %}
+    </div>
+  </form>
+</div>
+{% endblock %}

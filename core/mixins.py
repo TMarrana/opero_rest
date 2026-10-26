@@ -10,19 +10,21 @@ from django.core.exceptions import PermissionDenied
 
 
 class RoleRequiredMixin(LoginRequiredMixin):
-    """Exige um dos perfis em allowed_roles."""
+    """Exige um dos perfis em allowed_roles, na casa ativa do pedido
+    (Fase 9, `core.middleware.ActiveRestaurantMiddleware`). Sem acesso a
+    nenhuma casa, o perfil é None e o pedido é recusado."""
 
     allowed_roles: tuple = ()
 
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
-            if self.allowed_roles and request.user.role not in self.allowed_roles:
+            if self.allowed_roles and request.role not in self.allowed_roles:
                 raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
 
 
 class AdminRequiredMixin(RoleRequiredMixin):
-    """Só Admin: gestão de utilizadores e configuração do restaurante."""
+    """Só Admin: gestão de utilizadores e configuração da casa."""
 
     def dispatch(self, request, *args, **kwargs):
         from accounts.models import User
@@ -63,3 +65,11 @@ class StaffViewMixin(LoginRequiredMixin):
     Sem sessão, vai para o login de email (Fase 7).
     """
 
+
+class GroupAdminRequiredMixin(LoginRequiredMixin):
+    """Só o Admin do grupo: casas, acessos e o painel do grupo (Fase 9)."""
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated and not (request.user.is_group_admin and request.user.organization_id):
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)

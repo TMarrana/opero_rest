@@ -2,6 +2,7 @@ import json
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import F, ProtectedError, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.dateparse import parse_date
@@ -12,13 +13,9 @@ from core.mixins import StockRequiredMixin
 from core.models import Restaurant
 from core.utils import restaurant_scope
 
-from .forms import CategoryForm, ItemForm, MovementForm
+from .forms import CategoryForm, ItemForm, MovementForm, TransferForm
 from .models import Category, Item, StockMovement
-from .services import register_movement
-
-
-def _restaurant_for(user):
-    return user.restaurant or Restaurant.objects.first()
+from .services import register_movement, transfer_stock
 
 
 def _toast(response, texto, tom="sucesso"):
@@ -26,9 +23,17 @@ def _toast(response, texto, tom="sucesso"):
     return response
 
 
-def _contador_baixo(user):
+def _outras_casas(request):
+    """As outras casas ativas do grupo, para onde se pode transferir stock
+    (Fase 9). Não é preciso ter acesso a elas: é uma entrega à casa irmã."""
+    return Restaurant.objects.filter(organization_id=request.restaurant.organization_id, is_active=True).exclude(
+        pk=request.restaurant.pk
+    )
+
+
+def _contador_baixo(request):
     return (
-        restaurant_scope(user, Item.objects.filter(is_active=True))
+        restaurant_scope(request, Item.objects.filter(is_active=True))
         .filter(current_stock__lte=F("minimum_stock"))
         .count()
     )
@@ -39,7 +44,7 @@ class ItemListView(StockRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        qs = restaurant_scope(self.request.user, Item.objects.select_related("category"))
+        qs = restaurant_scope(self.request, Item.objects.select_related("category"))
         q = self.request.GET.get("q", "").strip()
         categoria = self.request.GET.get("categoria", "")
         if q:
@@ -49,8 +54,9 @@ class ItemListView(StockRequiredMixin, TemplateView):
         if self.request.GET.get("baixo"):
             qs = qs.filter(current_stock__lte=F("minimum_stock"))
         ctx["items"] = qs
-        ctx["categorias"] = restaurant_scope(self.request.user, Category.objects.all())
-        ctx["contador_baixo"] = _contador_baixo(self.request.user)
+        ctx["categorias"] = restaurant_scope(self.request, Category.objects.all())
+        ctx["contador_baixo"] = _contador_baixo(self.request)
+        ctx["pode_transferir"] = _outras_casas(self.request).exists()
         ctx["filtros"] = {"q": q, "categoria": categoria, "baixo": self.request.GET.get("baixo", "")}
         return ctx
 
@@ -67,16 +73,16 @@ class ItemFormView(StockRequiredMixin, View):
     def _get_item(self, request, pk):
         if pk is None:
             return None
-        return get_object_or_404(restaurant_scope(request.user, Item.objects.all()), pk=pk)
+        return get_object_or_404(restaurant_scope(request, Item.objects.all()), pk=pk)
 
     def get(self, request, pk=None):
         item = self._get_item(request, pk)
-        form = ItemForm(instance=item, restaurant=_restaurant_for(request.user))
+        form = ItemForm(instance=item, restaurant=request.restaurant)
         return render(request, "manage/inventory/form.html", {"form": form, "item": item})
 
     def post(self, request, pk=None):
         item = self._get_item(request, pk)
-        restaurant = _restaurant_for(request.user)
+        restaurant = request.restaurant
         if restaurant is None:
             messages.error(request, "Ainda não há restaurante configurado. Crie-o no admin primeiro.")
             return redirect("inventory:lista")
@@ -98,7 +104,7 @@ class MovementCreateView(StockRequiredMixin, View):
 
     def _get_item(self, request, pk):
         return get_object_or_404(
-            restaurant_scope(request.user, Item.objects.select_related("category")), pk=pk
+            restaurant_scope(request, Item.objects.select_related("category")), pk=pk
         )
 
     def get(self, request, pk):
@@ -130,10 +136,59 @@ class MovementCreateView(StockRequiredMixin, View):
         resp = render(
             request,
             "partials/inventory/pos_movimento.html",
-            {"item": item, "contador_baixo": _contador_baixo(request.user)},
+            {"item": item, "contador_baixo": _contador_baixo(request), "pode_transferir": _outras_casas(request).exists()},
         )
         texto = self._TOAST.get(form.cleaned_data["movement_type"], "Ajuste registado")
         return _toast(resp, texto)
+
+
+class TransferView(StockRequiredMixin, View):
+    """Transferir stock de um artigo desta casa para outra casa do grupo
+    (Fase 9): a saída aqui e a entrada lá ficam no histórico das duas."""
+
+    template_name = "manage/inventory/transferir.html"
+
+    def _contexto(self, request, pk, data=None):
+        item = get_object_or_404(restaurant_scope(request, Item.objects.select_related("category")), pk=pk)
+        casas = list(_outras_casas(request))
+        if not casas:
+            return None
+        escolhida = request.POST.get("destino") or request.GET.get("destino")
+        destino = next((c for c in casas if str(c.pk) == escolhida), casas[0])
+        form = TransferForm(data, item=item, destino=destino)
+        return {"item": item, "casas": casas, "destino": destino, "form": form}
+
+    def get(self, request, pk):
+        contexto = self._contexto(request, pk)
+        if contexto is None:
+            messages.error(request, "O grupo não tem outra casa ativa para onde transferir.")
+            return redirect("inventory:lista")
+        return render(request, self.template_name, contexto)
+
+    def post(self, request, pk):
+        contexto = self._contexto(request, pk, request.POST)
+        if contexto is None:
+            return redirect("inventory:lista")
+        form = contexto["form"]
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    transfer_stock(
+                        source_item=contexto["item"],
+                        destination_item=form.destination(),
+                        quantity=form.cleaned_data["quantity"],
+                        user=request.user,
+                        note=form.cleaned_data["note"],
+                    )
+            except ValidationError as exc:
+                form.add_error(None, " ".join(exc.messages))
+            else:
+                item = contexto["item"]
+                messages.success(
+                    request, f"Transferido: {form.cleaned_data['quantity']} {item.unit} de {item.name} para {contexto['destino']}"
+                )
+                return redirect("inventory:lista")
+        return render(request, self.template_name, contexto)
 
 
 class HistoryView(StockRequiredMixin, TemplateView):
@@ -142,7 +197,7 @@ class HistoryView(StockRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         qs = restaurant_scope(
-            self.request.user,
+            self.request,
             StockMovement.objects.select_related("item", "created_by"),
             field="item__restaurant",
         )
@@ -156,7 +211,7 @@ class HistoryView(StockRequiredMixin, TemplateView):
         if ate:
             qs = qs.filter(occurred_at__date__lte=ate)
         ctx["movimentos"] = qs[:200]
-        ctx["items"] = restaurant_scope(self.request.user, Item.objects.all())
+        ctx["items"] = restaurant_scope(self.request, Item.objects.all())
         ctx["filtros"] = {
             "artigo": artigo,
             "de": self.request.GET.get("de", ""),
@@ -172,21 +227,21 @@ class HistoryView(StockRequiredMixin, TemplateView):
 
 class CategoryListView(StockRequiredMixin, View):
     def _render(self, request, form):
-        categorias = restaurant_scope(request.user, Category.objects.all()).prefetch_related("items")
+        categorias = restaurant_scope(request, Category.objects.all()).prefetch_related("items")
         return render(request, "manage/inventory/categorias.html", {"categorias": categorias, "form": form})
 
     def get(self, request):
         return self._render(request, CategoryForm())
 
     def post(self, request):
-        restaurant = _restaurant_for(request.user)
+        restaurant = request.restaurant
         if restaurant is None:
             messages.error(request, "Ainda não há restaurante configurado. Crie-o no admin primeiro.")
             return redirect("inventory:categorias")
         form = CategoryForm(request.POST)
         if form.is_valid():
             duplicada = (
-                restaurant_scope(request.user, Category.objects.all())
+                restaurant_scope(request, Category.objects.all())
                 .filter(name__iexact=form.cleaned_data["name"])
                 .exists()
             )
@@ -203,7 +258,7 @@ class CategoryListView(StockRequiredMixin, View):
 
 class CategoryUpdateView(StockRequiredMixin, View):
     def _get(self, request, pk):
-        return get_object_or_404(restaurant_scope(request.user, Category.objects.all()), pk=pk)
+        return get_object_or_404(restaurant_scope(request, Category.objects.all()), pk=pk)
 
     def get(self, request, pk):
         categoria = self._get(request, pk)
@@ -215,7 +270,7 @@ class CategoryUpdateView(StockRequiredMixin, View):
         form = CategoryForm(request.POST, instance=categoria)
         if form.is_valid():
             duplicada = (
-                restaurant_scope(request.user, Category.objects.exclude(pk=pk))
+                restaurant_scope(request, Category.objects.exclude(pk=pk))
                 .filter(name__iexact=form.cleaned_data["name"])
                 .exists()
             )
@@ -230,7 +285,7 @@ class CategoryUpdateView(StockRequiredMixin, View):
 
 class CategoryDeleteView(StockRequiredMixin, View):
     def post(self, request, pk):
-        categoria = get_object_or_404(restaurant_scope(request.user, Category.objects.all()), pk=pk)
+        categoria = get_object_or_404(restaurant_scope(request, Category.objects.all()), pk=pk)
         try:
             categoria.delete()
             messages.success(request, "Categoria eliminada")

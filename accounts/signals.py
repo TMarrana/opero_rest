@@ -2,7 +2,7 @@ from django.contrib.auth.models import Group
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from .models import User
+from .models import Membership, User
 
 # Grupo Django correspondente a cada perfil. A autorização nas views usa
 # os mixins de core/mixins.py; os grupos mantêm o admin e futuras
@@ -23,3 +23,14 @@ def sync_role_group(sender, instance, **kwargs):
     instance.groups.remove(*instance.groups.filter(name__in=set(ROLE_GROUP.values()) - {wanted}))
     group, _ = Group.objects.get_or_create(name=wanted)
     instance.groups.add(group)
+
+
+@receiver(post_save, sender=User)
+def sync_default_membership(sender, instance, **kwargs):
+    """A casa e o perfil por omissão do utilizador têm sempre a linha de
+    acesso correspondente (Fase 9). As outras casas gerem-se à parte."""
+    if instance.restaurant_id is None:
+        return
+    Membership.objects.update_or_create(
+        user=instance, restaurant_id=instance.restaurant_id, defaults={"role": instance.role}
+    )

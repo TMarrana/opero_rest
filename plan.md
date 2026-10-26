@@ -42,6 +42,13 @@ Ao concluir qualquer trabalho descrito na secção 8:
 | 6 — Planeador de turnos | 🟡 Código completo; falta revisão visual do planeador e aprovação do âmbito pela AT |
 | 7 — Quiosque e app do colaborador separados | 🟡 Código completo; falta testar num tablet e num telemóvel reais e a aprovação da AT |
 | 8 — Calendário mensal de ausências | 🟡 Código completo e visto no browser; falta a revisão do TM com dados reais |
+| 9 — Vários restaurantes | 🟡 Primeiro bloco feito e visto no browser; faltam as duas decisões da secção 12 (catálogo de artigos, trabalhador em várias casas) e a aprovação da AT |
+| 10 — Vendas a partir do SAF-T | ⬜ Por iniciar; o cliente de teste já extrai o ficheiro |
+| 11 — Fornecedores e compras | ⬜ Por iniciar |
+| 12 — Consumos internos | ⬜ Por iniciar |
+| 13 — Fichas técnicas | ⬜ Por iniciar |
+| 14 — Stock atualizado pelas vendas | ⬜ Por iniciar |
+| 15 — Extração e análise de dados | ⬜ Por iniciar |
 
 Legenda: ⬜ Por iniciar · 🟡 Em curso · ✅ Concluída
 
@@ -61,7 +68,23 @@ No fim do MVP, um gerente consegue:
 - registar entradas, saídas e ajustes de stock e consultar o histórico;
 - dar acessos diferentes a gerente, responsável de stock e colaborador.
 
-**Não é** um ERP, um POS nem software de contabilidade.
+**Não é** um ERP, um POS nem software de contabilidade. Lê as vendas do POS a partir do ficheiro SAF-T (Fase 10), mas não fatura nem substitui o POS.
+
+### Mapa do produto
+
+As áreas que o produto tem de cobrir, e onde está cada uma neste plano (pedido do TM a 2026-10-26):
+
+| Área | Onde está | Estado |
+|---|---|---|
+| Stock e movimentos | Fase 1 | 🟡 código feito; falta a revisão visual |
+| Compras e fornecedores | Fase 11 (estava na V1.1) | ⬜ |
+| Trabalhadores, ponto e férias | Fases 2, 3, 5, 7 e 8; turnos na Fase 6 | 🟡 código feito; faltam os testes em aparelhos reais |
+| Consumos internos | Fase 12 (estava na V1.1) | ⬜ |
+| Fichas técnicas | Fase 13 (estava no Futuro) | ⬜ |
+| Vendas do POS | Fase 10, pelo ficheiro SAF-T | ⬜ |
+| Atualização de stock por vendas | Fase 14 (estava no Futuro) | ⬜ |
+| Extração e análise de dados | exportação do mês na Fase 5; o resto na Fase 15 | 🟡 parcial |
+| Vários restaurantes | modelo preparado desde a Fase 0; exposto na Fase 9 | ⬜ |
 
 ### Posicionamento
 Os HRIS generalistas, como a Factorial, ganham pela amplitude: payroll, recrutamento, avaliação de desempenho, marketplace de integrações. O Opero Rest não compete aí. Ganha pelo foco no restaurante: stock, ponto e turnos no mesmo sítio, ecrãs pensados para a cozinha e um registo de tempos que serve para a inspeção e para o contabilista sem configuração (estudo em `re-factorial/`, BR-007). Cada funcionalidade nova passa por este filtro: se só faz sentido para uma empresa de escritório, fica de fora.
@@ -77,8 +100,9 @@ O docx trata a interface como mínima ("navegação simples", dashboard sem grá
 | PWA instalável | Decidido |
 | Ponto picado só no tablet partilhado, com nome e código (Fase 7) | Decidido pelo TM; **a validar com AT** (secção 7) |
 | Fases 5 e 6: pausas, fecho do mês, saldo de férias, planeador de turnos | **A validar com AT** (secção 12) |
+| Fases 9 a 15: vários restaurantes, vendas pelo SAF-T, compras, consumos internos, fichas técnicas, stock pelas vendas, análise de dados | Pedido do TM; **a validar com AT** (secção 12) |
 
-Tudo o resto neste documento deriva do docx, exceto as Fases 5 e 6. Essas vêm do estudo da Factorial (`re-factorial/clone/prd.md`) e incluem duas coisas que o docx deixou fora do MVP: o saldo anual de férias e o planeamento visual de equipa.
+Tudo o resto neste documento deriva do docx, exceto as Fases 5 e 6 e as Fases 9 a 15. As Fases 5 e 6 vêm do estudo da Factorial (`re-factorial/clone/prd.md`) e incluem duas coisas que o docx deixou fora do MVP: o saldo anual de férias e o planeamento visual de equipa. As Fases 9 a 15 trazem para o plano o que o docx deixava para a V1.1 ou para o futuro (secção 10).
 
 ---
 
@@ -97,13 +121,15 @@ Tudo o resto neste documento deriva do docx, exceto as Fases 5 e 6. Essas vêm d
 | Testes | `pytest-django`, `pytest-cov` | |
 | Testes com tempo | `time-machine` *(Fase 5)* | fecho do mês, registos por resolver e turnos na noite da mudança de hora dependem do relógio |
 | Feriados | cálculo próprio em `vacations/holidays.py` *(Fase 5)* | feriados nacionais portugueses, incluindo os móveis (Sexta-feira Santa, Páscoa, Corpo de Deus); os municipais ficam em `vacations.Holiday` (ver Notas de desvio) |
+| XML de fora | `defusedxml` *(Fase 10)* | o SAF-T vem de outro programa: lê-se em streaming e sem expandir entidades |
+| Excel | `openpyxl` *(Fase 15)* | extração de dados em Excel, além do CSV |
 
 ### O que as Fases 5 e 6 não acrescentam
 
 - **Sem fila de tarefas** (Celery, Redis, cron). O aviso de mês por fechar e o estado «por resolver» calculam-se quando se lê a página, não por um job agendado. Só as notificações push (P2) podem vir a precisar de um envio em segundo plano.
 - **Sem SPA para o planeador.** A grelha semanal é feita com HTMX e Alpine: clicar numa célula e escolher o turno guardado. O arrastar e largar vem depois e, se vier, usa o SortableJS vendored em `static/js/`, sem npm.
 - **Sem biblioteca de auditoria** (`django-simple-history`). O histórico de correções é um modelo próprio, porque só existe num sítio e precisa de motivo e autor obrigatórios.
-- **Exportação com o módulo `csv` do Python.** O `openpyxl` só entra se o contabilista pedir Excel.
+- **Exportação com o módulo `csv` do Python.** O `openpyxl` entra na Fase 15, com a extração de dados em Excel.
 - **Notificações push (P2):** `pywebpush` com chaves VAPID, sobre o service worker que já existe. Só depois do teste em iOS (BR-004).
 
 ### Cuidados
@@ -118,6 +144,8 @@ Tudo o resto neste documento deriva do docx, exceto as Fases 5 e 6. Essas vêm d
 - **`AbstractUser` custom desde a primeira migração.** Trocar o modelo de utilizador depois de existirem dados é uma operação dolorosa. Faz-se no dia 1, mesmo que comece sem campos extra.
 - **Permissões por Django Groups**, um por perfil, mais mixins de verificação explícita nas views. Não confiar apenas em esconder botões no template.
 - **Multi-tenant preparado, não exposto.** Existe `core.Restaurant` e todos os modelos operacionais têm FK `restaurant` desde o início — acrescentar isto mais tarde obriga a migrar dados existentes. Mas o MVP serve **um restaurante por instância**: não há seletor de restaurante na UI nem middleware de tenant. O docx deixa em aberto se cada cliente terá domínio próprio, subdomínio ou área partilhada; esta abordagem não fecha nenhuma dessas portas.
+
+  **A Fase 9 expõe-no:** várias casas por cliente, com a casa ativa em cada pedido (`core/middleware.py`). Os atalhos de casa única saíram: `restaurant_scope()` recebe o pedido e, sem casa ativa, não devolve nada, e já não há `Restaurant.objects.first()` nas views.
 
 ---
 
@@ -339,6 +367,10 @@ Fora do MVP, por decisão do docx: lotes, datas de validade, múltiplos armazén
 
 Fora do MVP: contagem automática de saldo anual, integração com payroll, regras laborais, substituições, planeamento visual de equipa. As Fases 5 e 6 propõem trazer o saldo anual e o planeamento para depois do MVP, e as alterações ao modelo de dados estão descritas nessas fases.
 
+### Depois do MVP
+
+As Fases 9 a 15 acrescentam o grupo e o acesso por casa (`core.Organization`, `accounts.Membership`), as vendas (app `sales`), as compras (app `purchasing`), os consumos internos (em `inventory`) e as fichas técnicas (app `recipes`). Os modelos estão descritos em cada fase. A invariante 1 mantém-se: compras, consumos, transferências e vendas mexem no stock só através do `register_movement()`.
+
 ### Invariantes — implementar e testar
 
 Estas regras são o núcleo do sistema. Cada uma tem um teste dedicado na secção 11.
@@ -384,6 +416,18 @@ Estas regras são o núcleo do sistema. Cada uma tem um teste dedicado na secç�
 | Registar ausência em nome de um trabalhador (fica aprovada) | ✓ | ✓ | | |
 | Planear e publicar turnos | ✓ | ✓ | | |
 | Ver os próprios turnos publicados | ✓ | ✓ | ✓ | ✓ |
+| *Fases 9 a 15* | | | | |
+| Criar e editar casas, dar e tirar acessos, painel do grupo | só o Admin do grupo | | | |
+| Transferir stock entre casas | ✓ | ✓ | ✓ | |
+| Importar o SAF-T e ver as vendas | ✓ | ✓ | | |
+| Fornecedores, encomendas e receções | ✓ | ✓ ⚠ | ✓ | |
+| Registar consumos internos | ✓ | ✓ | ✓ | |
+| Ver os próprios consumos | ✓ | ✓ | ✓ | ✓ |
+| Criar e editar fichas técnicas | ✓ | ✓ | ✓ | |
+| Relatórios e extração de stock e compras | ✓ | ✓ | ✓ | |
+| Relatórios e extração de vendas e de pessoas | ✓ | ✓ | | |
+
+Na Fase 9, o perfil passa a ser por casa: a mesma pessoa pode ser gerente numa casa e não ter acesso a outra. Acima dos quatro perfis fica o **Admin do grupo**, que vê e configura todas as casas do mesmo cliente e é o único a ver as casas lado a lado.
 
 Regras que decorrem do docx:
 
@@ -640,6 +684,212 @@ Na área Férias, o gerente vê o mês inteiro de toda a equipa e marca ausênci
 
 ---
 
+### Roteiro depois do MVP (Fases 9 a 15)
+*Pedido do TM a 2026-10-26. O cliente de teste já consegue extrair o ficheiro SAF-T do POS (Zone Soft). Âmbito e ordem a aprovar pela AT (secção 12).*
+
+A ordem tem uma razão:
+1. **Vários restaurantes primeiro**, porque mexe em todos os módulos. Cada fase seguinte já nasce a funcionar com várias casas, em vez de ser corrigida depois.
+2. **As vendas logo a seguir**, porque o ficheiro já existe e a leitura não depende de mais nada.
+3. **Compras, consumos e fichas técnicas** preparam o abate de stock pelas vendas, que precisa das três.
+4. **A análise fecha**, porque cruza tudo.
+
+Cada fase traz a sua exportação em CSV. A Fase 15 junta as análises que cruzam módulos e casas.
+
+### Fase 9 — Vários restaurantes
+*Depende de: Fases 0 a 8.*
+**Estado:** 🟡 Primeiro bloco feito, testado (`tests/test_varias_casas.py`) e visto no browser com o `demo`. Falta o que depende das duas decisões da secção 12.
+
+O mesmo cliente gere várias casas na mesma conta. Cada pessoa vê só as casas a que tem acesso. O Admin do grupo vê todas.
+
+- [x] `core.Organization` (no ecrã, «Grupo») é o cliente.
+  - `Restaurant` ganha `organization`, `nif` (validado com o dígito de controlo), `address` e `municipality`. As séries de faturação entram com a Fase 10, que é quem as usa.
+  - A data migration (`core/0003`) cria um grupo por restaurante existente. Uma casa criada sem grupo fica sozinha num grupo novo.
+- [~] `accounts.Membership` tem os campos `user`, `restaurant` e `role`: o perfil passa a ser por casa.
+  - Feito: o Admin do grupo é `User.is_group_admin` com `User.organization`, e tem o perfil de Administrador em todas as casas ativas do grupo. Os mixins leem `request.role`, o perfil na casa ativa. A data migration (`accounts/0004`) dá a cada conta o acesso à casa que tinha; um superuser sem casa passa a Admin do grupo quando há um só grupo.
+  - Por fazer: `User.restaurant` e `User.role` continuam como casa e perfil por omissão, e um signal mantém a linha de acesso dessa casa igual a eles. Os Django Groups seguem o perfil por omissão, não o de cada casa; hoje só servem o admin do Django.
+- [x] Casa ativa na sessão.
+  - Há um seletor no rail do backoffice para quem tem mais de uma casa, e o nome da casa está sempre à vista.
+  - Cada página leva a casa em que foi aberta: `X-Opero-Casa` nos pedidos HTMX e `_casa` nos formulários (`static/js/casa.js`). Um POST de outra casa é recusado antes de gravar, com «Mudou para … noutro separador».
+  - Quem entra com uma casa de colaborador e tem backoffice noutra entra pela casa do backoffice.
+- [x] Isolamento num só sítio: `core.middleware.ActiveRestaurantMiddleware` põe `request.restaurant` e `request.role`, e todas as views filtram com `restaurant_scope(request, …)`.
+  - Saíram o «sem restaurante vê tudo» de `restaurant_scope()` e os seis `user.restaurant or Restaurant.objects.first()`.
+  - Um objeto de outra casa dá 404, mesmo com o pk certo. Uma conta sem casa recebe 403 no backoffice.
+- [x] O tablet do quiosque só mostra os trabalhadores da casa onde foi ativado. Um cookie antigo sem casa deixa de abrir o quiosque, em vez de mostrar a equipa de todas.
+- [x] Grupo → Casas e acessos, para o Admin do grupo: criar e editar casas (as sementes de áreas, categorias e tipos de ausência correm na casa nova) e dar, mudar ou tirar o acesso de cada conta a cada casa (`accounts/services.py`). O perfil de uma conta nova começa em Colaborador.
+- [~] Separação entre o que é de cada casa e o que é do grupo:
+  - são de cada casa, como já eram: o stock, os trabalhadores, o ponto, os turnos, as áreas, os feriados municipais, os períodos bloqueados e o fecho do mês. As vendas serão (Fase 10);
+  - serão do grupo: os fornecedores (Fase 11) e as fichas técnicas (Fase 13);
+  - o catálogo de artigos e os tipos de ausência e de pausa ficam por decidir (secção 12). Até lá, continuam por casa.
+- [x] `StockMovement` ganha `origin` (manual ou transferência; as fases seguintes juntam compra, consumo interno e venda) e `transfer`, a ligação à transferência que o gerou. O histórico assinala as transferências.
+- [x] Transferência de stock entre duas casas do grupo (`inventory/services.py::transfer_stock()`, modelo `StockTransfer`): uma saída numa e uma entrada na outra, na mesma transação, com a referência `TRF-n`.
+  - Os dois artigos têm de ter a mesma unidade, porque não há conversão.
+  - Se a casa de destino não tem o artigo, o ecrã cria-o lá, com o mesmo nome, unidade e categoria.
+  - Não é preciso ter acesso à casa de destino: é uma entrega à casa irmã.
+- [x] Painel do grupo (Grupo → Painel), com uma linha por casa: stock baixo, em turno, por resolver, férias e correções pendentes e mês por aprovar. «Abrir» muda a casa ativa. As vendas entram com a Fase 10.
+- [ ] Trabalhador em mais de uma casa: ver a decisão na secção 12 antes de construir. Até lá, cada ficha é de uma casa e só pica no tablet dessa casa.
+
+*Aceitação:* um grupo com duas casas.
+- A gerente da casa A não vê nada da casa B, nem mudando o URL.
+- O dono vê as duas no painel do grupo e transfere 5 kg de arroz da A para a B. Os dois históricos mostram o movimento, e o tablet da B só tem a equipa da B.
+
+### Fase 10 — Vendas a partir do SAF-T
+*Depende de: Fase 9 (NIF e séries da casa).*
+**Estado:** ⬜ Por iniciar. O cliente de teste já extrai o ficheiro.
+
+O gerente carrega o ficheiro SAF-T (PT) de faturação que o POS exporta, e o Opero Rest passa a saber o que se vendeu, quando e por quanto.
+- **Só leitura:** não mexe no stock (isso é a Fase 14) e não emite nem altera documentos fiscais.
+- **Qualquer POS:** funciona com qualquer POS certificado pela AT, e não só com a Zone Soft.
+- **A API da Zone Soft fica para depois:** não tem documentação pública, e o acesso faz-se pelo revendedor (secção 10).
+
+- [ ] Vendas → Importar, para o Admin e o Gerente.
+  - Aceita o XML do SAF-T (PT) 1.04_01, também dentro de um .zip.
+  - O ficheiro lê-se em streaming (`iterparse`) com `defusedxml`, porque um mês pode ter dezenas de MB e o XML vem de outro programa.
+- [ ] Antes de gravar, valida-se:
+  - o NIF do cabeçalho (`TaxRegistrationNumber`) tem de ser o da casa. Um ficheiro de outra empresa é recusado, e a mensagem mostra o NIF que trazia;
+  - o período (`StartDate`, `EndDate`);
+  - o programa que o gerou (`ProductID`, `SoftwareCertificateNumber`), que fica guardado para referência.
+- [ ] Documentos:
+  - contam só os de `SalesInvoices` (FT, FS, FR, NC, ND);
+  - ignoram-se `WorkingDocuments` (consultas de mesa) e `Payments`, para a mesma venda não contar duas vezes;
+  - os anulados (`InvoiceStatus` A) não contam;
+  - as notas de crédito abatem (linhas com `DebitAmount`).
+- [ ] Várias casas com o mesmo NIF distinguem-se pela série dos documentos (secção 12).
+- [ ] A hora da venda é o `SystemEntryDate`. Dá as vendas por hora.
+- [ ] O dia de serviço tem uma hora de corte por casa (proposta: 5h). Assim, um jantar que fecha à 1h conta no dia em que começou.
+- [ ] Modelo:
+  - `SalesImport`: casa, período, hash do ficheiro, programa, quem e quando;
+  - `SalesDocument`: casa, número (`InvoiceNo`, único por casa), tipo, estado, data e hora, dia de serviço, totais sem e com IVA, `SourceID`;
+  - `SalesLine`: código e descrição do produto, quantidade, unidade, preço unitário, valor sem IVA e taxa de IVA;
+  - `PosProduct`: código do POS, descrição, família (`ProductGroup`), último preço, por casa. Vem de `MasterFiles/Product`.
+- [ ] Importar o mesmo período duas vezes não duplica nada, porque os documentos se identificam pelo número.
+  - Um ficheiro que se sobrepõe a outro já importado só acrescenta os documentos novos.
+  - Também atualiza o estado dos que mudaram, como uma fatura anulada depois.
+- [ ] Dados pessoais:
+  - do cliente final (`MasterFiles/Customer` e os dados do cliente nos documentos) não se guarda nada;
+  - o ficheiro original também não fica guardado: guarda-se só o hash, para reconhecer um ficheiro repetido.
+- [ ] Ecrã Vendas:
+  - vendas por dia, por hora (um mapa da semana com as horas de serviço), por produto e por família;
+  - total sem IVA, número de documentos e ticket médio;
+  - comparação com o período anterior.
+- [ ] Vendas ao lado do ponto: vendas por hora trabalhada, por dia e por serviço. Na semana em planeamento, usam-se as horas previstas nos turnos.
+  - Não há salários, porque o docx exclui o cálculo salarial.
+  - Um custo médio por hora opcional, na Configuração, dá o custo de pessoal estimado em percentagem das vendas.
+- [ ] O dashboard avisa quando o último dia importado tem mais de 7 dias.
+- [ ] Exportação CSV das vendas por dia e por produto.
+- [ ] Validar com um ficheiro real do cliente de teste, sem o pôr no repositório. Nos testes usa-se um SAF-T pequeno e sintético. Confirmar com o cliente:
+  - se o POS exporta um período à escolha (um dia, uma semana) ou só o mês;
+  - como numera as séries.
+
+*Aceitação:* o gerente carrega o SAF-T de um mês do cliente de teste.
+- O total do mês sem IVA é igual, ao cêntimo, ao do relatório do POS.
+- Aparecem as vendas por hora, os produtos mais vendidos e as vendas por hora trabalhada de cada dia.
+- Carregar o mesmo ficheiro outra vez não muda nada.
+
+### Fase 11 — Fornecedores e compras
+*Estava na V1.1. Depende de: Fase 9 (os fornecedores são do grupo).*
+**Estado:** ⬜ Por iniciar.
+
+- [ ] `Supplier`, do grupo: nome, NIF, contactos, dias de entrega, observações e ativo. Um fornecedor com encomendas arquiva-se em vez de se apagar.
+- [ ] Artigos por fornecedor: a referência do fornecedor, o último preço e qual é o fornecedor preferido. A unidade de compra é a unidade do artigo, porque a conversão de unidades continua fora (docx).
+- [ ] Lista de compras: os artigos abaixo do mínimo, agrupados pelo fornecedor preferido. A quantidade sugerida é a que repõe o mínimo, e pode ser alterada.
+- [ ] Encomenda, com linhas. Estados: rascunho, enviada, recebida em parte, recebida e cancelada.
+  - Enquanto não houver envio de emails (secção 12), a encomenda imprime-se ou copia-se como texto para mandar por email ou WhatsApp.
+- [ ] Receção:
+  - confirma-se, linha a linha, o que chegou e a que preço, com o número e a data da fatura ou da guia;
+  - cada linha recebida gera uma `ENTRADA`, de origem compra, pelo `register_movement()`, com a referência da encomenda (invariantes 1 e 5);
+  - uma receção não se apaga; um erro corrige-se com um ajuste;
+  - há também receção sem encomenda, para quando o fornecedor aparece sem aviso.
+- [ ] O preço da última receção passa a ser o `reference_cost` do artigo. O preço médio ponderado continua fora.
+- [ ] Histórico de preços por artigo e fornecedor.
+- [ ] Exportação das compras por fornecedor e por mês.
+
+*Aceitação:* o responsável de stock abre a lista de compras e faz a encomenda ao fornecedor de frescos. Recebe-a com uma linha a menos.
+- O stock e o custo dos artigos mudam.
+- A encomenda fica «recebida em parte».
+
+### Fase 12 — Consumos internos
+*Estava na V1.1. Depende de: Fase 9. Os consumos de pratos dependem da Fase 13.*
+**Estado:** ⬜ Por iniciar.
+
+- [ ] Registo de um consumo interno:
+  - quem consumiu: um trabalhador, ou a casa, para ofertas, provas e o dono;
+  - o quê: um artigo e, depois da Fase 13, um prato com ficha técnica;
+  - a quantidade, a data e o motivo (refeição do pessoal, oferta, prova, dono).
+  - Gera uma `SAIDA`, de origem consumo interno, pelo `register_movement()`.
+- [ ] Quem regista: o Gerente e o Responsável de stock. O colaborador vê os seus consumos na app e nunca vê os dos outros (regra do docx, secção 7).
+- [ ] Valor ao custo de referência do momento. Fica guardado e não se recalcula quando o custo muda.
+- [ ] Limite opcional por colaborador, por exemplo uma refeição por turno. Passar o limite dá um aviso, mas não bloqueia.
+- [ ] Mapa mensal por colaborador, em CSV, para o contabilista. O tratamento das refeições em espécie fica por confirmar com ele (secção 12).
+
+*Aceitação:* o gerente regista o consumo de dois trabalhadores, um café e uma água cada.
+- O stock desce.
+- Cada um vê o seu consumo na app.
+- O mapa do mês mostra o valor por pessoa.
+
+### Fase 13 — Fichas técnicas
+*Estava no Futuro. Depende de: Fase 9 (as fichas são do grupo). A ligação ao POS depende da Fase 10.*
+**Estado:** ⬜ Por iniciar.
+
+- [ ] `Recipe`, do grupo: nome, tipo (prato, bebida ou preparação), número de doses, preço de venda de referência, notas de preparação e ativo.
+- [ ] Linhas: o artigo e a quantidade por dose, na unidade do artigo (sem conversão de unidades), com uma percentagem de quebra opcional para o descasque e a limpeza.
+- [ ] Preparações usadas noutras fichas, como um molho ou uma massa. Só um nível e sem ciclos.
+- [ ] Custo por dose, a partir do `reference_cost` atual, e food cost face ao preço de venda. Quando houver vendas, o preço é o do POS (Fase 10). Um artigo sem custo fica assinalado.
+- [ ] Ligação ao POS:
+  - cada ficha liga a um ou mais códigos de produto do POS em cada casa (`PosProduct`), porque o mesmo prato pode ter códigos diferentes em cada casa ou em cada menu;
+  - há uma lista dos produtos do POS sem ficha, ordenada pelo peso nas vendas.
+- [ ] Versões: mudar uma ficha cria uma versão nova, com data. O consumo de um dia passado calcula-se sempre com a versão em vigor nesse dia (Fase 14).
+- [ ] Ficha imprimível para a cozinha, por dose e para N doses.
+- [ ] Fora desta fase: os alergénios e a informação nutricional (secção 10).
+
+*Aceitação:* o gerente cria a ficha do «Bitoque» (bife, ovo, batata e arroz) e liga-a ao código do POS. Depois vê o custo por dose e o food cost face ao preço de venda que vem do SAF-T.
+
+### Fase 14 — Stock atualizado pelas vendas
+*Estava no Futuro. Depende de: Fases 10 e 13.*
+**Estado:** ⬜ Por iniciar.
+
+- [ ] Ao importar as vendas, cada linha com ficha técnica dá um consumo teórico.
+  - Por casa, por dia de serviço e por artigo, gera-se uma `SAIDA` de origem venda, pelo `register_movement()`, com a referência da importação.
+  - É um movimento por artigo e por dia, e não um por linha de venda, que seriam milhares por mês.
+- [ ] Um dia já aplicado não se aplica duas vezes.
+  - Se uma importação nova muda as vendas de um dia já aplicado (uma fatura anulada, uma nota de crédito), a diferença entra como um movimento novo.
+  - O movimento antigo nunca se edita (invariante 2).
+- [ ] Stock negativo: hoje o `register_movement()` recusa-o, mas uma venda que já aconteceu não se pode recusar. Ver a decisão na secção 12. Proposta:
+  - os movimentos de origem venda podem levar o stock abaixo de zero;
+  - o artigo fica assinalado «stock negativo, contar»;
+  - a contagem seguinte corrige com um ajuste.
+- [ ] Os produtos vendidos sem ficha não mexem no stock. Aparecem numa lista, com o seu peso nas vendas, para o gerente criar a ficha.
+- [ ] Teórico contra real: entre duas contagens físicas de um artigo, compara-se o consumo esperado com a diferença real, em quantidade e em valor.
+  - O consumo esperado vem das vendas, dos consumos internos e das quebras registadas.
+  - É o relatório que mostra o desperdício, as porções mal servidas e as fichas erradas.
+- [ ] Liga-se e desliga-se por casa, porque uma casa pode querer só ver as vendas.
+
+*Aceitação:* importa-se um dia com 40 bitoques.
+- O stock de bife desce 40 × 180 g, num só movimento com a referência da importação.
+- Voltar a importar o mesmo ficheiro não mexe no stock.
+- Uma nota de crédito de 2 bitoques, importada depois, devolve 360 g.
+
+### Fase 15 — Extração e análise de dados
+*Depende de: as fases cujos dados analisa. Pode avançar por partes, à medida que cada uma fica pronta.*
+**Estado:** ⬜ Por iniciar. Já existe a exportação CSV do mês aprovado (Fase 5).
+
+- [ ] Exportação de todas as listas, com os mesmos filtros do ecrã, em CSV (`;` e BOM, como a do mês) e em Excel (`openpyxl`). As listas são: artigos e stock, movimentos, ponto, ausências, turnos, compras, consumos e vendas.
+- [ ] Relatórios de stock (vinham da V1.1): artigos mais movimentados, histórico de ajustes e valor do stock por categoria e por casa.
+- [ ] Relatórios de pessoas: presenças e ausências por mês, horas por área, atrasos e faltas de marcação face aos turnos.
+- [ ] Relatórios de compras: por fornecedor, por artigo e evolução dos preços.
+- [ ] Relatórios de vendas e margem: vendas por produto com o food cost teórico, margem por prato, vendas por hora trabalhada e custo de pessoal estimado em percentagem das vendas.
+- [ ] Comparação entre casas, só para o Admin do grupo.
+- [ ] Gráficos simples, de barras e de linhas, em SVG gerado no servidor. Sem biblioteca de BI e sem Node.
+- [ ] Em todos os relatórios escolhem-se o período e a casa. As datas são na hora local, e os totais batem com os ecrãs de cada módulo.
+- [ ] Acesso conforme a matriz da secção 7. Os relatórios com dados de pessoas ficam só para o Admin e o Gerente.
+- [ ] Agregados diários das vendas, calculados na importação. Assim, os relatórios não somam meses inteiros de linhas a cada pedido.
+- [ ] Fora desta fase: BI externo, previsões e relatórios financeiros (secção 10).
+
+*Aceitação:* o dono do grupo abre «Análise», escolhe outubro e as duas casas.
+- Vê, lado a lado, as vendas, as horas trabalhadas, as vendas por hora trabalhada, o food cost teórico e os consumos internos.
+- Exporta a tabela para Excel, e os totais batem com os de cada módulo.
+
+---
+
 ## 9. Estados e feedback
 
 Regra transversal, aplicada em todos os ecrãs das três superfícies.
@@ -659,16 +909,27 @@ Regra transversal, aplicada em todos os ecrãs das três superfícies.
 ## 10. Fora do âmbito
 
 ### V1.1 — só depois do MVP estável num cliente piloto
-Fornecedores, lista de compras, encomendas e receção com geração de entradas. Consumos internos por colaborador. Relatórios básicos: artigos mais movimentados, histórico de ajustes, compras por fornecedor, presenças e ausências.
+A V1.1 passou para as Fases 11 (fornecedores, lista de compras, encomendas e receção), 12 (consumos internos) e 15 (relatórios básicos). Continuam a vir depois do piloto.
 
 ### Futuro
-Integração com POS e atualização de stock por vendas. Fichas técnicas e receitas. Previsão de compras. Multi-restaurante com painel de grupo. Aplicação móvel nativa. Integrações contabilísticas. Alertas por email, SMS ou WhatsApp. Gestão de validade e lotes. Relatórios financeiros avançados.
+A leitura das vendas do POS (pelo SAF-T), a atualização de stock por vendas, as fichas técnicas e os vários restaurantes com painel de grupo passaram para as Fases 9, 10, 13 e 14. Ficam no futuro:
+- **Ligação direta à API do POS**, em vez do SAF-T, para ter as vendas em tempo real. Só depois de a Fase 10 estar em uso e com a documentação na mão.
+  - A Zone Soft tem uma «API Zone Soft» sobre os dados do ZS bms na nuvem, mas sem documentação pública.
+  - O acesso faz-se pela Zone Soft ou pelo revendedor (estudo de 2026-10-25).
+  - Cada POS é uma integração à parte.
+- Previsão de compras.
+- Aplicação móvel nativa.
+- Integrações contabilísticas.
+- Alertas por email, SMS ou WhatsApp.
+- Gestão de validade e lotes.
+- Relatórios financeiros avançados.
+- Alergénios e informação nutricional nas fichas técnicas.
 
 **Nada desta lista entra no MVP.** Construir agora põe em risco o prazo e a qualidade da primeira versão.
 
 ### Depois das Fases 5 e 6 (estudo da Factorial, prioridades P2 e P3)
 - **P2:** trocas de turno entre colegas (precisam de notificações push na PWA; testar em iOS primeiro), uma caixa de pedidos única no dashboard (férias, correções e trocas), horas extra com um só nível de aprovação, cobertura mínima por área e hora, e horários fixos para quem não faz turnos.
-- **P3:** geolocalização na marcação, só em modo de alerta e só depois de uma avaliação de impacto (AIPD), e equipas e contratos para grupos com várias casas. Na geolocalização guardam-se as coordenadas só no momento da entrada e da saída, nunca o percurso (BR-002). Turnos rotativos, com um padrão semanal ou quinzenal que se repete (R-036), entram quando houver um piloto com folgas rotativas fixas.
+- **P3:** geolocalização na marcação, só em modo de alerta e só depois de uma avaliação de impacto (AIPD), e equipas e contratos para grupos com várias casas (as casas em si entram na Fase 9). Na geolocalização guardam-se as coordenadas só no momento da entrada e da saída, nunca o percurso (BR-002). Turnos rotativos, com um padrão semanal ou quinzenal que se repete (R-036), entram quando houver um piloto com folgas rotativas fixas.
 - **Integrações de payroll** (Primavera, Sage) e terminais de ponto: só depois de a exportação mensal estar em uso, e se o contabilista do piloto o pedir. Cada uma obriga a um programa de parceiros com meses de espera (BR-005).
 
 ### Não fazer
@@ -747,6 +1008,28 @@ Quando as Fases 5 e 6 arrancarem, juntam-se estes testes. A lista completa de te
 | `test_rest_day_not_deducted` | uma folga não desconta dias de férias |
 | `test_work_date_across_dst_change` | um turno na noite da mudança de hora conta no dia certo e com a duração real |
 
+Quando as Fases 9 a 15 arrancarem, juntam-se estes:
+
+| Teste | Verifica |
+|---|---|
+| `test_no_cross_restaurant_leak` | em cada lista e cada detalhe, um objeto de outra casa dá 404, mesmo com o pk certo *(Fase 9, feito; ver `tests/test_varias_casas.py`)* |
+| `test_post_from_other_restaurant_tab_rejected` | um formulário aberto noutra casa é recusado depois de mudar de casa *(Fase 9)* |
+| `test_kiosk_shows_only_its_restaurant` | o tablet de uma casa só mostra a equipa dessa casa *(Fase 9)* |
+| `test_transfer_moves_stock_between_restaurants` | a transferência tira de uma casa e põe na outra, na mesma transação *(Fase 9)* |
+| `test_saft_wrong_nif_rejected` | um SAF-T de outro NIF é recusado sem gravar nada *(Fase 10)* |
+| `test_saft_reimport_is_idempotent` | importar o mesmo ficheiro duas vezes não duplica documentos *(Fase 10)* |
+| `test_saft_cancelled_and_credit_notes` | os anulados não contam e as notas de crédito abatem *(Fase 10)* |
+| `test_saft_working_documents_ignored` | as consultas de mesa não contam como vendas *(Fase 10)* |
+| `test_saft_keeps_no_customer_data` | nenhum dado do cliente final fica gravado *(Fase 10)* |
+| `test_saft_entity_expansion_rejected` | um XML com entidades é recusado *(Fase 10)* |
+| `test_sale_after_midnight_counts_on_service_day` | uma venda à 1h conta no dia de serviço anterior *(Fase 10)* |
+| `test_receipt_creates_entry_movement` | a receção gera entradas com a referência da encomenda e atualiza o custo *(Fase 11)* |
+| `test_staff_sees_only_own_consumption` | o colaborador vê os seus consumos e não os dos outros *(Fase 12)* |
+| `test_recipe_version_used_for_past_day` | o consumo de um dia passado usa a versão da ficha desse dia *(Fase 13)* |
+| `test_sales_deduct_stock_once_per_day` | um dia de vendas gera um movimento por artigo, e reimportar não repete *(Fase 14)* |
+| `test_credit_note_after_apply_returns_stock` | uma nota de crédito importada depois devolve o stock com um movimento novo *(Fase 14)* |
+| `test_export_totals_match_screens` | os totais da exportação são os mesmos do ecrã *(Fase 15)* |
+
 ### Manual, por fase
 
 Seguir os critérios de aceitação de cada fase (secção 8), que são os do docx.
@@ -774,7 +1057,7 @@ Bloqueiam a Fase 4, não a Fase 0. O desenvolvimento começa sem elas.
 |---|---|---|
 | Nome final da marca e domínio | AT | branding, `ALLOWED_HOSTS`, ícones da PWA |
 | Hosting e ambiente de produção | TM | settings de produção, deploy, custos |
-| Isolamento por cliente: domínio, subdomínio ou área partilhada | AT + TM | middleware de tenant; o modelo já está preparado |
+| Isolamento por cliente: domínio, subdomínio ou área partilhada | AT + TM | middleware de tenant; o modelo já está preparado. A Fase 9 resolve as casas dentro do mesmo cliente; esta decisão continua a valer entre clientes diferentes |
 | RGPD e tratamento de dados de trabalhadores | AT | retenção, exportação, consentimento, política de privacidade; DPA com o restaurante e lista de subcontratantes (BR-006) |
 | Política de backups e recuperação | TM | frequência, retenção, teste de restauro |
 | Permissões do gerente sobre stock (⚠ secção 7) | AT | uma linha nos mixins |
@@ -786,6 +1069,14 @@ Bloqueiam a Fase 4, não a Fase 0. O desenvolvimento começa sem elas.
 | Contrato coletivo da restauração (Q-010) e dias de férias extra (Q-008) | AT, com contabilista | turnos, folgas, trabalho noturno e saldo por defeito |
 | Limite de horas para um registo ficar por resolver (antes do planeador) | AT + TM | um número em configuração; proposta: 14 horas |
 | Envio de emails (recuperação de password, avisos) | TM | enquanto não houver, a password esquecida resolve-se com uma provisória gerada pelo gerente (Fase 7) |
+| Âmbito e ordem das Fases 9 a 15 face ao piloto | AT | o docx deixava estas áreas para a V1.1 ou para o futuro; proposta: depois do piloto arrancar, pela ordem do roteiro |
+| Catálogo de artigos do grupo ou de cada casa | AT + TM | proposta: catálogo do grupo e stock por casa, porque as fichas técnicas, os fornecedores e as transferências precisam dos mesmos artigos nas várias casas. Mexe no modelo do stock (Fase 9) |
+| Trabalhador que trabalha em mais de uma casa | AT, com o contabilista | proposta: uma casa principal (o empregador), com o saldo de férias e o fecho do mês; pica e tem turnos nas outras (Fase 9) |
+| Várias casas com o mesmo NIF | TM, com o cliente de teste | distinguem-se pela série dos documentos no SAF-T; confirmar como o POS numera as séries (Fase 10) |
+| Hora de corte do dia de serviço nas vendas | AT + TM | proposta: 5h, configurável por casa (Fase 10) |
+| Operador do POS (`SourceID`) ligado ao trabalhador, para vendas por empregado | AT, com jurista | toca em RGPD e na relação laboral; fica desligado até haver decisão (Fase 10) |
+| Stock negativo causado pelas vendas | AT + TM | proposta: aceitar só nos movimentos de origem venda e assinalar o artigo para contar (Fase 14) |
+| Refeições do pessoal e consumos internos no processamento salarial | AT, com o contabilista | formato e conteúdo do mapa mensal da Fase 12 |
 
 ---
 
@@ -803,6 +1094,8 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 
 | Data | Fase | O que foi feito | Por fechar | Próximo passo |
 |---|---|---|---|---|
+| 2026-10-26 (2ª) | 9 | **Fase 9 arrancada: várias casas no mesmo grupo.**<br>• **Dados:** `Organization`; `Restaurant.organization`, `nif`, `address` e `municipality`; `User.organization` e `is_group_admin`; `Membership` (acesso e perfil por casa); `StockTransfer`, `StockMovement.origin` e `transfer`. Migrações `core/0003`, `accounts/0004` e `inventory/0002`, com data migrations.<br>• **Casa ativa:** `core.middleware.ActiveRestaurantMiddleware` põe `request.restaurant` e `request.role`. As views passaram todas para `restaurant_scope(request, …)` e os mixins para `request.role`; saíram o «sem restaurante vê tudo» e os seis `Restaurant.objects.first()`. Seletor de casa no rail e recusa de POSTs abertos noutra casa (`static/js/casa.js`, `X-Opero-Casa`).<br>• **Grupo:** painel com uma linha por casa, casas e acessos, só para o Admin do grupo. O gerente muda o perfil de uma conta só na casa onde está.<br>• **Stock:** transferência entre casas, com a criação do artigo no destino se faltar.<br>• **Quiosque:** só a equipa da casa do tablet; um cookie sem casa já não abre o quiosque.<br>• **Demo:** Grupo Tasca com a Tasca da Esquina e a Tasca da Ribeira, `dono@tasca.pt` como Admin do grupo e o gerente com acesso às duas.<br>23 testes novos, 257 no total; `check` e `makemigrations --check` limpos; migrações e `demo` aplicados ao `db.sqlite3` (cópia de segurança fora do repositório). No `db.sqlite3`, o superuser sem casa passou a Admin do grupo. CSS reconstruído e service worker para v7.<br>No browser, como `dono@tasca.pt`: painel do grupo, «Abrir» a Ribeira, transferir 5 kg de arroz para a Esquina (cria o artigo lá), mudar de casa no seletor e ver a entrada no histórico da Esquina, ecrã de acessos. | As duas decisões da secção 12 (catálogo de artigos do grupo, trabalhador em várias casas) não foram tomadas: tudo continua por casa. `User.restaurant` e `User.role` ainda existem, como casa e perfil por omissão. A recusa de POSTs de outra casa depende de JavaScript nos formulários normais (no HTMX vai no cabeçalho); sem JavaScript, o POST passa. Nada commitado. | Fechar com a AT as duas decisões da secção 12 e, com elas, acabar a Fase 9. Depois, Fase 10 (SAF-T). |
+| 2026-10-26 | 9–15 | **Roteiro depois do MVP no plano, sem código.** Pedido do TM: o cliente de teste já extrai o SAF-T do POS (Zone Soft), e o produto tem de cobrir stock e movimentos, compras e fornecedores, trabalhadores, ponto e férias, consumos internos, fichas técnicas, atualização de stock por vendas, extração e análise de dados e, sobretudo, vários restaurantes.<br>Mapa do produto na secção 1, a confirmar onde está cada área. Fases novas: 9 (vários restaurantes), 10 (vendas pelo SAF-T), 11 (fornecedores e compras), 12 (consumos internos), 13 (fichas técnicas), 14 (stock pelas vendas) e 15 (extração e análise). Acertos nas secções 2, 6, 7, 10, 11 e 12.<br>Antes, a 2026-10-25, um estudo da Zone Soft feito com fontes públicas: a «BMS Mobile» é o ZS bms mobile, e a API não tem documentação pública. | Âmbito e ordem por aprovar pela AT. Sete decisões novas na secção 12, das quais o catálogo de artigos e o trabalhador em várias casas mexem no modelo da Fase 9. | Pedir ao cliente de teste um SAF-T de um mês e saber se o POS exporta um período à escolha. Levar à AT a ordem das fases e as decisões novas. |
 | 2026-10-25 (2ª) | 8 | **Calendário mensal de ausências no backoffice.** A entrada «Férias» abre o mês: uma linha por trabalhador, uma coluna por dia, ausências aprovadas a cheio e pendentes tracejadas, fins de semana, feriados e períodos bloqueados assinalados, contagem de quem está fora e saldo de cada um. Clicar numa célula abre um painel, como no planeador, para marcar uma ausência (fica aprovada), aprovar ou recusar um pedido e cancelar uma ausência que ainda não acabou. Serviço novo `cancel_by_manager()` e campo `cancelled_by`, com migração `vacations/0005`.<br>18 testes novos, 234 no total; `check` e `makemigrations --check` limpos; migração aplicada ao `db.sqlite3`.<br>No browser: marcar, ver o saldo e a contagem a mudar, e cancelar (a ausência de teste do Rui ficou cancelada no `db.sqlite3`). O painel começou ao lado da grelha, como no planeador, mas assim só cabiam 20 dias: passou a abrir por cima, e a página pode usar a largura toda (bloco `largura` em `base_manage.html`). | Marcar com arrastar sobre várias células não foi feito: o painel tem início e fim. Sem filtro por área, porque as ausências não têm área. | Rever o calendário com dados reais e decidir se vale a pena arrastar para marcar períodos. |
 | 2026-10-25 | 7 | **Fase 7 completa em código: o ponto pica-se só no tablet partilhado e a app do colaborador passa a ser de consulta e pedidos.** Decidido em conversa com o TM; secções 1, 3, 5, 6, 7, 9, 10, 11 e 12 atualizadas.<br>• **Dados:** o código de ponto passou do `User` para o `Worker` (`kiosk_code`, `code_set_at`); a data migration copiou o PIN que havia (o da Marta) e removeu os campos do utilizador. `User.must_change_password`.<br>• **Quiosque (app `kiosk`, `/quiosque/`):** nomes → código no teclado do ecrã → ações do estado atual, com as pausas ao lado da Saída. Sem sessão: o código devolve um token assinado de 60 s e de uso único. Confirmação da entrada com a saída prevista, a saída esquecida e os registos por resolver, até «OK» ou 15 s; as outras durante 5 s. Aviso no ecrã de ações quando já passou do fim previsto. `hx-boost` e um aviso «Nada foi registado» para falhas de rede ou do servidor. Bloqueio de 60 s ao fim de 5 falhas, por trabalhador.<br>• **App:** sem botão de ponto, com o estado do dia, o turno de hoje, os totais e as três entradas. Login por email; o login por PIN, o `MarkView`, a fila offline e as sessões PIN saíram. Service worker v5.<br>• **Backoffice:** «Código de ponto» e «Conta da app» na lista de trabalhadores. A conta é criada com uma password provisória mostrada uma vez; o gerente só gere Colaborador e Resp. stock. O middleware obriga a mudar a provisória. A ativação do dispositivo perdeu o modo pessoal.<br>• **Testes:** 216 (eram 195). Os da sessão PIN e da fila offline foram substituídos pelos do quiosque e das contas. Os testes passaram a usar um hasher rápido e a limpar a cache: a suite desceu de 8 minutos para menos de 15 segundos.<br>• **No browser:** quiosque visto de ponta a ponta (nomes, código, entrada, regresso aos 15 s, ações em turno, pausa e regresso aos 5 s), app, lista de trabalhadores e conta. Daí saíram duas correções: o formulário do código publicava para `/quiosque/` (com `hx-push-url="false"` o endereço não muda) e o teclado subia quando a dica desaparecia. Nos testes apareceu também o token repetido no mesmo segundo, corrigido com um valor aleatório.<br>`check` e `makemigrations --check` limpos; migrações e `demo` aplicados ao `db.sqlite3` (cópia de segurança fora do repositório). Nada commitado. | O aviso sem rede não foi visto com o tablet desligado. Tablet e telemóvel reais por testar. Cache local: o bloqueio do código e o uso único dos tokens só valem dentro de um processo (ver Notas de desvio). A Marta ficou com uma entrada e uma pausa abertas no `db.sqlite3` de desenvolvimento, do teste no browser. | Testar num tablet real: duas pessoas seguidas, o tablet em modo avião e a leitura do teclado com luz má. No telemóvel: criar a conta de alguém, entrar com a provisória e mudá-la. Levar à AT a decisão do código no tablet (secção 12). |
 | 2026-10-24 (5ª) | 5, 6 | **Fase 5 completa em código e Fase 6 inteira.** Commits `0764720`, `b7b9495`, `82b3aa9` e `f2d45cc`.<br>• **Por resolver e pedidos de correção:** uma entrada sem saída que passe do limite (14 h, `ATTENDANCE_UNRESOLVED_HOURS`) fica por resolver e conta zero. Já não impede a entrada seguinte: ao marcar nova entrada, a antiga fica com `missing_exit`. O colaborador pede correção no histórico ou a partir do aviso no ecrã de ponto; o gerente decide em Ponto → Pedidos, e a aprovação passa pelos serviços e fica no histórico.<br>• **Ausências:** `AbsenceType` com cinco tipos de origem, meio dia, aprovação automática, ausência do gerente já aprovada, cancelamento pelo colaborador. `Allowance` com transitados que caducam e ecrã de saldos. Feriados nacionais calculados, municipais por restaurante. `BlockedPeriod` recusa na submissão e aparece antes de pedir.<br>• **Configuração:** a entrada do rail deixou de ser um marcador. CRUD para o Admin (áreas, tipos de pausa e de ausência, feriados, períodos bloqueados) e turnos guardados para o gerente.<br>• **Fecho do mês:** `MonthClose`, aprovação por trabalhador ou de todos os prontos, recusa com contagem, bloqueio nos serviços (incluindo marcações offline atrasadas), reabertura com motivo, aviso no dashboard e CSV (`;`, BOM, só aprovados).<br>• **Planeador (app `shifts`):** turnos guardados, grelha semanal com painel por célula (HTMX), lote, cópia da semana anterior, folgas, conflitos (sobreposição, folga, ausência aprovada, menos de 11 h de descanso), publicação com resumo do que muda e despublicação. Ausência aprovada passa turnos a reserva; cancelada, volta a rascunho. «Os meus turnos» na vista staff. Na vista da equipa, o previsto ao lado do realizado, com atraso, saída fora de horas e falta de marcação. O limite dos registos por resolver passa a ser o fim do turno publicado mais 4 h. Folgas e dias sem turno em semanas planeadas não descontam férias.<br>195 testes; `check` e `makemigrations --check` limpos; migrações aplicadas ao `db.sqlite3`. | **Ninguém viu os ecrãs novos:** a extensão do Chrome não estava ligada, por isso o planeador, os pedidos, o fecho do mês, a configuração e os saldos só foram verificados pelos testes. R-012 (pergunta na saída tardia) não foi feito, como o plano deixava em aberto. Anexos nos tipos de ausência ficaram de fora (ver Notas de desvio). O `demo` não cria turnos. | Rever no browser, com `manage.py demo`, os ecrãs novos: Turnos (sobretudo a largura da grelha com o painel ao lado), Ponto → Pedidos e Fecho do mês, Férias → Saldos e Configuração. Depois levar à AT o âmbito das Fases 5 e 6 e os valores por confirmar (14 h, 22 dias, 11 h de descanso, formato do CSV). |
@@ -824,6 +1117,9 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 
 Alterações ao plano decididas durante a execução. Se algo aqui contradiz uma secção acima, **corrigir também a secção** — este registo é o histórico, não a fonte de verdade.
 
+- **2026-10-26 · Admin do grupo como atributo da conta, e casa por omissão mantida.** O plano previa o Admin do grupo «no `Organization`»: ficou `User.is_group_admin` com `User.organization`, sem uma linha de acesso por casa, para que uma casa nova lhe fique logo visível. `User.restaurant` e `User.role` ficam como casa e perfil por omissão, com um signal que mantém a linha de acesso dessa casa; assim o código e os testes que criam contas com casa e perfil continuam certos. O acesso real é sempre o de `Membership`.
+- **2026-10-26 · Service worker para v7.** O CSS mudou com a Fase 9 (seletor de casa, área do grupo).
+- **2026-10-26 · A V1.1 e parte do Futuro passam a fases do plano.** Os fornecedores e compras, os consumos internos, as fichas técnicas, a atualização de stock por vendas, os relatórios e os vários restaurantes deixam de estar só na secção 10 e passam às Fases 9 a 15. A ligação ao POS faz-se pelo ficheiro SAF-T e não pela API, porque o cliente de teste já o extrai e porque funciona com qualquer POS certificado. «Multi-tenant preparado, não exposto» (secção 2) deixa de valer a partir da Fase 9.
 - **2026-10-25 · O gerente cancela ausências aprovadas.** Até aqui só o colaborador cancelava (R-056). No calendário, o gerente cancela uma ausência aprovada que ainda não acabou, para desfazer uma marcação errada. As que já acabaram ficam, porque contam no saldo e no mês. Um pedido pendente recusa-se.
 - **2026-10-25 · Service worker para v6 e CSS antigo em desenvolvimento.** O service worker serve `/static/` primeiro da cache, sem revalidar. Em desenvolvimento, o `app.css` tem sempre o mesmo nome, por isso as classes novas só chegam ao browser quando a versão da cache muda ou com Ctrl+Shift+R. Em produção, o `whitenoise` dá um nome com hash a cada versão do CSS e o problema não existe. Sempre que o CSS mudar em desenvolvimento, subir a versão (`CACHE` em `static/sw.js`).
 - **2026-10-25 · Código de ponto na ficha, não na conta.** Quem não tem email pica na mesma; ter conta da app é opcional. A migração copiou os PINs existentes sem os pedir de novo.

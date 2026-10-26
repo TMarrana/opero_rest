@@ -1,0 +1,61 @@
+{% extends "base_manage.html" %}
+{% block title %}Acessos · {{ casa.name }}{% endblock %}
+{% block content %}
+<a href="{% url 'grupo:casas' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Casas e acessos</a>
+<h1 class="mt-2 font-display text-2xl font-bold">Acessos a {{ casa.name }}</h1>
+<p class="mt-1 text-sm text-ardosia">Quem entra nesta casa e com que perfil. O perfil vale só aqui: a mesma pessoa pode ser gerente nesta casa e colaboradora noutra. Como Admin do grupo, tem acesso a todas.</p>
+
+<div class="mt-6 cartao">
+  {% if acessos %}
+  <div class="overflow-x-auto">
+    <table class="tabela">
+      <thead><tr><th>Conta</th><th>Perfil nesta casa</th><th><span class="sr-only">Ações</span></th></tr></thead>
+      <tbody>
+        {% for a in acessos %}
+        <tr>
+          <td class="font-medium">{{ a.user }}<span class="block text-xs font-normal text-ardosia">{{ a.user.email }}{% if a.user.restaurant_id == casa.pk %} · casa por omissão{% endif %}</span></td>
+          <td>
+            <form method="post" class="flex items-center gap-2">
+              {% csrf_token %}
+              <input type="hidden" name="user" value="{{ a.user.pk }}">
+              <input type="hidden" name="acao" value="perfil">
+              <select name="role" class="campo-input w-auto" aria-label="Perfil de {{ a.user }}">
+                {% for valor, nome in perfis %}<option value="{{ valor }}"{% if valor == a.role %} selected{% endif %}>{{ nome }}</option>{% endfor %}
+              </select>
+              <button type="submit" class="text-sm underline underline-offset-2">Guardar</button>
+            </form>
+          </td>
+          <td class="whitespace-nowrap text-right">
+            <form method="post" class="inline" x-data="{ confirmar: false }">
+              {% csrf_token %}
+              <input type="hidden" name="user" value="{{ a.user.pk }}">
+              <input type="hidden" name="acao" value="tirar">
+              <button type="button" x-show="!confirmar" x-on:click="confirmar = true" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Tirar acesso</button>
+              <button type="submit" x-show="confirmar" x-cloak class="text-sm font-semibold text-chama underline underline-offset-2">Confirmar</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="px-6 py-12 text-center text-sm text-ardosia">Ainda ninguém tem acesso a esta casa.</div>
+  {% endif %}
+</div>
+
+<section class="mt-8 max-w-lg">
+  <h2 class="font-display text-lg font-bold">Dar acesso</h2>
+  {% if form.fields.user.queryset.exists %}
+  <form method="post" class="mt-3 cartao space-y-4 p-6">
+    {% csrf_token %}
+    <input type="hidden" name="acao" value="dar">
+    {% include "components/campo.html" with field=form.user %}
+    {% include "components/campo.html" with field=form.role %}
+    <div class="flex justify-end">{% include "components/botao.html" with label="Dar acesso" %}</div>
+  </form>
+  {% else %}
+  <p class="mt-2 text-sm text-ardosia">Todas as contas do grupo já têm acesso a esta casa. As contas novas criam-se na ficha do trabalhador, em «Conta da app».</p>
+  {% endif %}
+</section>
+{% endblock %}

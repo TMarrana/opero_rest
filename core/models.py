@@ -1,5 +1,7 @@
 from django.db import models
 
+from .validators import validate_nif
+
 
 class TimeStampedModel(models.Model):
     """Base abstrata de todos os modelos operacionais."""
@@ -11,22 +13,52 @@ class TimeStampedModel(models.Model):
         abstract = True
 
 
-class Restaurant(TimeStampedModel):
-    """
-    Multi-tenant preparado, não exposto: o MVP serve um restaurante por
-    instância, mas todos os modelos operacionais apontam para aqui desde
-    a primeira migração (secção 2 do plano).
-    """
+class Organization(TimeStampedModel):
+    """O cliente, que no ecrã se chama «Grupo» (Fase 9): junta as casas que
+    gere na mesma conta. O Admin do grupo vê e configura todas."""
 
     name = models.CharField("nome", max_length=120)
-    slug = models.SlugField(unique=True)
     is_active = models.BooleanField("ativo", default=True)
 
     class Meta:
-        verbose_name = "restaurante"
+        verbose_name = "grupo"
 
     def __str__(self):
         return self.name
+
+
+class Restaurant(TimeStampedModel):
+    """
+    Uma casa do grupo. Todos os modelos operacionais apontam para aqui
+    desde a primeira migração (secção 2 do plano); desde a Fase 9 o
+    mesmo cliente pode ter várias, e cada pedido do backoffice trabalha
+    numa só (`core.middleware.ActiveRestaurantMiddleware`).
+    """
+
+    organization = models.ForeignKey(
+        Organization, verbose_name="grupo", on_delete=models.PROTECT, related_name="restaurants"
+    )
+    name = models.CharField("nome", max_length=120)
+    slug = models.SlugField(unique=True)
+    is_active = models.BooleanField("ativo", default=True)
+    nif = models.CharField("NIF", max_length=9, blank=True, validators=[validate_nif])
+    address = models.CharField("morada", max_length=200, blank=True)
+    municipality = models.CharField(
+        "concelho", max_length=80, blank=True, help_text="Para saber que feriado municipal se aplica."
+    )
+
+    class Meta:
+        verbose_name = "restaurante"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        # Uma casa criada sem grupo é um cliente novo com uma só casa.
+        if self.organization_id is None:
+            self.organization = Organization.objects.create(name=self.name)
+        super().save(*args, **kwargs)
 
 
 class WorkArea(TimeStampedModel):

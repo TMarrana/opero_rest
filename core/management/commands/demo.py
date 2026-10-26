@@ -7,8 +7,12 @@ completo de cada perfil. Idempotente: correr duas vezes não duplica.
 
 Contas criadas (password de todas: demo1234):
     admin@tasca.pt · gerente@tasca.pt · stock@tasca.pt · marta@tasca.pt
+    dono@tasca.pt (Admin do grupo, Fase 9)
 Códigos de ponto no quiosque (/quiosque/, Fase 7):
-    Marta 2468 · Rui 1122 · Gustavo (gerente) 1357
+    Marta 2468 · Rui 1122 · Gustavo (gerente) 1357 · Inês (Ribeira) 4321
+
+Fase 9: duas casas no mesmo grupo, a Tasca da Esquina e a Tasca da
+Ribeira. O gerente tem acesso às duas.
 """
 import datetime
 from decimal import Decimal
@@ -18,6 +22,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from attendance.services import add_manual_entry, open_shift
+from accounts.services import dar_acesso
 from core.models import Restaurant
 from inventory.models import Category, Item
 from inventory.services import register_movement
@@ -148,8 +153,58 @@ class Command(BaseCommand):
                 end_date=datetime.date.today() + datetime.timedelta(days=18),
             )
 
+        self._segunda_casa(restaurant, gerente)
+
         self.stdout.write(self.style.SUCCESS("Dados de demonstração prontos."))
-        self.stdout.write(f"Contas (password {PASSWORD}): admin@tasca.pt, gerente@tasca.pt, stock@tasca.pt, marta@tasca.pt")
         self.stdout.write(
-            "Codigos de ponto: Marta 2468, Rui 1122, Gustavo 1357 (ativar o tablet em Dispositivo e abrir /quiosque/)"
+            f"Contas (password {PASSWORD}): admin@tasca.pt, gerente@tasca.pt, stock@tasca.pt, marta@tasca.pt, "
+            "dono@tasca.pt (Admin do grupo)"
         )
+        self.stdout.write(
+            "Codigos de ponto: Marta 2468, Rui 1122, Gustavo 1357, Ines 4321 na Ribeira "
+            "(ativar o tablet em Dispositivo e abrir /quiosque/)"
+        )
+
+    def _segunda_casa(self, esquina, gerente):
+        """Fase 9: a segunda casa do grupo, o Admin do grupo e o gerente com
+        acesso às duas."""
+        grupo = esquina.organization
+        if grupo.name == esquina.name:
+            grupo.name = "Grupo Tasca"
+            grupo.save(update_fields=["name", "updated_at"])
+        ribeira, _ = Restaurant.objects.get_or_create(
+            slug="tasca-da-ribeira", defaults={"name": "Tasca da Ribeira", "organization": grupo, "municipality": "Porto"}
+        )
+        dono, novo = User.objects.get_or_create(
+            email="dono@tasca.pt",
+            defaults={"first_name": "Dora", "last_name": "Lima", "organization": grupo, "is_group_admin": True},
+        )
+        if novo:
+            dono.set_password(PASSWORD)
+            dono.save()
+        dar_acesso(gerente, ribeira, User.Role.MANAGER)
+
+        ines, _ = Worker.objects.get_or_create(restaurant=ribeira, full_name="Inês Rocha", defaults={"job_title": "sala"})
+        if not ines.has_code:
+            ines.set_kiosk_code("4321")
+        Worker.objects.get_or_create(restaurant=ribeira, full_name="Paulo Freitas", defaults={"job_title": "cozinha"})
+
+        categorias = {c.name: c for c in Category.objects.filter(restaurant=ribeira)}
+        for nome, cat, unidade, minimo, stock in [
+            ("Tomate chucha", "Frescos", Item.Unit.KG, "5", "2"),
+            ("Arroz carolino", "Mercearia", Item.Unit.KG, "10", "25"),
+            ("Vinho tinto da casa", "Bebidas", Item.Unit.UN, "12", "30"),
+        ]:
+            item, novo = Item.objects.get_or_create(
+                restaurant=ribeira,
+                name=nome,
+                defaults={"category": categorias[cat], "unit": unidade, "minimum_stock": Decimal(minimo)},
+            )
+            if novo:
+                register_movement(
+                    item=item,
+                    movement_type="ENTRADA",
+                    quantity=Decimal(stock),
+                    user=gerente,
+                    reason="stock inicial de demonstração",
+                )

@@ -7,11 +7,13 @@ from django.core import signing
 from django.shortcuts import redirect, render
 from django.views import View
 
+from core.middleware import SESSION_KEY
 from core.mixins import ManagerRequiredMixin
 from core.models import WorkArea
 from core.utils import restaurant_scope
 
 from .forms import LoginForm
+from .models import BACKOFFICE_ROLES
 
 DEVICE_COOKIE = "opero_dispositivo"
 DEVICE_MAX_AGE = 60 * 60 * 24 * 180  # 180 dias
@@ -31,7 +33,13 @@ class PostLoginRedirectView(LoginRequiredMixin, View):
     """Cada perfil entra na sua superfície (secção 5 do plano)."""
 
     def get(self, request):
-        if request.user.is_backoffice:
+        if request.role in BACKOFFICE_ROLES:
+            return redirect("dashboard:home")
+        # Colaborador na casa por omissão e com backoffice noutra (Fase 9):
+        # entra pela casa onde tem backoffice.
+        casa = next((r for r, perfil in request.casas.items() if perfil in BACKOFFICE_ROLES), None)
+        if casa is not None:
+            request.session[SESSION_KEY] = casa.pk
             return redirect("dashboard:home")
         return redirect("staff:home")
 
@@ -103,7 +111,7 @@ class DeviceActivateView(ManagerRequiredMixin, View):
     longa duração que abre o quiosque em /quiosque/ (secção 7 do plano)."""
 
     def _areas(self, request):
-        return restaurant_scope(request.user, WorkArea.objects.filter(archived_at__isnull=True))
+        return restaurant_scope(request, WorkArea.objects.filter(archived_at__isnull=True))
 
     def get(self, request):
         info = device_info(request)
@@ -125,7 +133,7 @@ class DeviceActivateView(ManagerRequiredMixin, View):
                 "por": request.user.pk,
                 "partilhado": True,
                 "area": area.pk if area else None,
-                "restaurante": request.user.restaurant_id,
+                "restaurante": request.restaurant.pk,
             },
             salt=DEVICE_COOKIE,
         )

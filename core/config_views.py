@@ -22,7 +22,7 @@ from django.views import View
 from attendance.models import BreakType
 from shifts.models import ShiftTemplate
 from core.mixins import ManagerRequiredMixin
-from core.models import Restaurant, WorkArea
+from core.models import WorkArea
 from vacations.holidays import national_holidays
 from vacations.models import AbsenceType, BlockedPeriod, Holiday
 from workers.models import Worker
@@ -90,22 +90,14 @@ SECOES = {
 }
 
 
-def _secao(slug, user=None):
+def _secao(slug, request=None):
     try:
         secao = SECOES[slug]
     except KeyError:
         raise Http404
-    if user is not None and secao.so_admin and not _e_admin(user):
+    if request is not None and secao.so_admin and request.role != "ADMIN":
         raise PermissionDenied
     return secao
-
-
-def _e_admin(user):
-    return user.role == "ADMIN" or user.restaurant_id is None
-
-
-def _restaurant(user):
-    return user.restaurant or Restaurant.objects.first()
 
 
 def _form_class(secao):
@@ -131,19 +123,19 @@ def _preparar(form, restaurant):
 
 class ConfigHomeView(ManagerRequiredMixin, View):
     def get(self, request):
-        restaurant = _restaurant(request.user)
+        restaurant = request.restaurant
         secoes = [
             (s, s.model.objects.filter(restaurant=restaurant).count())
             for s in SECOES.values()
-            if not s.so_admin or _e_admin(request.user)
+            if not s.so_admin or request.role == "ADMIN"
         ]
         return render(request, "manage/config/inicio.html", {"secoes": secoes})
 
 
 class ConfigListView(ManagerRequiredMixin, View):
     def get(self, request, secao):
-        s = _secao(secao, request.user)
-        restaurant = _restaurant(request.user)
+        s = _secao(secao, request)
+        restaurant = request.restaurant
         qs = s.model.objects.filter(restaurant=restaurant)
         if s.arquiva:
             qs = qs.order_by("archived_at", "name")
@@ -162,17 +154,17 @@ class ConfigFormView(ManagerRequiredMixin, View):
     def _obj(self, request, s, pk):
         if pk is None:
             return None
-        return get_object_or_404(s.model, pk=pk, restaurant=_restaurant(request.user))
+        return get_object_or_404(s.model, pk=pk, restaurant=request.restaurant)
 
     def get(self, request, secao, pk=None):
-        s = _secao(secao, request.user)
-        restaurant = _restaurant(request.user)
+        s = _secao(secao, request)
+        restaurant = request.restaurant
         form = _preparar(_form_class(s)(instance=self._obj(request, s, pk)), restaurant)
         return render(request, "manage/config/form.html", {"secao": s, "form": form, "novo": pk is None})
 
     def post(self, request, secao, pk=None):
-        s = _secao(secao, request.user)
-        restaurant = _restaurant(request.user)
+        s = _secao(secao, request)
+        restaurant = request.restaurant
         obj = self._obj(request, s, pk)
         form = _preparar(_form_class(s)(request.POST, instance=obj), restaurant)
         if form.is_valid():
@@ -194,8 +186,8 @@ class ConfigRemoveView(ManagerRequiredMixin, View):
     """Arquivar (ou repor) nas secções arquiváveis; apagar nas outras."""
 
     def post(self, request, secao, pk):
-        s = _secao(secao, request.user)
-        obj = get_object_or_404(s.model, pk=pk, restaurant=_restaurant(request.user))
+        s = _secao(secao, request)
+        obj = get_object_or_404(s.model, pk=pk, restaurant=request.restaurant)
         if s.arquiva:
             obj.archived_at = None if obj.archived_at else timezone.now()
             obj.save(update_fields=["archived_at", "updated_at"])

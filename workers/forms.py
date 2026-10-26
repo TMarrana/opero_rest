@@ -28,7 +28,7 @@ class WorkerForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         qs = User.objects.filter(is_active=True)
         if restaurant is not None:
-            qs = qs.filter(restaurant=restaurant)
+            qs = qs.filter(memberships__restaurant=restaurant)
         livres = qs.filter(worker__isnull=True)
         if self.instance.pk and self.instance.user_id:
             livres = livres | qs.filter(pk=self.instance.user_id)
@@ -48,12 +48,13 @@ class KioskCodeForm(forms.Form):
     )
 
 
-def roles_que_gere(user):
-    """Perfis das contas que este utilizador pode criar e gerir (secção 7):
-    o admin gere todas; o gerente, só as de Colaborador e Resp. stock."""
-    if user.role == User.Role.ADMIN:
+def roles_que_gere(role):
+    """Perfis das contas que quem tem este perfil na casa pode criar e gerir
+    (secção 7): o admin gere todas; o gerente, só as de Colaborador e
+    Resp. stock."""
+    if role == User.Role.ADMIN:
         return list(User.Role)
-    if user.role == User.Role.MANAGER:
+    if role == User.Role.MANAGER:
         return [User.Role.STAFF, User.Role.STOCK]
     return []
 

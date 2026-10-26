@@ -7,18 +7,38 @@
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <script src="{% static 'js/htmx.min.js' %}" defer></script>
   <script src="{% static 'js/alpine.min.js' %}" defer></script>
+  <script src="{% static 'js/casa.js' %}" defer></script>
 </head>
-<body class="min-h-screen bg-aco text-carvao"
-      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+{# A casa em que a página foi aberta vai em cada pedido (Fase 9, core/middleware.py). #}
+<body class="min-h-screen bg-aco text-carvao" data-casa="{{ request.restaurant.pk|default:'' }}"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"{% if request.restaurant %}, "X-Opero-Casa": "{{ request.restaurant.pk }}"{% endif %}}'>
 
   <div class="flex min-h-screen">
     {# ---- Rail de navegação fixo: as seis áreas do docx (secção 5) ---- #}
     <aside class="w-56 shrink-0 bg-carvao text-aco flex flex-col">
       <div class="px-5 py-6">
         <img src="{% static 'img/logo-opero.png' %}" alt="Opero" class="block h-7 w-auto">
-        <span class="block text-xs text-ardosia mt-0.5">{{ request.user.restaurant|default:"—" }}</span>
+        {% if request.casas|length > 1 %}
+        <form method="post" action="{% url 'dashboard:mudar_casa' %}" class="mt-3">
+          {% csrf_token %}
+          <label for="casa-ativa" class="block text-[11px] uppercase tracking-wide text-ardosia">Casa</label>
+          <select id="casa-ativa" name="casa" onchange="this.form.requestSubmit()"
+                  class="mt-1 w-full rounded border border-aco/20 bg-carvao px-2 py-1.5 text-sm font-semibold text-superficie">
+            {% for casa in request.casas %}
+            <option value="{{ casa.pk }}"{% if casa == request.restaurant %} selected{% endif %}>{{ casa.name }}</option>
+            {% endfor %}
+          </select>
+          <noscript><button type="submit" class="mt-1 text-xs underline">Mudar</button></noscript>
+        </form>
+        {% else %}
+        <span class="block text-xs text-ardosia mt-0.5">{{ request.restaurant|default:"—" }}</span>
+        {% endif %}
       </div>
       <nav class="flex-1 px-2 space-y-1 text-sm font-medium" aria-label="Navegação principal">
+        {% if request.user.is_group_admin %}
+        {% url 'grupo:painel' as url_grupo %}
+        <a href="{{ url_grupo }}" class="block rounded px-3 py-2.5 {% if '/gestao/grupo/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Grupo</a>
+        {% endif %}
         {% url 'dashboard:home' as url_dash %}
         <a href="{{ url_dash }}" class="block rounded px-3 py-2.5 {% if request.path == url_dash %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Dashboard</a>
         {% url 'workers:lista' as url_workers %}
@@ -33,14 +53,14 @@
         <a href="{{ url_stock }}" class="block rounded px-3 py-2.5 {% if '/gestao/stock/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Stock</a>
         {% url 'accounts:dispositivo' as url_disp %}
         <a href="{{ url_disp }}" class="block rounded px-3 py-2.5 {% if request.path == url_disp %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Dispositivo</a>
-        {% if request.user.role == "ADMIN" %}
+        {% if request.role == "ADMIN" %}
         {% url 'config:inicio' as url_config %}
         <a href="{{ url_config }}" class="block rounded px-3 py-2.5 {% if '/gestao/configuracao/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Configuração</a>
         {% endif %}
       </nav>
       <div class="px-5 py-4 border-t border-aco/10 text-xs">
         <p class="truncate text-aco/80">{{ request.user }}</p>
-        <p class="text-ardosia">{{ request.user.get_role_display }}</p>
+        <p class="text-ardosia">{% if request.user.is_group_admin %}Admin do grupo{% else %}{{ perfil_ativo }}{% endif %}</p>
         <form method="post" action="{% url 'accounts:logout' %}" class="mt-2">
           {% csrf_token %}
           <button type="submit" class="text-aco/60 hover:text-superficie underline underline-offset-2">Sair</button>
