@@ -43,7 +43,7 @@ Ao concluir qualquer trabalho descrito na secção 8:
 | 7 — Quiosque e app do colaborador separados | 🟡 Código completo; falta testar num tablet e num telemóvel reais e a aprovação da AT |
 | 8 — Calendário mensal de ausências | 🟡 Código completo e visto no browser; falta a revisão do TM com dados reais |
 | 9 — Vários restaurantes | 🟡 Primeiro bloco feito e visto no browser; faltam as duas decisões da secção 12 (catálogo de artigos, trabalhador em várias casas) e a aprovação da AT |
-| 10 — Vendas a partir do SAF-T | ⬜ Por iniciar; o cliente de teste já extrai o ficheiro |
+| 10 — Vendas a partir do SAF-T | 🟡 Código completo e visto no browser com dados sintéticos; falta validar com o ficheiro real do cliente de teste e as vendas por serviço |
 | 11 — Fornecedores e compras | ⬜ Por iniciar |
 | 12 — Consumos internos | ⬜ Por iniciar |
 | 13 — Fichas técnicas | ⬜ Por iniciar |
@@ -81,7 +81,7 @@ As áreas que o produto tem de cobrir, e onde está cada uma neste plano (pedido
 | Trabalhadores, ponto e férias | Fases 2, 3, 5, 7 e 8; turnos na Fase 6 | 🟡 código feito; faltam os testes em aparelhos reais |
 | Consumos internos | Fase 12 (estava na V1.1) | ⬜ |
 | Fichas técnicas | Fase 13 (estava no Futuro) | ⬜ |
-| Vendas do POS | Fase 10, pelo ficheiro SAF-T | ⬜ |
+| Vendas do POS | Fase 10, pelo ficheiro SAF-T | 🟡 código feito; falta o ficheiro real |
 | Atualização de stock por vendas | Fase 14 (estava no Futuro) | ⬜ |
 | Extração e análise de dados | exportação do mês na Fase 5; o resto na Fase 15 | 🟡 parcial |
 | Vários restaurantes | modelo preparado desde a Fase 0; exposto na Fase 9 | ⬜ |
@@ -121,7 +121,7 @@ Tudo o resto neste documento deriva do docx, exceto as Fases 5 e 6 e as Fases 9 
 | Testes | `pytest-django`, `pytest-cov` | |
 | Testes com tempo | `time-machine` *(Fase 5)* | fecho do mês, registos por resolver e turnos na noite da mudança de hora dependem do relógio |
 | Feriados | cálculo próprio em `vacations/holidays.py` *(Fase 5)* | feriados nacionais portugueses, incluindo os móveis (Sexta-feira Santa, Páscoa, Corpo de Deus); os municipais ficam em `vacations.Holiday` (ver Notas de desvio) |
-| XML de fora | `defusedxml` *(Fase 10)* | o SAF-T vem de outro programa: lê-se em streaming e sem expandir entidades |
+| XML de fora | `defusedxml` *(Fase 10, instalado)* | o SAF-T vem de outro programa: lê-se em streaming e sem expandir entidades |
 | Excel | `openpyxl` *(Fase 15)* | extração de dados em Excel, além do CSV |
 
 ### O que as Fases 5 e 6 não acrescentam
@@ -171,6 +171,7 @@ opero_rest/
   vacations/                # VacationRequest (Fase 5: AbsenceType, Allowance, Holiday, BlockedPeriod)
   shifts/                   # Fase 6: ShiftTemplate, Shift, RestDay
   inventory/                # Category, Item, StockMovement
+  sales/                    # Fase 10: SAF-T (saft.py lê, services.py grava, reports.py conta)
   dashboard/                # vista agregada do gerente
   staff/                    # vista do colaborador (mobile)
 
@@ -316,6 +317,8 @@ Entra-se com email e password. A sessão dura o defeito do Django (14 dias), por
 Desktop-first, funcional em tablet. A entrada Férias abre o calendário mensal da Fase 8. Rail de navegação fixo à esquerda com as seis áreas do docx:
 
 `Dashboard · Trabalhadores · Ponto · Férias · Stock · Configuração`
+
+Depois do MVP juntaram-se Grupo (Fase 9, só o Admin do grupo), Turnos (Fase 6) e Vendas (Fase 10, Admin e Gerente).
 
 Conteúdo denso, tabelas com pesquisa e filtros, figuras mono alinhadas à direita, histórico sempre a um clique de distância de qualquer ação que altere stock, ponto ou férias.
 
@@ -734,51 +737,60 @@ O mesmo cliente gere várias casas na mesma conta. Cada pessoa vê só as casas 
 
 ### Fase 10 — Vendas a partir do SAF-T
 *Depende de: Fase 9 (NIF e séries da casa).*
-**Estado:** ⬜ Por iniciar. O cliente de teste já extrai o ficheiro.
+**Estado:** 🟡 Código completo, testado (`tests/test_vendas.py`, 28 testes) e visto no browser com o `demo`, que importa um SAF-T sintético em cada casa. Faltam o ficheiro real do cliente de teste e as vendas por serviço.
 
 O gerente carrega o ficheiro SAF-T (PT) de faturação que o POS exporta, e o Opero Rest passa a saber o que se vendeu, quando e por quanto.
 - **Só leitura:** não mexe no stock (isso é a Fase 14) e não emite nem altera documentos fiscais.
 - **Qualquer POS:** funciona com qualquer POS certificado pela AT, e não só com a Zone Soft.
 - **A API da Zone Soft fica para depois:** não tem documentação pública, e o acesso faz-se pelo revendedor (secção 10).
 
-- [ ] Vendas → Importar, para o Admin e o Gerente.
-  - Aceita o XML do SAF-T (PT) 1.04_01, também dentro de um .zip.
-  - O ficheiro lê-se em streaming (`iterparse`) com `defusedxml`, porque um mês pode ter dezenas de MB e o XML vem de outro programa.
-- [ ] Antes de gravar, valida-se:
-  - o NIF do cabeçalho (`TaxRegistrationNumber`) tem de ser o da casa. Um ficheiro de outra empresa é recusado, e a mensagem mostra o NIF que trazia;
-  - o período (`StartDate`, `EndDate`);
-  - o programa que o gerou (`ProductID`, `SoftwareCertificateNumber`), que fica guardado para referência.
-- [ ] Documentos:
+- [x] Vendas → Importar, para o Admin e o Gerente (`sales/views.py::ImportView`).
+  - Aceita o XML do SAF-T (PT) 1.04_01, também dentro de um .zip com um só XML.
+  - O ficheiro lê-se em streaming (`iterparse`) com `defusedxml`, porque um mês pode ter dezenas de MB e o XML vem de outro programa (`sales/saft.py`). Recusa DTDs e entidades. Cada documento larga-se depois de lido: um ficheiro de 30 MB (seis meses, 13 mil documentos) lê-se em 4 segundos.
+  - Limites: 100 MB no carregamento e 300 MB de XML depois de descomprimido.
+- [x] Antes de gravar, valida-se:
+  - o NIF do cabeçalho (`TaxRegistrationNumber`) tem de ser o da casa. Um ficheiro de outra empresa é recusado, e a mensagem mostra o NIF que trazia. Uma casa sem NIF não importa;
+  - a versão (`AuditFileVersion` 1.04) e o período (`StartDate`, `EndDate`);
+  - o programa que o gerou (`ProductID`, `SoftwareCertificateNumber`), que fica guardado para referência;
+  - que há `SalesInvoices`: um SAF-T de contabilidade é recusado.
+  - Os totais de controlo (`TotalDebit`, `TotalCredit`) comparam-se com as linhas lidas. Se não batem, a importação fica assinalada, mas não é recusada (ver Notas de desvio).
+- [x] Documentos:
   - contam só os de `SalesInvoices` (FT, FS, FR, NC, ND);
   - ignoram-se `WorkingDocuments` (consultas de mesa) e `Payments`, para a mesma venda não contar duas vezes;
-  - os anulados (`InvoiceStatus` A) não contam;
-  - as notas de crédito abatem (linhas com `DebitAmount`).
-- [ ] Várias casas com o mesmo NIF distinguem-se pela série dos documentos (secção 12).
-- [ ] A hora da venda é o `SystemEntryDate`. Dá as vendas por hora.
-- [ ] O dia de serviço tem uma hora de corte por casa (proposta: 5h). Assim, um jantar que fecha à 1h conta no dia em que começou.
-- [ ] Modelo:
-  - `SalesImport`: casa, período, hash do ficheiro, programa, quem e quando;
-  - `SalesDocument`: casa, número (`InvoiceNo`, único por casa), tipo, estado, data e hora, dia de serviço, totais sem e com IVA, `SourceID`;
-  - `SalesLine`: código e descrição do produto, quantidade, unidade, preço unitário, valor sem IVA e taxa de IVA;
-  - `PosProduct`: código do POS, descrição, família (`ProductGroup`), último preço, por casa. Vem de `MasterFiles/Product`.
-- [ ] Importar o mesmo período duas vezes não duplica nada, porque os documentos se identificam pelo número.
+  - os anulados (`InvoiceStatus` A) não contam, e os já faturados noutro documento (F) também não;
+  - as notas de crédito abatem: os totais e as linhas ficam com sinal negativo.
+- [x] Várias casas com o mesmo NIF distinguem-se pela série dos documentos (secção 12). Cada casa indica as suas séries nas regras de vendas. Se outra casa tem o mesmo NIF e esta não tem séries, a importação é recusada, para as vendas não contarem nas duas. Os documentos de outras séries contam-se e mostram-se na importação.
+- [x] A hora da venda é o `SystemEntryDate`. Dá as vendas por hora.
+- [x] O dia de serviço tem uma hora de corte por casa (5h por omissão, entre 0 e 11). Assim, um jantar que fecha à 1h conta no dia em que começou. Calcula-se na hora local do ficheiro.
+- [x] Modelo (`sales/models.py`):
+  - `SalesImport`: casa, período, hash do ficheiro, programa, quem e quando, e as contagens (novos, com estado alterado, já importados, de outras séries);
+  - `SalesDocument`: casa, número (`InvoiceNo`, único por casa), série, tipo, estado, data e hora, dia de serviço, totais sem e com IVA, `SourceID`;
+  - `SalesLine`: produto e descrição, quantidade, unidade, preço unitário, valor sem IVA e taxa de IVA;
+  - `PosProduct`: código do POS, descrição, família (`ProductGroup`), último preço, por casa. Vem de `MasterFiles/Product`;
+  - `SalesSettings`, por casa: hora de corte, séries e custo médio por hora (Vendas → Regras, só o Admin; também em Configuração).
+- [x] Importar o mesmo período duas vezes não duplica nada, porque os documentos se identificam pelo número.
+  - O mesmo ficheiro (o mesmo hash, com ou sem .zip) é recusado com «Este ficheiro já foi importado a … Nada mudou».
   - Um ficheiro que se sobrepõe a outro já importado só acrescenta os documentos novos.
   - Também atualiza o estado dos que mudaram, como uma fatura anulada depois.
-- [ ] Dados pessoais:
-  - do cliente final (`MasterFiles/Customer` e os dados do cliente nos documentos) não se guarda nada;
+- [x] Dados pessoais:
+  - do cliente final (`MasterFiles/Customer` e os dados do cliente nos documentos) não se guarda nada: nem se leem;
   - o ficheiro original também não fica guardado: guarda-se só o hash, para reconhecer um ficheiro repetido.
-- [ ] Ecrã Vendas:
-  - vendas por dia, por hora (um mapa da semana com as horas de serviço), por produto e por família;
+- [x] Ecrã Vendas (`templates/manage/sales/vendas.html`):
+  - vendas por dia (com barra), por hora (mapa da semana a começar na hora de corte), por produto (os 20 primeiros) e por família;
   - total sem IVA, número de documentos e ticket médio;
-  - comparação com o período anterior.
-- [ ] Vendas ao lado do ponto: vendas por hora trabalhada, por dia e por serviço. Na semana em planeamento, usam-se as horas previstas nos turnos.
-  - Não há salários, porque o docx exclui o cálculo salarial.
-  - Um custo médio por hora opcional, na Configuração, dá o custo de pessoal estimado em percentagem das vendas.
-- [ ] O dashboard avisa quando o último dia importado tem mais de 7 dias.
-- [ ] Exportação CSV das vendas por dia e por produto.
-- [ ] Validar com um ficheiro real do cliente de teste, sem o pôr no repositório. Nos testes usa-se um SAF-T pequeno e sintético. Confirmar com o cliente:
+  - comparação com o período anterior. Um período que ainda não está todo importado, como o mês corrente, compara-se só com os mesmos dias do anterior;
+  - por mês, com setas, ou por um intervalo de datas.
+- [~] Vendas ao lado do ponto: vendas por hora trabalhada, por dia e por serviço. Na semana em planeamento, usam-se as horas previstas nos turnos.
+  - Feito: por dia e no total do período. As horas são as do ponto, sem pausas não pagas nem registos por resolver; num dia sem ponto, as dos turnos publicados, assinaladas «prev.».
+  - Feito: o custo médio por hora opcional dá o custo de pessoal estimado em percentagem das vendas. Não há salários, porque o docx exclui o cálculo salarial.
+  - Por fazer: por serviço (almoço e jantar). Falta decidir como se define um serviço: pelas horas, ou pelos turnos guardados.
+- [x] O dashboard avisa quando o último dia importado tem mais de 7 dias, e leva a Importar. O painel do grupo tem as vendas do mês de cada casa e o último dia importado.
+- [x] Exportação CSV das vendas por dia (com as horas) e por produto, com `;`, BOM e vírgula decimal, como a do mês.
+- [ ] Validar com um ficheiro real do cliente de teste, sem o pôr no repositório. Nos testes e no `demo` usa-se um SAF-T sintético (`sales/sintetico.py`). Confirmar com o cliente:
   - se o POS exporta um período à escolha (um dia, uma semana) ou só o mês;
-  - como numera as séries.
+  - como numera as séries;
+  - se os totais de controlo batem (o aviso da importação) e se o total do mês bate com o relatório do POS;
+  - se usa o estado F e em que documentos.
 
 *Aceitação:* o gerente carrega o SAF-T de um mês do cliente de teste.
 - O total do mês sem IVA é igual, ao cêntimo, ao do relatório do POS.
@@ -1016,13 +1028,13 @@ Quando as Fases 9 a 15 arrancarem, juntam-se estes:
 | `test_post_from_other_restaurant_tab_rejected` | um formulário aberto noutra casa é recusado depois de mudar de casa *(Fase 9)* |
 | `test_kiosk_shows_only_its_restaurant` | o tablet de uma casa só mostra a equipa dessa casa *(Fase 9)* |
 | `test_transfer_moves_stock_between_restaurants` | a transferência tira de uma casa e põe na outra, na mesma transação *(Fase 9)* |
-| `test_saft_wrong_nif_rejected` | um SAF-T de outro NIF é recusado sem gravar nada *(Fase 10)* |
-| `test_saft_reimport_is_idempotent` | importar o mesmo ficheiro duas vezes não duplica documentos *(Fase 10)* |
-| `test_saft_cancelled_and_credit_notes` | os anulados não contam e as notas de crédito abatem *(Fase 10)* |
-| `test_saft_working_documents_ignored` | as consultas de mesa não contam como vendas *(Fase 10)* |
-| `test_saft_keeps_no_customer_data` | nenhum dado do cliente final fica gravado *(Fase 10)* |
-| `test_saft_entity_expansion_rejected` | um XML com entidades é recusado *(Fase 10)* |
-| `test_sale_after_midnight_counts_on_service_day` | uma venda à 1h conta no dia de serviço anterior *(Fase 10)* |
+| `test_saft_wrong_nif_rejected` | um SAF-T de outro NIF é recusado sem gravar nada *(Fase 10, feito; ver `tests/test_vendas.py`)* |
+| `test_saft_reimport_is_idempotent` | importar o mesmo ficheiro duas vezes não duplica documentos *(Fase 10, feito; ver `tests/test_vendas.py`)* |
+| `test_saft_cancelled_and_credit_notes` | os anulados não contam e as notas de crédito abatem *(Fase 10, feito; ver `tests/test_vendas.py`)* |
+| `test_saft_working_documents_ignored` | as consultas de mesa não contam como vendas *(Fase 10, feito; ver `tests/test_vendas.py`)* |
+| `test_saft_keeps_no_customer_data` | nenhum dado do cliente final fica gravado *(Fase 10, feito; ver `tests/test_vendas.py`)* |
+| `test_saft_entity_expansion_rejected` | um XML com entidades é recusado *(Fase 10, feito; ver `tests/test_vendas.py`)* |
+| `test_sale_after_midnight_counts_on_service_day` | uma venda à 1h conta no dia de serviço anterior *(Fase 10, feito; ver `tests/test_vendas.py`)* |
 | `test_receipt_creates_entry_movement` | a receção gera entradas com a referência da encomenda e atualiza o custo *(Fase 11)* |
 | `test_staff_sees_only_own_consumption` | o colaborador vê os seus consumos e não os dos outros *(Fase 12)* |
 | `test_recipe_version_used_for_past_day` | o consumo de um dia passado usa a versão da ficha desse dia *(Fase 13)* |
@@ -1072,8 +1084,9 @@ Bloqueiam a Fase 4, não a Fase 0. O desenvolvimento começa sem elas.
 | Âmbito e ordem das Fases 9 a 15 face ao piloto | AT | o docx deixava estas áreas para a V1.1 ou para o futuro; proposta: depois do piloto arrancar, pela ordem do roteiro |
 | Catálogo de artigos do grupo ou de cada casa | AT + TM | proposta: catálogo do grupo e stock por casa, porque as fichas técnicas, os fornecedores e as transferências precisam dos mesmos artigos nas várias casas. Mexe no modelo do stock (Fase 9) |
 | Trabalhador que trabalha em mais de uma casa | AT, com o contabilista | proposta: uma casa principal (o empregador), com o saldo de férias e o fecho do mês; pica e tem turnos nas outras (Fase 9) |
-| Várias casas com o mesmo NIF | TM, com o cliente de teste | distinguem-se pela série dos documentos no SAF-T; confirmar como o POS numera as séries (Fase 10) |
-| Hora de corte do dia de serviço nas vendas | AT + TM | proposta: 5h, configurável por casa (Fase 10) |
+| Várias casas com o mesmo NIF | TM, com o cliente de teste | distinguem-se pela série dos documentos no SAF-T; confirmar como o POS numera as séries (Fase 10). Já está feito: cada casa indica as suas séries nas regras de vendas, e sem elas a importação é recusada |
+| Hora de corte do dia de serviço nas vendas | AT + TM | proposta: 5h, configurável por casa (Fase 10). Feito com as 5h por omissão; falta a AT confirmar |
+| Serviço (almoço, jantar) nas vendas por hora trabalhada | AT + TM | proposta: pelos turnos guardados, ou por uma hora de mudança configurável (Fase 10) |
 | Operador do POS (`SourceID`) ligado ao trabalhador, para vendas por empregado | AT, com jurista | toca em RGPD e na relação laboral; fica desligado até haver decisão (Fase 10) |
 | Stock negativo causado pelas vendas | AT + TM | proposta: aceitar só nos movimentos de origem venda e assinalar o artigo para contar (Fase 14) |
 | Refeições do pessoal e consumos internos no processamento salarial | AT, com o contabilista | formato e conteúdo do mapa mensal da Fase 12 |
@@ -1094,6 +1107,7 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 
 | Data | Fase | O que foi feito | Por fechar | Próximo passo |
 |---|---|---|---|---|
+| 2026-10-26 (3ª) | 10 | **Fase 10: vendas a partir do SAF-T.** App nova `sales`.<br>• **Leitura (`sales/saft.py`):** streaming com `defusedxml` (nova dependência em `requirements.txt`), XML ou .zip, sem DTDs nem entidades. Só o cabeçalho, os produtos e `SalesInvoices`; os clientes nunca se leem; `WorkingDocuments` e `Payments` saltam-se.<br>• **Importação (`sales/services.py`):** NIF, versão, período e programa validados antes de gravar; tudo numa transação. Documentos únicos por número: o mesmo ficheiro é recusado, um sobreposto acrescenta os novos e atualiza o estado. Anulados (A) e faturados (F) não contam; notas de crédito com sinal negativo. Séries por casa, obrigatórias quando há outra casa com o mesmo NIF. Dia de serviço com hora de corte (5h). Totais de controlo comparados, só com aviso.<br>• **Modelos:** `SalesImport`, `SalesDocument`, `SalesLine`, `PosProduct`, `SalesSettings` (migração `sales/0001`).<br>• **Ecrãs:** Vendas (resumo com comparação, por dia com horas do ponto e vendas por hora trabalhada, mapa da semana por hora, produtos, famílias, dois CSV), Importar (com o histórico de importações) e Regras (só o Admin, também em Configuração). Entrada Vendas no rail para o Admin e o Gerente. Aviso no dashboard com mais de 7 dias sem importar, e vendas do mês no painel do grupo.<br>• **Demo:** NIF nas duas casas e um SAF-T sintético de cada uma (`sales/sintetico.py`), do dia 1 do mês passado até ontem.<br>28 testes novos, 285 no total; `check` e `makemigrations --check` limpos; migração e `demo` aplicados ao `db.sqlite3` (cópia de segurança fora do repositório). CSS reconstruído e service worker para v8.<br>No browser, como `dono@tasca.pt`: Vendas de setembro e outubro, Importar e painel do grupo. Daí saíram três correções: a variação do número de documentos rebentava com inteiros (`float` sem `quantize`), o rodapé da tabela estava desalinhado, e outubro incompleto aparecia comparado com setembro inteiro. | Ficheiro real do cliente de teste por importar: é o critério de aceitação (o total do mês igual ao do relatório do POS). Vendas por serviço por fazer, à espera da decisão nova da secção 12. O carregamento de um ficheiro pelo browser só foi testado pelos testes, não à mão. Nada commitado. | Pedir ao cliente de teste o SAF-T de um mês e o relatório de vendas do POS desse mês; importar e comparar o total ao cêntimo. Confirmar as séries, o estado F e os totais de controlo (Notas de desvio). Depois, Fase 11. |
 | 2026-10-26 (2ª) | 9 | **Fase 9 arrancada: várias casas no mesmo grupo.**<br>• **Dados:** `Organization`; `Restaurant.organization`, `nif`, `address` e `municipality`; `User.organization` e `is_group_admin`; `Membership` (acesso e perfil por casa); `StockTransfer`, `StockMovement.origin` e `transfer`. Migrações `core/0003`, `accounts/0004` e `inventory/0002`, com data migrations.<br>• **Casa ativa:** `core.middleware.ActiveRestaurantMiddleware` põe `request.restaurant` e `request.role`. As views passaram todas para `restaurant_scope(request, …)` e os mixins para `request.role`; saíram o «sem restaurante vê tudo» e os seis `Restaurant.objects.first()`. Seletor de casa no rail e recusa de POSTs abertos noutra casa (`static/js/casa.js`, `X-Opero-Casa`).<br>• **Grupo:** painel com uma linha por casa, casas e acessos, só para o Admin do grupo. O gerente muda o perfil de uma conta só na casa onde está.<br>• **Stock:** transferência entre casas, com a criação do artigo no destino se faltar.<br>• **Quiosque:** só a equipa da casa do tablet; um cookie sem casa já não abre o quiosque.<br>• **Demo:** Grupo Tasca com a Tasca da Esquina e a Tasca da Ribeira, `dono@tasca.pt` como Admin do grupo e o gerente com acesso às duas.<br>23 testes novos, 257 no total; `check` e `makemigrations --check` limpos; migrações e `demo` aplicados ao `db.sqlite3` (cópia de segurança fora do repositório). No `db.sqlite3`, o superuser sem casa passou a Admin do grupo. CSS reconstruído e service worker para v7.<br>No browser, como `dono@tasca.pt`: painel do grupo, «Abrir» a Ribeira, transferir 5 kg de arroz para a Esquina (cria o artigo lá), mudar de casa no seletor e ver a entrada no histórico da Esquina, ecrã de acessos. | As duas decisões da secção 12 (catálogo de artigos do grupo, trabalhador em várias casas) não foram tomadas: tudo continua por casa. `User.restaurant` e `User.role` ainda existem, como casa e perfil por omissão. A recusa de POSTs de outra casa depende de JavaScript nos formulários normais (no HTMX vai no cabeçalho); sem JavaScript, o POST passa. Nada commitado. | Fechar com a AT as duas decisões da secção 12 e, com elas, acabar a Fase 9. Depois, Fase 10 (SAF-T). |
 | 2026-10-26 | 9–15 | **Roteiro depois do MVP no plano, sem código.** Pedido do TM: o cliente de teste já extrai o SAF-T do POS (Zone Soft), e o produto tem de cobrir stock e movimentos, compras e fornecedores, trabalhadores, ponto e férias, consumos internos, fichas técnicas, atualização de stock por vendas, extração e análise de dados e, sobretudo, vários restaurantes.<br>Mapa do produto na secção 1, a confirmar onde está cada área. Fases novas: 9 (vários restaurantes), 10 (vendas pelo SAF-T), 11 (fornecedores e compras), 12 (consumos internos), 13 (fichas técnicas), 14 (stock pelas vendas) e 15 (extração e análise). Acertos nas secções 2, 6, 7, 10, 11 e 12.<br>Antes, a 2026-10-25, um estudo da Zone Soft feito com fontes públicas: a «BMS Mobile» é o ZS bms mobile, e a API não tem documentação pública. | Âmbito e ordem por aprovar pela AT. Sete decisões novas na secção 12, das quais o catálogo de artigos e o trabalhador em várias casas mexem no modelo da Fase 9. | Pedir ao cliente de teste um SAF-T de um mês e saber se o POS exporta um período à escolha. Levar à AT a ordem das fases e as decisões novas. |
 | 2026-10-25 (2ª) | 8 | **Calendário mensal de ausências no backoffice.** A entrada «Férias» abre o mês: uma linha por trabalhador, uma coluna por dia, ausências aprovadas a cheio e pendentes tracejadas, fins de semana, feriados e períodos bloqueados assinalados, contagem de quem está fora e saldo de cada um. Clicar numa célula abre um painel, como no planeador, para marcar uma ausência (fica aprovada), aprovar ou recusar um pedido e cancelar uma ausência que ainda não acabou. Serviço novo `cancel_by_manager()` e campo `cancelled_by`, com migração `vacations/0005`.<br>18 testes novos, 234 no total; `check` e `makemigrations --check` limpos; migração aplicada ao `db.sqlite3`.<br>No browser: marcar, ver o saldo e a contagem a mudar, e cancelar (a ausência de teste do Rui ficou cancelada no `db.sqlite3`). O painel começou ao lado da grelha, como no planeador, mas assim só cabiam 20 dias: passou a abrir por cima, e a página pode usar a largura toda (bloco `largura` em `base_manage.html`). | Marcar com arrastar sobre várias células não foi feito: o painel tem início e fim. Sem filtro por área, porque as ausências não têm área. | Rever o calendário com dados reais e decidir se vale a pena arrastar para marcar períodos. |
@@ -1116,6 +1130,16 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 ### Notas de desvio
 
 Alterações ao plano decididas durante a execução. Se algo aqui contradiz uma secção acima, **corrigir também a secção** — este registo é o histórico, não a fonte de verdade.
+
+- **2026-10-26 · Regras de vendas num modelo à parte.** A Fase 9 dizia que as séries de faturação entravam no `Restaurant`. Ficaram em `sales.SalesSettings`, com a hora de corte e o custo médio por hora, para a app `sales` não mexer no modelo do `core`. O NIF continua no `Restaurant`, em Grupo → Casas.
+- **2026-10-26 · Estado F não conta.** Um documento «faturado» (F) já foi incluído noutro, e contá-lo seria contar a venda duas vezes. A especificação não é clara sobre se entra nos totais de controlo, por isso o aviso de totais diferentes aceita as duas somas. Confirmar com o ficheiro real.
+- **2026-10-26 · Totais de controlo só avisam.** Uma diferença entre os totais de `SalesInvoices` e as linhas lidas assinala a importação em vez de a recusar: recusar podia bloquear um ficheiro real por uma diferença de interpretação. O critério de aceitação continua a ser o total do mês igual ao do relatório do POS.
+- **2026-10-26 · O mesmo ficheiro outra vez é recusado**, com «Nada mudou», em vez de criar uma importação vazia. O hash é o do XML, por isso o mesmo ficheiro dentro e fora de um .zip é o mesmo.
+- **2026-10-26 · Horas previstas só nos dias sem ponto.** O plano dizia «na semana em planeamento, usam-se as horas previstas nos turnos». As vendas são sempre de dias passados, por isso a regra ficou: num dia com vendas e sem registos de ponto, mas com turnos publicados, usam-se as horas dos turnos, assinaladas «prev.».
+- **2026-10-26 · Comparação com os mesmos dias.** Um período que ainda não está todo importado (o mês corrente) compara-se com os mesmos dias do período anterior. Sem isto, outubro até dia 25 aparecia 15 % abaixo de setembro inteiro.
+- **2026-10-26 · Importação no próprio pedido.** Sem fila de tarefas (secção 2): um mês lê-se e grava-se em poucos segundos. Se um ficheiro real demorar demais, passa para segundo plano.
+- **2026-10-26 · `SourceID` guardado, não ligado.** O operador do POS fica em cada documento, como o plano previa, mas não aparece em nenhum ecrã nem se liga ao trabalhador até haver a decisão da secção 12.
+- **2026-10-26 · Service worker para v8.** O CSS mudou com o ecrã Vendas.
 
 - **2026-10-26 · Admin do grupo como atributo da conta, e casa por omissão mantida.** O plano previa o Admin do grupo «no `Organization`»: ficou `User.is_group_admin` com `User.organization`, sem uma linha de acesso por casa, para que uma casa nova lhe fique logo visível. `User.restaurant` e `User.role` ficam como casa e perfil por omissão, com um signal que mantém a linha de acesso dessa casa; assim o código e os testes que criam contas com casa e perfil continuam certos. O acesso real é sempre o de `Membership`.
 - **2026-10-26 · Service worker para v7.** O CSS mudou com a Fase 9 (seletor de casa, área do grupo).

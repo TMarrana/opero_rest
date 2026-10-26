@@ -51,6 +51,10 @@
         <a href="{{ url_turnos }}" class="block rounded px-3 py-2.5 {% if '/gestao/turnos/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Turnos</a>
         {% url 'inventory:lista' as url_stock %}
         <a href="{{ url_stock }}" class="block rounded px-3 py-2.5 {% if '/gestao/stock/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Stock</a>
+        {% if request.role == "ADMIN" or request.role == "MANAGER" %}
+        {% url 'sales:vendas' as url_vendas %}
+        <a href="{{ url_vendas }}" class="block rounded px-3 py-2.5 {% if '/gestao/vendas/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Vendas</a>
+        {% endif %}
         {% url 'accounts:dispositivo' as url_disp %}
         <a href="{{ url_disp }}" class="block rounded px-3 py-2.5 {% if request.path == url_disp %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Dispositivo</a>
         {% if request.role == "ADMIN" %}

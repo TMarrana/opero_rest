@@ -14,6 +14,9 @@ from core.utils import restaurant_scope
 from inventory.models import Item, StockMovement
 from vacations.models import VacationRequest
 
+# O dashboard avisa quando o último dia de vendas importado tem mais do que isto.
+VENDAS_ATRASO_DIAS = 7
+
 
 class DashboardView(RoleRequiredMixin, TemplateView):
     """Dashboard do gerente (Fase 4): sem gráficos sofisticados — os
@@ -73,6 +76,13 @@ class DashboardView(RoleRequiredMixin, TemplateView):
             ).count()
             ctx["mes_por_fechar"] = anterior
             ctx["por_aprovar"] = ativos.count() - aprovados
+            # Vendas (Fase 10): avisa quando o último dia importado ficou para trás.
+            from sales.reports import ultimo_dia
+
+            ctx["ultimo_dia_vendas"] = ultimo_dia(request.restaurant)
+            if ctx["ultimo_dia_vendas"] is not None:
+                atraso = (timezone.localdate() - ctx["ultimo_dia_vendas"]).days
+                ctx["vendas_atraso"] = atraso if atraso > VENDAS_ATRASO_DIAS else 0
             ctx["pedidos_correcao"] = restaurant_scope(
                 request,
                 CorrectionRequest.objects.filter(status=CorrectionRequest.Status.PENDENTE),
@@ -106,6 +116,10 @@ def _sinais(restaurant):
     ativos = Worker.objects.filter(restaurant=restaurant, is_active=True)
     anterior = previous_month(timezone.localdate())
     aprovados = MonthClose.objects.filter(worker__in=ativos, month=anterior, reopened_at__isnull=True).count()
+    from attendance.month import month_range
+    from sales.reports import resumo, ultimo_dia
+
+    vendas_mes = resumo(restaurant, *month_range(timezone.localdate())).total
     return {
         "casa": restaurant,
         "stock_baixo": Item.objects.filter(restaurant=restaurant, is_active=True, current_stock__lte=F("minimum_stock")).count(),
@@ -118,6 +132,8 @@ def _sinais(restaurant):
             worker__restaurant=restaurant, status=CorrectionRequest.Status.PENDENTE
         ).count(),
         "por_aprovar": ativos.count() - aprovados,
+        "vendas_mes": vendas_mes,
+        "ultimo_dia_vendas": ultimo_dia(restaurant),
     }
 
 
@@ -133,4 +149,5 @@ class GroupDashboardView(GroupAdminRequiredMixin, TemplateView):
 
         ctx["linhas"] = [_sinais(casa) for casa in self.request.casas]
         ctx["mes_por_fechar"] = previous_month(timezone.localdate())
+        ctx["mes_atual"] = timezone.localdate()
         return ctx

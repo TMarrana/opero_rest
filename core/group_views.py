@@ -33,7 +33,7 @@ class RestaurantForm(forms.ModelForm):
         }
         labels = {"is_active": "Casa ativa"}
         help_texts = {
-            "nif": "O NIF da empresa que fatura nesta casa. Serve para reconhecer o ficheiro SAF-T (Fase 10).",
+            "nif": "O NIF da empresa que fatura nesta casa. Serve para reconhecer o ficheiro SAF-T que o POS exporta.",
             "is_active": "Uma casa inativa deixa de aparecer no seletor e no painel do grupo. Nada se apaga.",
         }
 

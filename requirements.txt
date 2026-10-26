@@ -2,3 +2,4 @@ Django>=5.2,<6.0
 django-environ>=0.12
 dj-database-url>=2.3
 whitenoise>=6.8
+defusedxml>=0.7

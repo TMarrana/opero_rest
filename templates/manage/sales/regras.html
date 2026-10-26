@@ -1,0 +1,21 @@
+{% extends "base_manage.html" %}
+{% block title %}Regras de vendas{% endblock %}
+{% block content %}
+<a href="{% url 'sales:importar' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Importar vendas</a>
+<h1 class="mt-2 font-display text-2xl font-bold">Regras de vendas</h1>
+<p class="mt-1 text-sm text-ardosia">Valem para {{ request.restaurant }}. Mudar a hora de corte só se aplica às importações seguintes.</p>
+
+<form method="post" class="mt-6 max-w-lg space-y-5">
+  {% csrf_token %}
+  <div class="cartao space-y-5 p-6">
+    {% include "components/campo.html" with field=form.day_cutoff_hour %}
+    {% include "components/campo.html" with field=form.series %}
+    {% include "components/campo.html" with field=form.hourly_cost %}
+  </div>
+  <div class="flex justify-end gap-3">
+    {% url 'sales:importar' as url_voltar %}
+    {% include "components/botao.html" with label="Cancelar" variante="fantasma" href=url_voltar %}
+    {% include "components/botao.html" with label="Guardar" %}
+  </div>
+</form>
+{% endblock %}

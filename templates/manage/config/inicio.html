@@ -16,6 +16,14 @@
     </a>
   </li>
   {% endfor %}
+  {% if request.role == "ADMIN" %}
+  <li>
+    <a href="{% url 'sales:regras' %}" class="cartao block p-5 hover:bg-carvao/5">
+      <span class="font-display text-base font-bold">Vendas</span>
+      <span class="mt-1 block text-sm text-ardosia">Hora de corte do dia de serviço, séries do SAF-T e custo médio por hora.</span>
+    </a>
+  </li>
+  {% endif %}
   <li>
     <a href="{% url 'accounts:dispositivo' %}" class="cartao block p-5 hover:bg-carvao/5">
       <span class="font-display text-base font-bold">Dispositivo</span>

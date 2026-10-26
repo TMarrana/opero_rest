@@ -1,0 +1,67 @@
+{% extends "base_manage.html" %}
+{% block title %}Importar vendas{% endblock %}
+{% block content %}
+{% comment %}Importação do SAF-T (Fase 10). O erro de um ficheiro recusado fica
+no ecrã, junto ao formulário, porque diz o que fazer a seguir.{% endcomment %}
+<a href="{% url 'sales:vendas' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Vendas</a>
+<h1 class="mt-2 font-display text-2xl font-bold">Importar vendas</h1>
+<p class="mt-1 max-w-2xl text-sm text-ardosia">
+  Carregue o ficheiro SAF-T de faturação que o POS exporta. O Opero lê as vendas e não altera nada no POS nem no stock.
+  Pode carregar o mesmo período mais de uma vez: só entram os documentos novos e os que mudaram de estado.
+</p>
+
+<div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,28rem)_minmax(0,1fr)]">
+  <form method="post" enctype="multipart/form-data" class="space-y-5" x-data="{ a_enviar: false }" x-on:submit="a_enviar = true">
+    {% csrf_token %}
+    {% if erro %}
+    <p class="rounded-md bg-chama/10 px-4 py-3 text-sm font-medium text-chama" role="alert">{{ erro }}</p>
+    {% endif %}
+    <div class="cartao space-y-5 p-6">
+      {% include "components/campo.html" with field=form.ficheiro %}
+      <dl class="space-y-1 text-sm">
+        <div class="flex justify-between gap-4"><dt class="text-ardosia">NIF da casa</dt><dd class="font-dados">{{ request.restaurant.nif|default:"por preencher" }}</dd></div>
+        <div class="flex justify-between gap-4"><dt class="text-ardosia">Dia de serviço até às</dt><dd class="font-dados">{{ regras.day_cutoff_hour|stringformat:"02d" }}:00</dd></div>
+        {% if regras.series %}<div class="flex justify-between gap-4"><dt class="text-ardosia">Séries desta casa</dt><dd class="font-dados">{{ regras.series }}</dd></div>{% endif %}
+      </dl>
+      {% if request.role == "ADMIN" %}
+      <p class="text-sm"><a href="{% url 'sales:regras' %}" class="underline underline-offset-2">Mudar as regras de vendas</a></p>
+      {% endif %}
+    </div>
+    <div class="flex justify-end">
+      <button type="submit" x-bind:disabled="a_enviar"
+              class="inline-flex min-h-toque items-center justify-center rounded-md bg-carvao px-5 py-2.5 text-sm font-semibold text-superficie hover:bg-carvao/85 disabled:opacity-50">
+        <span x-show="!a_enviar">Importar</span>
+        <span x-show="a_enviar" x-cloak>A ler o ficheiro…</span>
+      </button>
+    </div>
+  </form>
+
+  <section class="cartao self-start">
+    <h2 class="border-b border-ardosia/15 px-4 py-3 font-display text-base font-bold">Importações</h2>
+    {% if importacoes %}
+    <div>
+      {% for i in importacoes %}
+      <article class="talao">
+        <time class="block text-xs text-ardosia">{{ i.created_at|date:"d/m/Y · H:i" }} · {{ i.imported_by }}</time>
+        <p class="mt-0.5 text-sm font-semibold">{{ i.period_start|date:"d/m/Y" }} a {{ i.period_end|date:"d/m/Y" }}</p>
+        <p class="text-sm">
+          {{ i.documents_new }} novo{{ i.documents_new|pluralize }}
+          {% if i.documents_updated %}· {{ i.documents_updated }} com estado alterado{% endif %}
+          {% if i.documents_unchanged %}· {{ i.documents_unchanged }} já importado{{ i.documents_unchanged|pluralize }}{% endif %}
+        </p>
+        {% if i.documents_other_series %}
+        <p class="text-sm text-ardosia">{{ i.documents_other_series }} de outras séries ({{ i.other_series }}), que não são desta casa</p>
+        {% endif %}
+        {% if i.control_mismatch %}
+        <p class="text-sm font-medium text-chama">Os totais de controlo do ficheiro não batem com os documentos lidos. Confira o total com o relatório do POS.</p>
+        {% endif %}
+        <p class="text-xs text-ardosia">{{ i.file_name }} · {{ i.product_id|default:"programa desconhecido" }}{% if i.certificate_number %} · certificado {{ i.certificate_number }}{% endif %}</p>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="px-4 py-8 text-center text-sm text-ardosia">Ainda não importou nenhum ficheiro. Comece pelo último mês fechado.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

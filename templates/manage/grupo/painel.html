@@ -1,4 +1,5 @@
 {% extends "base_manage.html" %}
+{% load vendas %}
 {% block title %}Grupo{% endblock %}
 {% block content %}
 {% comment %}Painel do grupo (Fase 9): uma linha por casa, com os sinais do
@@ -18,6 +19,7 @@ dashboard de cada uma. Para agir, abre-se a casa, que passa a ser a ativa.{% end
           <th class="text-right">Férias pendentes</th>
           <th class="text-right">Correções pendentes</th>
           <th class="text-right">{{ mes_por_fechar|date:"F" }} por aprovar</th>
+          <th class="text-right">Vendas de {{ mes_atual|date:"F" }}</th>
           <th><span class="sr-only">Abrir</span></th>
         </tr>
       </thead>
@@ -31,6 +33,7 @@ dashboard de cada uma. Para agir, abre-se a casa, que passa a ser a ativa.{% end
           <td class="td-dados text-right {% if l.ferias_pendentes %}font-semibold{% endif %}">{{ l.ferias_pendentes }}</td>
           <td class="td-dados text-right {% if l.correcoes_pendentes %}font-semibold{% endif %}">{{ l.correcoes_pendentes }}</td>
           <td class="td-dados text-right {% if l.por_aprovar %}font-semibold{% endif %}">{{ l.por_aprovar }}</td>
+          <td class="td-dados text-right">{% if l.ultimo_dia_vendas %}{{ l.vendas_mes|euros }}<span class="block text-xs text-ardosia">até {{ l.ultimo_dia_vendas|date:"d/m" }}</span>{% else %}<span class="text-ardosia">—</span>{% endif %}</td>
           <td class="whitespace-nowrap text-right">
             {% if l.casa != request.restaurant %}
             <form method="post" action="{% url 'dashboard:mudar_casa' %}" class="inline">

@@ -153,7 +153,8 @@ class Command(BaseCommand):
                 end_date=datetime.date.today() + datetime.timedelta(days=18),
             )
 
-        self._segunda_casa(restaurant, gerente)
+        ribeira = self._segunda_casa(restaurant, gerente)
+        self._vendas(restaurant, ribeira, gerente)
 
         self.stdout.write(self.style.SUCCESS("Dados de demonstração prontos."))
         self.stdout.write(
@@ -208,3 +209,28 @@ class Command(BaseCommand):
                     user=gerente,
                     reason="stock inicial de demonstração",
                 )
+        return ribeira
+
+    def _vendas(self, esquina, ribeira, gerente):
+        """Fase 10: um SAF-T sintético de cada casa, do dia 1 do mês passado
+        até ontem, importado como o gerente o faria."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from sales import sintetico
+        from sales.models import SalesImport
+        from sales.services import import_saft
+
+        ontem = timezone.localdate() - datetime.timedelta(days=1)
+        inicio = (ontem.replace(day=1) - datetime.timedelta(days=1)).replace(day=1)
+        for casa, nif, serie, semente in ((esquina, "509123457", "E", 1), (ribeira, "510000002", "R", 2)):
+            if not casa.nif:
+                casa.nif = nif
+                casa.save(update_fields=["nif", "updated_at"])
+            if SalesImport.objects.filter(restaurant=casa).exists():
+                continue
+            docs = sintetico.mes_de_demonstracao(inicio=inicio, fim=ontem, serie=serie, semente=semente)
+            conteudo = sintetico.gerar(nif=casa.nif, documentos=docs, inicio=inicio, fim=ontem)
+            imp = import_saft(
+                restaurant=casa, upload=SimpleUploadedFile(f"saft-{casa.slug}.xml", conteudo), user=gerente
+            )
+            self.stdout.write(f"Vendas de {casa.slug}: {imp.documents_new} documentos importados")
