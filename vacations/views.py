@@ -1,7 +1,12 @@
+import calendar
+import datetime
+
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.views import View
 from django.views.generic import TemplateView
 
@@ -11,8 +16,16 @@ from core.utils import restaurant_scope
 from workers.models import Worker
 
 from .forms import AllowanceForm, DecisionForm, VacationRequestForm
-from .models import Allowance, VacationRequest
-from .services import allowance_for, balance, create_request, decide_request
+from .models import AbsenceType, Allowance, BlockedPeriod, VacationRequest
+from .services import (
+    allowance_for,
+    balance,
+    cancel_by_manager,
+    create_request,
+    decide_request,
+    holidays_between,
+    manager_can_cancel,
+)
 
 
 def _scoped_requests(user):
@@ -145,3 +158,178 @@ class AllowanceListView(ManagerRequiredMixin, View):
         else:
             messages.error(request, "Saldo não guardado: verifique os números.")
         return redirect(f"{request.path}?ano={ano}")
+
+
+def _mes(request):
+    """Primeiro dia do mês pedido em ?mes=AAAA-MM; sem ele, o mês atual."""
+    valor = request.GET.get("mes") or request.POST.get("mes") or ""
+    try:
+        ano, mes = (int(x) for x in valor.split("-"))
+        return datetime.date(ano, mes, 1)
+    except ValueError:
+        return timezone.localdate().replace(day=1)
+
+
+def _url_mes(dia):
+    return f"{reverse('vacations:calendario')}?mes={dia:%Y-%m}"
+
+
+def _ativas(restaurant, inicio, fim):
+    """Ausências aprovadas e pendentes que tocam o período."""
+    return VacationRequest.objects.filter(
+        worker__restaurant=restaurant,
+        status__in=[VacationRequest.Status.APROVADO, VacationRequest.Status.PENDENTE],
+        start_date__lte=fim,
+        end_date__gte=inicio,
+    ).select_related("absence_type")
+
+
+class CalendarView(ManagerRequiredMixin, View):
+    """Calendário mensal das ausências da equipa: uma linha por
+    trabalhador, uma coluna por dia. Aprovadas a cheio, pendentes
+    tracejadas; fins de semana, feriados e períodos bloqueados à vista.
+    Clicar numa célula abre o painel, como no planeador de turnos."""
+
+    def get(self, request):
+        restaurant = _restaurant(request.user)
+        inicio = _mes(request)
+        fim = inicio.replace(day=calendar.monthrange(inicio.year, inicio.month)[1])
+        dias = [inicio + datetime.timedelta(days=i) for i in range(fim.day)]
+        hoje = timezone.localdate()
+        feriados = holidays_between(restaurant, inicio, fim)
+        bloqueados = {}
+        for b in BlockedPeriod.objects.filter(restaurant=restaurant, start__lte=fim, end__gte=inicio):
+            for d in dias:
+                if b.start <= d <= b.end:
+                    bloqueados.setdefault(d, b.name)
+        colunas = [
+            {
+                "dia": d,
+                "fim_de_semana": d.weekday() >= 5,
+                "feriado": feriados.get(d),
+                "bloqueado": bloqueados.get(d),
+                "hoje": d == hoje,
+            }
+            for d in dias
+        ]
+
+        por_trabalhador = {}
+        for a in _ativas(restaurant, inicio, fim):
+            por_trabalhador.setdefault(a.worker_id, []).append(a)
+        fora = {d: 0 for d in dias}
+        linhas = []
+        for w in restaurant_scope(request.user, Worker.objects.filter(is_active=True)):
+            ausencias = por_trabalhador.get(w.pk, [])
+            celulas = []
+            for col in colunas:
+                do_dia = [a for a in ausencias if a.start_date <= col["dia"] <= a.end_date]
+                # Uma aprovada tapa uma pendente no mesmo dia.
+                do_dia.sort(key=lambda a: a.status != VacationRequest.Status.APROVADO)
+                if do_dia and do_dia[0].status == VacationRequest.Status.APROVADO:
+                    fora[col["dia"]] += 1
+                ausencia = do_dia[0] if do_dia else None
+                celulas.append(
+                    {
+                        **col,
+                        "ausencia": ausencia,
+                        "pendente": ausencia is not None and ausencia.status == VacationRequest.Status.PENDENTE,
+                        # Duas letras do tipo, ou ½ num meio dia.
+                        "texto": ("½" if ausencia.half_day else ausencia.absence_type.name[:2]) if ausencia else "",
+                        "mais": len(do_dia) > 1,
+                    }
+                )
+            linhas.append({"worker": w, "celulas": celulas, "saldo": balance(w, inicio.year)["disponiveis"]})
+        anterior = (inicio - datetime.timedelta(days=1)).replace(day=1)
+        return render(
+            request,
+            "manage/vacations/calendario.html",
+            {
+                "mes": inicio,
+                "mes_anterior": anterior,
+                "mes_seguinte": fim + datetime.timedelta(days=1),
+                "colunas": colunas,
+                "linhas": linhas,
+                "fora": [fora[d] for d in dias],
+                "tipos": AbsenceType.objects.filter(restaurant=restaurant, archived_at__isnull=True),
+                "pendentes": _scoped_requests(request.user).filter(status=VacationRequest.Status.PENDENTE).count(),
+            },
+        )
+
+
+class CalendarCellView(ManagerRequiredMixin, View):
+    """Painel de uma célula do calendário (trabalhador × dia): marcar uma
+    ausência a partir desse dia, aprovar ou recusar um pedido pendente, e
+    cancelar uma ausência aprovada que ainda não acabou."""
+
+    def _worker(self, request, pk):
+        return get_object_or_404(restaurant_scope(request.user, Worker.objects.all()), pk=pk)
+
+    def get(self, request, worker, dia):
+        restaurant = _restaurant(request.user)
+        worker = self._worker(request, worker)
+        dia = parse_date(dia)
+        ausencias = list(
+            worker.vacation_requests.filter(
+                status__in=[VacationRequest.Status.APROVADO, VacationRequest.Status.PENDENTE],
+                start_date__lte=dia,
+                end_date__gte=dia,
+            ).select_related("absence_type", "decided_by")
+        )
+        hoje = timezone.localdate()
+        for a in ausencias:
+            a.cancelavel = manager_can_cancel(a, today=hoje)
+        form = VacationRequestForm(
+            restaurant=restaurant, with_worker=False, initial={"start_date": dia, "end_date": dia}
+        )
+        return render(
+            request,
+            "partials/vacations/celula.html",
+            {
+                "worker": worker,
+                "dia": dia,
+                "ausencias": ausencias,
+                "form": form,
+                "saldo": balance(worker, dia.year),
+                "feriado": holidays_between(restaurant, dia, dia).get(dia),
+            },
+        )
+
+    def post(self, request, worker, dia):
+        restaurant = _restaurant(request.user)
+        worker = self._worker(request, worker)
+        dia = parse_date(dia)
+        acao = request.POST.get("acao")
+        try:
+            if acao == "marcar":
+                form = VacationRequestForm(request.POST, restaurant=restaurant, with_worker=False)
+                if not form.is_valid():
+                    erros = [e for lista in form.errors.values() for e in lista]
+                    raise ValidationError(erros[0] if erros else "Verifique os campos da ausência.")
+                create_request(
+                    worker=worker,
+                    absence_type=form.cleaned_data["absence_type"],
+                    start_date=form.cleaned_data["start_date"],
+                    end_date=form.cleaned_data["end_date"],
+                    half_day=form.cleaned_data.get("half_day", False),
+                    note=form.cleaned_data["request_note"],
+                    created_by=request.user,
+                )
+                messages.success(request, f"Ausência de {worker.full_name} marcada")
+            elif acao in ("aprovar", "recusar", "cancelar"):
+                pedido = get_object_or_404(worker.vacation_requests, pk=request.POST.get("pedido"))
+                if acao == "cancelar":
+                    cancel_by_manager(request_obj=pedido, user=request.user)
+                    messages.success(request, "Ausência cancelada")
+                else:
+                    decide_request(
+                        request_obj=pedido,
+                        user=request.user,
+                        approve=acao == "aprovar",
+                        note=request.POST.get("decision_note", ""),
+                    )
+                    messages.success(request, "Pedido aprovado" if acao == "aprovar" else "Pedido recusado")
+            else:
+                raise ValidationError("Ação inválida.")
+        except ValidationError as exc:
+            messages.error(request, exc.messages[0])
+        return redirect(_url_mes(dia))

@@ -2,7 +2,7 @@
    Estáticos: cache-first. Páginas: network-first com fallback ao cache.
    POSTs nunca passam por aqui. Desde a Fase 7 não há fila offline: a app
    só consulta e pede, e o ponto pica-se no tablet. */
-const CACHE = "opero-shell-v5";
+const CACHE = "opero-shell-v6";
 const SHELL = [
   "/static/css/app.css",
   "/static/js/htmx.min.js",

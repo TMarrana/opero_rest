@@ -200,9 +200,36 @@ def cancel_request(*, request_obj, worker):
         estava_aprovado = pedido.status == VacationRequest.Status.APROVADO
         pedido.status = VacationRequest.Status.CANCELADO
         pedido.cancelled_at = timezone.now()
-        pedido.save(update_fields=["status", "cancelled_at", "updated_at"])
+        pedido.cancelled_by = worker.user
+        pedido.save(update_fields=["status", "cancelled_at", "cancelled_by", "updated_at"])
         if estava_aprovado:
             from shifts.services import on_absence_cancelled
 
             on_absence_cancelled(pedido)
+    return pedido
+
+
+def manager_can_cancel(pedido, today=None):
+    """O gerente cancela no calendário uma ausência aprovada que ainda não
+    acabou. Um pedido pendente recusa-se; uma ausência que já acabou fica
+    como está, porque já conta no saldo e no mês."""
+    today = today or timezone.localdate()
+    return pedido.status == VacationRequest.Status.APROVADO and pedido.end_date >= today
+
+
+def cancel_by_manager(*, request_obj, user):
+    """Desfazer uma ausência marcada no calendário. Não apaga nada
+    (invariante 6): o pedido fica cancelado, com autor e data, e os turnos
+    que estavam em reserva voltam a rascunho."""
+    with transaction.atomic():
+        pedido = VacationRequest.objects.select_for_update().get(pk=request_obj.pk)
+        if not manager_can_cancel(pedido):
+            raise ValidationError("Só se cancelam ausências aprovadas que ainda não acabaram.")
+        pedido.status = VacationRequest.Status.CANCELADO
+        pedido.cancelled_at = timezone.now()
+        pedido.cancelled_by = user
+        pedido.save(update_fields=["status", "cancelled_at", "cancelled_by", "updated_at"])
+        from shifts.services import on_absence_cancelled
+
+        on_absence_cancelled(pedido)
     return pedido

@@ -4,6 +4,7 @@
 <div class="flex flex-wrap items-end justify-between gap-4">
   <h1 class="font-display text-2xl font-bold">Férias e ausências</h1>
   <div class="flex items-center gap-4">
+    <a href="{% url 'vacations:calendario' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Calendário</a>
     <a href="{% url 'vacations:saldos' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Saldos</a>
     {% include "components/botao.html" with label="Registar ausência" href="/gestao/ferias/novo/" %}
   </div>

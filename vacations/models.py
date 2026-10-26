@@ -70,6 +70,15 @@ class VacationRequest(TimeStampedModel):
     decided_at = models.DateTimeField("decidido em", null=True, blank=True)
     decision_note = models.CharField("observação da decisão", max_length=300, blank=True)
     cancelled_at = models.DateTimeField("cancelado em", null=True, blank=True)
+    # Quem cancelou: o próprio colaborador, ou o gerente no calendário.
+    cancelled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="cancelado por",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="vacation_cancellations",
+    )
 
     class Meta:
         verbose_name = "pedido de ausência"

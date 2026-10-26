@@ -1,0 +1,8 @@
+{% comment %}Marca de uma ausência no calendário. Parâmetros: tipo (AbsenceType),
+pendente (bool), texto. Aprovada a cheio, na cor do tipo; pendente só com
+contorno tracejado. As cores são as três neutras dos tipos (secção 4).{% endcomment %}
+<span class="flex h-full w-full items-center justify-center rounded-sm font-dados text-[11px] font-semibold leading-none
+  {% if pendente %}border border-dashed border-ardosia text-ardosia
+  {% elif tipo.color == 'carvao' %}bg-carvao text-superficie
+  {% elif tipo.color == 'aco' %}border border-ardosia/50 bg-aco text-carvao
+  {% else %}bg-ardosia text-superficie{% endif %}">{{ texto }}</span>
