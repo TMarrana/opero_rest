@@ -107,11 +107,12 @@ class StockMovement(TimeStampedModel):
 
     class Origin(models.TextChoices):
         """De onde vem o movimento (Fase 9), para os relatórios separarem uma
-        quebra de uma venda. As fases seguintes juntam compra, consumo
-        interno e venda."""
+        quebra de uma venda. A Fase 11 junta a compra; as seguintes, o
+        consumo interno e a venda."""
 
         MANUAL = "MANUAL", "Registo manual"
         TRANSFERENCIA = "TRANSFERENCIA", "Transferência entre casas"
+        COMPRA = "COMPRA", "Compra"
 
     item = models.ForeignKey(Item, verbose_name="artigo", on_delete=models.PROTECT, related_name="movements")
     movement_type = models.CharField("tipo", max_length=10, choices=Type.choices)

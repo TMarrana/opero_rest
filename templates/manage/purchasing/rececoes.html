@@ -1,0 +1,60 @@
+{% extends "base_manage.html" %}
+{% load vendas %}
+{% block title %}Receções{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <h1 class="font-display text-2xl font-bold">Compras</h1>
+  {% url 'purchasing:rececao_nova' as url_rececao %}
+  {% include "components/botao.html" with label="Receção sem encomenda" href=url_rececao %}
+</div>
+{% include "manage/purchasing/_nav.html" %}
+
+<div class="mt-4 flex flex-wrap items-center justify-between gap-4">
+  <div class="flex items-center gap-2">
+    <a href="?mes={{ mes_anterior|date:'Y-m' }}" class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-3 py-2 text-sm font-semibold hover:bg-carvao/5" aria-label="Mês anterior">&larr;</a>
+    <span class="font-dados text-sm font-semibold">{{ mes|date:"m/Y" }}</span>
+    {% if mes_seguinte %}<a href="?mes={{ mes_seguinte|date:'Y-m' }}" class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-3 py-2 text-sm font-semibold hover:bg-carvao/5" aria-label="Mês seguinte">&rarr;</a>{% endif %}
+  </div>
+  {% if rececoes %}<a href="?mes={{ mes|date:'Y-m' }}&amp;exportar=1" class="text-sm font-semibold underline underline-offset-2">Exportar CSV do mês</a>{% endif %}
+</div>
+<p class="mt-1 text-xs text-ardosia">O mês conta pela data da fatura ou da guia. Valores sem IVA.</p>
+
+{% if rececoes %}
+<div class="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+  <section class="cartao self-start">
+    <div class="flex items-baseline justify-between border-b border-ardosia/15 px-4 py-3">
+      <h2 class="font-display text-base font-bold">Por fornecedor</h2>
+      <span class="font-dados text-sm font-semibold">{{ total|euros }}</span>
+    </div>
+    <table class="tabela">
+      <thead><tr><th>Fornecedor</th><th class="th-dados">Receções</th><th class="th-dados">Total</th></tr></thead>
+      <tbody>
+        {% for fornecedor, n, valor, sem_preco in por_fornecedor %}
+        <tr>
+          <td class="font-medium"><a href="{% url 'purchasing:fornecedor' fornecedor.pk %}" class="hover:underline">{{ fornecedor.name }}</a>
+            {% if sem_preco %}<span class="block text-xs font-normal text-ardosia">{{ sem_preco }} linha{{ sem_preco|pluralize }} sem preço</span>{% endif %}</td>
+          <td class="td-dados">{{ n }}</td>
+          <td class="td-dados">{{ valor|euros }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <section class="cartao self-start">
+    <h2 class="border-b border-ardosia/15 px-4 py-3 font-display text-base font-bold">Receções do mês</h2>
+    {% for r in rececoes %}
+    <article class="talao">
+      <time class="block text-xs text-ardosia">{{ r.document_date|date:"d/m/Y" }} · recebida por {{ r.received_by }}</time>
+      <p class="mt-0.5 text-sm font-semibold"><a href="{% url 'purchasing:rececao' r.pk %}" class="underline underline-offset-2">{{ r.reference }}</a> · {{ r.supplier.name }}</p>
+      <p class="text-sm">{{ r.document_number }}{% if r.order %} · {{ r.order.reference }}{% else %} · sem encomenda{% endif %} · {{ r.total|euros }}</p>
+    </article>
+    {% endfor %}
+  </section>
+</div>
+{% else %}
+<div class="mt-4 cartao px-6 py-12 text-center">
+  <p class="font-display text-lg font-bold">Não há receções neste mês.</p>
+  <p class="mt-1 text-sm text-ardosia">As receções registam-se a partir de uma encomenda enviada, ou sem encomenda quando o fornecedor aparece sem aviso.</p>
+</div>
+{% endif %}
+{% endblock %}

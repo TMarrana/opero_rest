@@ -1,0 +1,6 @@
+{# Estado de uma encomenda. Só a recebida usa a cor de estado. #}
+{% if encomenda.state == "RECEBIDA" %}
+{% include "components/badge.html" with label=encomenda.get_state_display variante="servico" %}
+{% else %}
+{% include "components/badge.html" with label=encomenda.get_state_display %}
+{% endif %}

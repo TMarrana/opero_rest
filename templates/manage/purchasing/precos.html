@@ -1,0 +1,54 @@
+{% extends "base_manage.html" %}
+{% load vendas %}
+{% block title %}Preços de {{ item.name }}{% endblock %}
+{% block content %}
+<a href="{% url 'inventory:lista' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Stock</a>
+<h1 class="mt-2 font-display text-2xl font-bold">Preços de {{ item.name }}</h1>
+<p class="mt-1 text-sm text-ardosia">
+  Custo de referência: <span class="font-dados font-semibold text-carvao">{{ item.reference_cost|preco }}</span> por {{ item.get_unit_display }}.
+  É o preço da última receção.
+</p>
+
+<div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+  <section class="cartao self-start">
+    <h2 class="border-b border-ardosia/15 px-4 py-3 font-display text-base font-bold">Fornecedores</h2>
+    {% if fornecedores %}
+    <table class="tabela">
+      <thead><tr><th>Fornecedor</th><th>Ref.</th><th class="th-dados">Último preço</th></tr></thead>
+      <tbody>
+        {% for f in fornecedores %}
+        <tr>
+          <td class="font-medium"><a href="{% url 'purchasing:fornecedor' f.supplier.pk %}" class="hover:underline">{{ f.supplier.name }}</a>{% if f.preferred %} {% include "components/badge.html" with label="Preferido" %}{% endif %}</td>
+          <td class="font-dados text-sm">{{ f.supplier_ref }}</td>
+          <td class="td-dados">{{ f.last_price|preco }}<span class="block text-xs text-ardosia">{{ f.last_price_at|date:"d/m/Y" }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="px-4 py-8 text-center text-sm text-ardosia">Nenhum fornecedor vende este artigo. Ligue-o na página de um fornecedor.</p>
+    {% endif %}
+  </section>
+
+  <section class="cartao self-start">
+    <h2 class="border-b border-ardosia/15 px-4 py-3 font-display text-base font-bold">Receções</h2>
+    {% if historico %}
+    <table class="tabela">
+      <thead><tr><th>Data</th><th>Fornecedor</th><th class="th-dados">Qtd.</th><th class="th-dados">Preço</th></tr></thead>
+      <tbody>
+        {% for l in historico %}
+        <tr>
+          <td class="font-dados text-sm"><a href="{% url 'purchasing:rececao' l.receipt.pk %}" class="underline underline-offset-2">{{ l.receipt.document_date|date:"d/m/Y" }}</a></td>
+          <td class="text-sm">{{ l.receipt.supplier.name }}</td>
+          <td class="td-dados">{{ l.quantity|numero }}</td>
+          <td class="td-dados">{{ l.unit_price|preco }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="px-4 py-8 text-center text-sm text-ardosia">Ainda não houve receções deste artigo.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

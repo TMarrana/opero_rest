@@ -1,0 +1,31 @@
+{% extends "base_manage.html" %}
+{% block title %}{% if fornecedor %}Editar {{ fornecedor.name }}{% else %}Novo fornecedor{% endif %}{% endblock %}
+{% block content %}
+<a href="{% if fornecedor %}{% url 'purchasing:fornecedor' fornecedor.pk %}{% else %}{% url 'purchasing:fornecedores' %}{% endif %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">{% if fornecedor %}{{ fornecedor.name }}{% else %}Fornecedores{% endif %}</a>
+<h1 class="mt-2 font-display text-2xl font-bold">{% if fornecedor %}Editar fornecedor{% else %}Novo fornecedor{% endif %}</h1>
+<p class="mt-1 text-sm text-ardosia">Fica disponível em todas as casas do grupo.</p>
+
+<form method="post" class="mt-6 max-w-2xl space-y-5">
+  {% csrf_token %}
+  <div class="cartao grid gap-5 p-6 sm:grid-cols-2">
+    <div class="sm:col-span-2">{% include "components/campo.html" with field=form.name %}</div>
+    {% include "components/campo.html" with field=form.nif %}
+    {% include "components/campo.html" with field=form.contact_name %}
+    {% include "components/campo.html" with field=form.phone %}
+    {% include "components/campo.html" with field=form.email %}
+    <fieldset class="sm:col-span-2">
+      <legend class="text-sm font-medium">{{ form.delivery_days.label }}</legend>
+      <div class="mt-2 flex flex-wrap gap-4 text-sm">
+        {% for opcao in form.delivery_days %}<label class="inline-flex min-h-toque items-center gap-2">{{ opcao.tag }} {{ opcao.choice_label }}</label>{% endfor %}
+      </div>
+      <p class="mt-1 text-xs text-ardosia">{{ form.delivery_days.help_text }}</p>
+    </fieldset>
+    <div class="sm:col-span-2">{% include "components/campo.html" with field=form.notes %}</div>
+  </div>
+  <div class="flex justify-end gap-3">
+    {% if fornecedor %}{% url 'purchasing:fornecedor' fornecedor.pk as url_voltar %}{% else %}{% url 'purchasing:fornecedores' as url_voltar %}{% endif %}
+    {% include "components/botao.html" with label="Cancelar" variante="fantasma" href=url_voltar %}
+    {% include "components/botao.html" with label="Guardar" %}
+  </div>
+</form>
+{% endblock %}

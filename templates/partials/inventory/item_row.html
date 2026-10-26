@@ -15,6 +15,7 @@
             hx-get="{% url 'inventory:movimento' item.pk %}" hx-target="#modal-slot" hx-swap="innerHTML"
             class="font-semibold text-carvao underline underline-offset-2 hover:text-chama">Movimento</button>
     {% if pode_transferir and item.is_active %}<a href="{% url 'inventory:transferir' item.pk %}" class="ml-3 text-ardosia underline underline-offset-2 hover:text-carvao">Transferir</a>{% endif %}
+    <a href="{% url 'purchasing:precos' item.pk %}" class="ml-3 text-ardosia underline underline-offset-2 hover:text-carvao">Preços</a>
     <a href="{% url 'inventory:editar' item.pk %}" class="ml-3 text-ardosia underline underline-offset-2 hover:text-carvao">Editar</a>
   </td>
 </tr>

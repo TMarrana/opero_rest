@@ -1,0 +1,82 @@
+{% extends "base_manage.html" %}
+{% load vendas %}
+{% block title %}Lista de compras{% endblock %}
+{% block content %}
+{% comment %}Lista de compras (Fase 11): os artigos no mínimo ou abaixo dele,
+agrupados pelo fornecedor preferido. Cada grupo cria o rascunho de uma
+encomenda, que ainda se pode mudar antes de enviar.{% endcomment %}
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <h1 class="font-display text-2xl font-bold">Compras</h1>
+  {% url 'purchasing:rececao_nova' as url_rececao %}
+  {% include "components/botao.html" with label="Receção sem encomenda" variante="fantasma" href=url_rececao %}
+</div>
+{% include "manage/purchasing/_nav.html" %}
+
+<p class="mt-4 text-sm text-ardosia">
+  A quantidade sugerida repõe o mínimo e desconta o que já está encomendado e ainda não chegou. Pode mudá-la; a zero, o artigo fica de fora.
+</p>
+
+{% for fornecedor, linhas in grupos %}
+<form method="post" class="mt-6 cartao">
+  {% csrf_token %}
+  <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-ardosia/15 px-4 py-3">
+    {% if fornecedor %}
+    <div>
+      <h2 class="font-display text-base font-bold"><a href="{% url 'purchasing:fornecedor' fornecedor.pk %}" class="hover:underline">{{ fornecedor.name }}</a></h2>
+      {% if fornecedor.delivery_days %}<p class="text-xs text-ardosia">Entrega: {{ fornecedor.delivery_days_display }}</p>{% endif %}
+    </div>
+    <input type="hidden" name="fornecedor" value="{{ fornecedor.pk }}">
+    {% else %}
+    <div>
+      <h2 class="font-display text-base font-bold">Sem fornecedor preferido</h2>
+      <p class="text-xs text-ardosia">Escolha a quem encomendar, ou marque o preferido na página do fornecedor.</p>
+    </div>
+    <select name="fornecedor" required class="campo-input w-60" aria-label="Fornecedor">
+      <option value="">Escolher fornecedor…</option>
+      {% for f in request.restaurant.organization.suppliers.all %}{% if f.is_active %}<option value="{{ f.pk }}">{{ f.name }}</option>{% endif %}{% endfor %}
+    </select>
+    {% endif %}
+  </div>
+  <div class="overflow-x-auto">
+    <table class="tabela">
+      <thead>
+        <tr>
+          <th>Artigo</th>
+          <th class="th-dados">Stock</th>
+          <th class="th-dados">Mínimo</th>
+          <th class="th-dados">Já encomendado</th>
+          <th class="th-dados">Último preço</th>
+          <th class="th-dados">Encomendar</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in linhas %}
+        <tr>
+          <td class="font-medium">{{ l.item.name }}{% if l.ref %} <span class="font-dados text-xs text-ardosia">{{ l.ref }}</span>{% endif %}</td>
+          <td class="td-dados {% if l.item.current_stock < l.item.minimum_stock %}font-semibold text-chama{% endif %}">{{ l.item.current_stock|numero }} {{ l.item.unit }}</td>
+          <td class="td-dados text-ardosia">{{ l.item.minimum_stock|numero }}</td>
+          <td class="td-dados text-ardosia">{% if l.encomendado %}{{ l.encomendado|numero }}{% endif %}</td>
+          <td class="td-dados text-ardosia">{% if l.preco is not None %}{{ l.preco|preco }}{% endif %}</td>
+          <td class="td-dados">
+            <label class="inline-flex items-center gap-2">
+              <span class="sr-only">Quantidade de {{ l.item.name }}</span>
+              <input type="text" inputmode="decimal" name="qtd-{{ l.item.pk }}" value="{{ l.sugerido|campo }}" class="campo-input font-dados w-24 text-right">
+              <span class="w-8 text-left text-xs text-ardosia">{{ l.item.unit }}</span>
+            </label>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="flex justify-end border-t border-ardosia/10 px-4 py-3">
+    {% include "components/botao.html" with label="Criar encomenda" %}
+  </div>
+</form>
+{% empty %}
+<div class="mt-6 cartao px-6 py-12 text-center">
+  <p class="font-display text-lg font-bold">Não há artigos por encomendar.</p>
+  <p class="mt-1 text-sm text-ardosia">Os artigos aparecem aqui quando o stock chega ao mínimo. Para encomendar na mesma, crie uma encomenda em Encomendas.</p>
+</div>
+{% endfor %}
+{% endblock %}

@@ -14,6 +14,7 @@ urlpatterns = [
     path("gestao/configuracao/", include("core.config_urls")),
     path("gestao/turnos/", include("shifts.urls")),
     path("gestao/vendas/", include("sales.urls")),
+    path("gestao/compras/", include("purchasing.urls")),
     path("equipa/", include("staff.urls")),
     path("quiosque/", include("kiosk.urls")),
     path("", include("core.urls")),

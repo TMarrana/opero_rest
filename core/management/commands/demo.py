@@ -155,6 +155,7 @@ class Command(BaseCommand):
 
         ribeira = self._segunda_casa(restaurant, gerente)
         self._vendas(restaurant, ribeira, gerente)
+        self._compras(restaurant, resp_stock)
 
         self.stdout.write(self.style.SUCCESS("Dados de demonstração prontos."))
         self.stdout.write(
@@ -234,3 +235,50 @@ class Command(BaseCommand):
                 restaurant=casa, upload=SimpleUploadedFile(f"saft-{casa.slug}.xml", conteudo), user=gerente
             )
             self.stdout.write(f"Vendas de {casa.slug}: {imp.documents_new} documentos importados")
+
+    def _compras(self, esquina, resp_stock):
+        """Fase 11: três fornecedores do grupo, os preferidos dos artigos da
+        Esquina, dois frescos abaixo do mínimo e uma receção da semana
+        passada, para haver histórico de preços."""
+        from purchasing.models import Receipt, Supplier
+        from purchasing.services import receive, save_supplier_item
+
+        grupo = esquina.organization
+        frescos, _ = Supplier.objects.get_or_create(
+            organization=grupo, name="Frescos do Mercado",
+            defaults={"contact_name": "Sr. Albino", "phone": "912 345 678", "delivery_days": "1,4",
+                      "notes": "Encomendar até às 18h da véspera."},
+        )
+        mercearia, _ = Supplier.objects.get_or_create(
+            organization=grupo, name="Mercearia Central",
+            defaults={"nif": "505000008", "email": "encomendas@merceariacentral.pt", "delivery_days": "2"},
+        )
+        drogaria, _ = Supplier.objects.get_or_create(organization=grupo, name="Drogaria Lopes", defaults={"delivery_days": "3"})
+
+        categorias = {c.name: c for c in Category.objects.filter(restaurant=esquina)}
+        for nome, minimo, stock in [("Alface frisada", "4", "1"), ("Cebola", "8", "3")]:
+            item, novo = Item.objects.get_or_create(
+                restaurant=esquina, name=nome,
+                defaults={"category": categorias["Frescos"], "unit": Item.Unit.KG, "minimum_stock": Decimal(minimo)},
+            )
+            if novo:
+                register_movement(item=item, movement_type="ENTRADA", quantity=Decimal(stock), user=resp_stock,
+                                  reason="stock inicial de demonstração")
+        artigos = {i.name: i for i in Item.objects.filter(restaurant=esquina)}
+        for fornecedor, nome, ref, preco in [
+            (frescos, "Tomate chucha", "", "1.20"),
+            (frescos, "Alface frisada", "", "0.90"),
+            (frescos, "Cebola", "", "0.65"),
+            (mercearia, "Azeite virgem extra", "AZ-5L", "6.40"),
+            (mercearia, "Guardanapos 33x33", "GD-33", "2.15"),
+            (drogaria, "Lixívia alimentar", "LX-1", "1.10"),
+        ]:
+            if not fornecedor.items.filter(item=artigos[nome]).exists():
+                save_supplier_item(supplier=fornecedor, item=artigos[nome], supplier_ref=ref,
+                                   last_price=Decimal(preco), preferred=True)
+        if not Receipt.objects.filter(restaurant=esquina).exists():
+            receive(
+                restaurant=esquina, supplier=frescos, user=resp_stock, document_number="GR 2026/311",
+                document_date=timezone.localdate() - datetime.timedelta(days=7),
+                lines=[(artigos["Tomate chucha"], Decimal(5), Decimal("1.15"), None)],
+            )

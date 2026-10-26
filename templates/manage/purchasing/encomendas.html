@@ -1,0 +1,52 @@
+{% extends "base_manage.html" %}
+{% block title %}Encomendas{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <h1 class="font-display text-2xl font-bold">Compras</h1>
+  {% if fornecedores %}
+  <form method="post" action="{% url 'purchasing:encomenda_nova' %}" class="flex items-center gap-2">
+    {% csrf_token %}
+    <select name="fornecedor" required class="campo-input w-56" aria-label="Fornecedor da nova encomenda">
+      <option value="">Fornecedor…</option>
+      {% for f in fornecedores %}<option value="{{ f.pk }}">{{ f.name }}</option>{% endfor %}
+    </select>
+    {% include "components/botao.html" with label="Nova encomenda" %}
+  </form>
+  {% endif %}
+</div>
+{% include "manage/purchasing/_nav.html" %}
+
+<form method="get" class="mt-4 flex items-center gap-2 text-sm">
+  <label for="estado" class="text-ardosia">Mostrar</label>
+  <select id="estado" name="estado" class="campo-input w-56" onchange="this.form.submit()">
+    <option value="abertas"{% if estado == "abertas" %} selected{% endif %}>Em aberto</option>
+    <option value="todas"{% if estado == "todas" %} selected{% endif %}>Todas</option>
+    {% for valor, nome in estados %}<option value="{{ valor }}"{% if estado == valor %} selected{% endif %}>{{ nome }}</option>{% endfor %}
+  </select>
+  <noscript><button type="submit" class="underline">Ver</button></noscript>
+</form>
+
+<div class="mt-4 cartao">
+  {% if encomendas %}
+  <div class="overflow-x-auto">
+    <table class="tabela">
+      <thead><tr><th>Encomenda</th><th>Fornecedor</th><th>Estado</th><th class="th-dados">Linhas</th><th>Criada</th><th>Enviada</th></tr></thead>
+      <tbody>
+        {% for encomenda in encomendas %}
+        <tr>
+          <td class="font-dados font-semibold"><a href="{% url 'purchasing:encomenda' encomenda.pk %}" class="underline underline-offset-2">{{ encomenda.reference }}</a></td>
+          <td class="font-medium">{{ encomenda.supplier.name }}</td>
+          <td>{% include "manage/purchasing/_estado.html" %}</td>
+          <td class="td-dados">{{ encomenda.n_linhas }}</td>
+          <td class="font-dados text-sm">{{ encomenda.created_at|date:"d/m H:i" }}</td>
+          <td class="font-dados text-sm text-ardosia">{{ encomenda.sent_at|date:"d/m H:i"|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="px-4 py-8 text-center text-sm text-ardosia">Não há encomendas{% if estado == "abertas" %} em aberto{% endif %}. Comece pela lista de compras, ou crie uma encomenda a um fornecedor.</p>
+  {% endif %}
+</div>
+{% endblock %}

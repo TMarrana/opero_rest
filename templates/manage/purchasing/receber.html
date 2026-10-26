@@ -1,0 +1,88 @@
+{% extends "base_manage.html" %}
+{% load vendas %}
+{% block title %}Receção{% endblock %}
+{% block content %}
+{% comment %}Receção (Fase 11), linha a linha: o que chegou e a que preço. Cada
+linha dá entrada no stock e não se apaga; um erro corrige-se com um ajuste.{% endcomment %}
+{% if encomenda %}
+<a href="{% url 'purchasing:encomenda' encomenda.pk %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">{{ encomenda.reference }}</a>
+<h1 class="mt-2 font-display text-2xl font-bold">Receber {{ encomenda.reference }} · {{ fornecedor.name }}</h1>
+{% else %}
+<a href="{% url 'purchasing:rececoes' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Receções</a>
+<h1 class="mt-2 font-display text-2xl font-bold">Receção sem encomenda</h1>
+<form method="get" class="mt-4 flex items-center gap-2">
+  <label for="fornecedor" class="text-sm text-ardosia">Fornecedor</label>
+  <select id="fornecedor" name="fornecedor" class="campo-input w-64" onchange="this.form.submit()">
+    <option value="">Escolher…</option>
+    {% for f in fornecedores %}<option value="{{ f.pk }}"{% if f == fornecedor %} selected{% endif %}>{{ f.name }}</option>{% endfor %}
+  </select>
+  <noscript><button type="submit" class="text-sm underline">Escolher</button></noscript>
+</form>
+{% endif %}
+<p class="mt-1 text-sm text-ardosia">Indique o que chegou de facto. Cada linha entra no stock, e o preço passa a ser o custo de referência do artigo.</p>
+
+{% if fornecedor %}
+<form method="post" class="mt-6 space-y-5">
+  {% csrf_token %}
+  {% if not encomenda %}<input type="hidden" name="fornecedor" value="{{ fornecedor.pk }}">{% endif %}
+  {% for erro in form.non_field_errors %}
+  <p class="rounded-md bg-chama/10 px-4 py-3 text-sm font-medium text-chama" role="alert">{{ erro }}</p>
+  {% endfor %}
+  <div class="cartao grid gap-5 p-6 sm:grid-cols-3">
+    {% include "components/campo.html" with field=form.document_number %}
+    {% include "components/campo.html" with field=form.document_date %}
+    {% include "components/campo.html" with field=form.notes %}
+  </div>
+
+  <div class="cartao">
+    <div class="overflow-x-auto">
+      <table class="tabela">
+        <thead>
+          <tr>
+            <th>Artigo</th>
+            {% if encomenda %}<th class="th-dados">Encomendado</th><th class="th-dados">Falta</th>{% endif %}
+            <th class="th-dados">Chegou</th>
+            <th class="th-dados">Preço unitário</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in linhas %}
+          <tr>
+            {% if encomenda %}
+            <td class="font-medium">{{ l.item.name }}</td>
+            <td class="td-dados text-ardosia">{{ l.encomendado|numero }} {{ l.item.unit }}</td>
+            <td class="td-dados">{{ l.falta|numero }}</td>
+            {% else %}
+            <td>
+              <select name="item-{{ l.chave }}" class="campo-input" aria-label="Artigo da linha {{ forloop.counter }}">
+                <option value="">—</option>
+                {% for a in artigos %}<option value="{{ a.pk }}"{% if l.item_id == a.pk|stringformat:"s" %} selected{% endif %}>{{ a.name }} ({{ a.unit }})</option>{% endfor %}
+              </select>
+            </td>
+            {% endif %}
+            <td class="td-dados"><input type="text" inputmode="decimal" name="qtd-{{ l.chave }}" value="{{ l.qtd }}" aria-label="Quantidade que chegou{% if l.item %} de {{ l.item.name }}{% endif %}" class="campo-input font-dados w-24 text-right"></td>
+            <td class="td-dados"><input type="text" inputmode="decimal" name="preco-{{ l.chave }}" value="{{ l.preco }}" aria-label="Preço unitário{% if l.item %} de {{ l.item.name }}{% endif %}" class="campo-input font-dados w-28 text-right"></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="border-t border-ardosia/10 px-4 py-2.5 text-xs text-ardosia">
+      Preços sem IVA, na unidade do artigo. {% if encomenda %}Uma linha que não chegou fica a zero ou vazia, e a encomenda fica recebida em parte.{% else %}As linhas sem artigo ficam de fora.{% endif %}
+    </p>
+  </div>
+
+  <div class="flex justify-end gap-3" x-data="{ confirmar: false }">
+    <button type="button" x-show="!confirmar" x-on:click="confirmar = true"
+            class="inline-flex min-h-toque items-center rounded-md bg-carvao px-5 py-2.5 text-sm font-semibold text-superficie hover:bg-carvao/85">Registar receção</button>
+    <div x-show="confirmar" x-cloak class="flex items-center gap-3">
+      <span class="text-sm">O stock muda já, e a receção não se apaga.</span>
+      <button type="button" x-on:click="confirmar = false" class="text-sm underline underline-offset-2">Rever</button>
+      <button type="submit" class="inline-flex min-h-toque items-center rounded-md bg-carvao px-5 py-2.5 text-sm font-semibold text-superficie hover:bg-carvao/85">Confirmar receção</button>
+    </div>
+  </div>
+</form>
+{% elif not fornecedores %}
+<p class="mt-6 cartao px-6 py-10 text-center text-sm text-ardosia">Ainda não há fornecedores. <a href="{% url 'purchasing:fornecedor_novo' %}" class="underline underline-offset-2">Crie o primeiro</a>.</p>
+{% endif %}
+{% endblock %}

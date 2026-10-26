@@ -1,0 +1,11 @@
+{# Separadores das compras (Fase 11). #}
+<nav class="mt-4 flex flex-wrap gap-4 border-b border-ardosia/20 text-sm" aria-label="Compras">
+  {% url 'purchasing:lista' as url_lista %}
+  {% url 'purchasing:encomendas' as url_encomendas %}
+  {% url 'purchasing:rececoes' as url_rececoes %}
+  {% url 'purchasing:fornecedores' as url_fornecedores %}
+  <a href="{{ url_lista }}" class="-mb-px border-b-2 px-1 pb-2 {% if request.path == url_lista %}border-carvao font-semibold{% else %}border-transparent text-ardosia hover:text-carvao{% endif %}">Lista de compras</a>
+  <a href="{{ url_encomendas }}" class="-mb-px border-b-2 px-1 pb-2 {% if '/encomendas/' in request.path %}border-carvao font-semibold{% else %}border-transparent text-ardosia hover:text-carvao{% endif %}">Encomendas</a>
+  <a href="{{ url_rececoes }}" class="-mb-px border-b-2 px-1 pb-2 {% if '/rececoes/' in request.path %}border-carvao font-semibold{% else %}border-transparent text-ardosia hover:text-carvao{% endif %}">Receções</a>
+  <a href="{{ url_fornecedores }}" class="-mb-px border-b-2 px-1 pb-2 {% if '/fornecedores/' in request.path %}border-carvao font-semibold{% else %}border-transparent text-ardosia hover:text-carvao{% endif %}">Fornecedores</a>
+</nav>

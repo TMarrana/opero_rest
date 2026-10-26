@@ -44,7 +44,7 @@ Ao concluir qualquer trabalho descrito na secção 8:
 | 8 — Calendário mensal de ausências | 🟡 Código completo e visto no browser; falta a revisão do TM com dados reais |
 | 9 — Vários restaurantes | 🟡 Primeiro bloco feito e visto no browser; faltam as duas decisões da secção 12 (catálogo de artigos, trabalhador em várias casas) e a aprovação da AT |
 | 10 — Vendas a partir do SAF-T | 🟡 Código completo e visto no browser com dados sintéticos; falta validar com o ficheiro real do cliente de teste e as vendas por serviço |
-| 11 — Fornecedores e compras | ⬜ Por iniciar |
+| 11 — Fornecedores e compras | 🟡 Código completo, testado e visto no browser; falta a aprovação da AT e o uso real com um fornecedor |
 | 12 — Consumos internos | ⬜ Por iniciar |
 | 13 — Fichas técnicas | ⬜ Por iniciar |
 | 14 — Stock atualizado pelas vendas | ⬜ Por iniciar |
@@ -77,7 +77,7 @@ As áreas que o produto tem de cobrir, e onde está cada uma neste plano (pedido
 | Área | Onde está | Estado |
 |---|---|---|
 | Stock e movimentos | Fase 1 | 🟡 código feito; falta a revisão visual |
-| Compras e fornecedores | Fase 11 (estava na V1.1) | ⬜ |
+| Compras e fornecedores | Fase 11 (estava na V1.1) | 🟡 código feito |
 | Trabalhadores, ponto e férias | Fases 2, 3, 5, 7 e 8; turnos na Fase 6 | 🟡 código feito; faltam os testes em aparelhos reais |
 | Consumos internos | Fase 12 (estava na V1.1) | ⬜ |
 | Fichas técnicas | Fase 13 (estava no Futuro) | ⬜ |
@@ -172,6 +172,7 @@ opero_rest/
   shifts/                   # Fase 6: ShiftTemplate, Shift, RestDay
   inventory/                # Category, Item, StockMovement
   sales/                    # Fase 10: SAF-T (saft.py lê, services.py grava, reports.py conta)
+  purchasing/               # Fase 11: Supplier, SupplierItem, PurchaseOrder, Receipt
   dashboard/                # vista agregada do gerente
   staff/                    # vista do colaborador (mobile)
 
@@ -318,7 +319,7 @@ Desktop-first, funcional em tablet. A entrada Férias abre o calendário mensal 
 
 `Dashboard · Trabalhadores · Ponto · Férias · Stock · Configuração`
 
-Depois do MVP juntaram-se Grupo (Fase 9, só o Admin do grupo), Turnos (Fase 6) e Vendas (Fase 10, Admin e Gerente).
+Depois do MVP juntaram-se Grupo (Fase 9, só o Admin do grupo), Turnos (Fase 6), Compras (Fase 11, com o stock) e Vendas (Fase 10, Admin e Gerente).
 
 Conteúdo denso, tabelas com pesquisa e filtros, figuras mono alinhadas à direita, histórico sempre a um clique de distância de qualquer ação que altere stock, ponto ou férias.
 
@@ -799,21 +800,27 @@ O gerente carrega o ficheiro SAF-T (PT) de faturação que o POS exporta, e o Op
 
 ### Fase 11 — Fornecedores e compras
 *Estava na V1.1. Depende de: Fase 9 (os fornecedores são do grupo).*
-**Estado:** ⬜ Por iniciar.
+**Estado:** 🟡 Código completo, testado (`tests/test_compras.py`, 21 testes, com o critério de aceitação) e visto no browser com o `demo`. Falta a aprovação da AT e o uso com um fornecedor real.
 
-- [ ] `Supplier`, do grupo: nome, NIF, contactos, dias de entrega, observações e ativo. Um fornecedor com encomendas arquiva-se em vez de se apagar.
-- [ ] Artigos por fornecedor: a referência do fornecedor, o último preço e qual é o fornecedor preferido. A unidade de compra é a unidade do artigo, porque a conversão de unidades continua fora (docx).
-- [ ] Lista de compras: os artigos abaixo do mínimo, agrupados pelo fornecedor preferido. A quantidade sugerida é a que repõe o mínimo, e pode ser alterada.
-- [ ] Encomenda, com linhas. Estados: rascunho, enviada, recebida em parte, recebida e cancelada.
-  - Enquanto não houver envio de emails (secção 12), a encomenda imprime-se ou copia-se como texto para mandar por email ou WhatsApp.
-- [ ] Receção:
-  - confirma-se, linha a linha, o que chegou e a que preço, com o número e a data da fatura ou da guia;
-  - cada linha recebida gera uma `ENTRADA`, de origem compra, pelo `register_movement()`, com a referência da encomenda (invariantes 1 e 5);
-  - uma receção não se apaga; um erro corrige-se com um ajuste;
-  - há também receção sem encomenda, para quando o fornecedor aparece sem aviso.
-- [ ] O preço da última receção passa a ser o `reference_cost` do artigo. O preço médio ponderado continua fora.
-- [ ] Histórico de preços por artigo e fornecedor.
-- [ ] Exportação das compras por fornecedor e por mês.
+App `purchasing`, em Compras no rail, para o Admin, o Gerente e o Responsável de stock. Tem quatro separadores: Lista de compras, Encomendas, Receções e Fornecedores.
+
+- [x] `Supplier`, do grupo: nome (único no grupo), NIF, pessoa de contacto, telefone, email, dias de entrega, observações e ativo. Um fornecedor com encomendas ou receções arquiva-se; sem histórico, apaga-se.
+- [x] Artigos por fornecedor (`SupplierItem`), geridos na página do fornecedor: a referência do fornecedor, o último preço e qual é o fornecedor preferido. Um só preferido por artigo (constraint parcial): marcar outro tira a marca ao anterior. A unidade de compra é a unidade do artigo, porque a conversão de unidades continua fora (docx). O fornecedor é do grupo, mas os artigos que se lhe ligam são os da casa ativa.
+- [x] Lista de compras: os artigos ativos no mínimo ou abaixo dele (o mesmo critério do «Stock baixo»), agrupados pelo fornecedor preferido. A quantidade sugerida repõe o mínimo e desconta o que já está encomendado e ainda não chegou, e pode ser alterada. Os artigos sem preferido aparecem no fim, com a escolha do fornecedor. Cada grupo cria o rascunho de uma encomenda.
+- [x] Encomenda, com linhas (`PurchaseOrder`, `PurchaseOrderLine`, referência `ENC-n`). Estados: rascunho, enviada, recebida em parte, recebida e cancelada.
+  - Em rascunho, as linhas, a entrega pretendida e as observações mudam-se; o preço previsto vem do último preço do fornecedor.
+  - Enquanto não houver envio de emails (secção 12), a encomenda imprime-se (folha sem o rail) ou copia-se como texto («- 3 kg · Alface frisada») para mandar por email ou WhatsApp. «Marcar como enviada» é o passo seguinte.
+  - Cancela-se em rascunho ou enviada. Uma recebida em parte não se cancela (ver Notas de desvio).
+- [x] Receção (`Receipt`, `ReceiptLine`, referência `REC-n`):
+  - confirma-se, linha a linha, o que chegou e a que preço, com o número e a data da fatura ou da guia, que é obrigatória e não pode ser no futuro;
+  - cada linha recebida gera uma `ENTRADA`, de origem compra (`StockMovement.Origin.COMPRA`, migração `inventory/0003`), pelo `register_movement()`, com a referência «ENC-n · número do documento» (invariantes 1 e 5). O histórico do stock assinala «compra»;
+  - tudo numa transação: ou entra a receção inteira, ou nada;
+  - uma receção não se apaga (nem na UI nem no admin, e as linhas protegem-na); um erro corrige-se com um ajuste;
+  - há também receção sem encomenda, para quando o fornecedor aparece sem aviso: oito linhas com artigo, quantidade e preço;
+  - pede-se uma confirmação antes de registar, porque mexe no stock (secção 9).
+- [x] O preço da última receção passa a ser o `reference_cost` do artigo e o último preço do fornecedor. Uma linha sem preço não mexe no custo. O preço médio ponderado continua fora.
+- [x] Histórico de preços por artigo e fornecedor: «Preços» na lista do stock, com os fornecedores do artigo e as receções.
+- [x] Exportação das compras por fornecedor e por mês: Receções mostra o mês (pela data da fatura ou guia) com o total por fornecedor, e exporta as linhas em CSV (`;`, BOM, vírgula decimal).
 
 *Aceitação:* o responsável de stock abre a lista de compras e faz a encomenda ao fornecedor de frescos. Recebe-a com uma linha a menos.
 - O stock e o custo dos artigos mudam.
@@ -1035,7 +1042,7 @@ Quando as Fases 9 a 15 arrancarem, juntam-se estes:
 | `test_saft_keeps_no_customer_data` | nenhum dado do cliente final fica gravado *(Fase 10, feito; ver `tests/test_vendas.py`)* |
 | `test_saft_entity_expansion_rejected` | um XML com entidades é recusado *(Fase 10, feito; ver `tests/test_vendas.py`)* |
 | `test_sale_after_midnight_counts_on_service_day` | uma venda à 1h conta no dia de serviço anterior *(Fase 10, feito; ver `tests/test_vendas.py`)* |
-| `test_receipt_creates_entry_movement` | a receção gera entradas com a referência da encomenda e atualiza o custo *(Fase 11)* |
+| `test_receipt_creates_entry_movement` | a receção gera entradas com a referência da encomenda e atualiza o custo *(Fase 11, feito; ver `tests/test_compras.py`)* |
 | `test_staff_sees_only_own_consumption` | o colaborador vê os seus consumos e não os dos outros *(Fase 12)* |
 | `test_recipe_version_used_for_past_day` | o consumo de um dia passado usa a versão da ficha desse dia *(Fase 13)* |
 | `test_sales_deduct_stock_once_per_day` | um dia de vendas gera um movimento por artigo, e reimportar não repete *(Fase 14)* |
@@ -1107,6 +1114,7 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 
 | Data | Fase | O que foi feito | Por fechar | Próximo passo |
 |---|---|---|---|---|
+| 2026-10-26 (4ª) | 10, 11 | **Fase 10 commitada e enviada** (`7d01623`). **Fase 11: fornecedores e compras**, app nova `purchasing`.<br>• **Modelos:** `Supplier` (do grupo), `SupplierItem` (um preferido por artigo), `PurchaseOrder` e linhas, `Receipt` e linhas, ligadas ao movimento que geraram. `StockMovement.Origin.COMPRA`. Migrações `inventory/0003` e `purchasing/0001`.<br>• **Serviços (`purchasing/services.py`):** lista de compras (repor o mínimo menos o já encomendado), criar, mudar, enviar e cancelar encomendas, texto da encomenda, receção numa transação (entrada de origem compra pelo `register_movement()`, custo de referência e último preço do fornecedor, estado da encomenda), mês por fornecedor.<br>• **Ecrãs:** Compras no rail para o Admin, o Gerente e o Resp. stock, com Lista de compras, Encomendas (rascunho editável, texto para copiar, folha para imprimir), Receber, Receções (mês por fornecedor e CSV), Fornecedores (artigos, preferido, arquivar) e Preços de cada artigo, a partir do stock. O histórico do stock assinala as compras.<br>• **Demo:** três fornecedores, os preferidos dos artigos da Esquina, alface e cebola abaixo do mínimo e uma receção da semana passada.<br>21 testes novos, 306 no total; `check` e `makemigrations --check` limpos; migrações e `demo` aplicados ao `db.sqlite3` (cópia de segurança fora do repositório). CSS reconstruído e service worker para v9.<br>No browser, como `dono@tasca.pt` na Esquina: o critério de aceitação de ponta a ponta (lista de compras → encomenda aos Frescos do Mercado → tomate acrescentado ao rascunho → enviada → recebida sem a cebola → «Recebida em parte», stock e custo mudados, entradas no histórico), mais Receções e a página do fornecedor. Daí saíram três acertos: a unidade partia para baixo do campo, o texto dizia «3 quilograma» e os preços apareciam como «0,9». | A AT tem de aprovar o âmbito. Sem «dar por fechada» uma encomenda recebida em parte (Notas de desvio). O fluxo foi feito no browser pelo Admin do grupo; o Resp. stock só pelos testes. A encomenda `ENC-1` e a receção `REC-2` ficaram no `db.sqlite3` de desenvolvimento. Fase 11 por commitar. | Commitar a Fase 11. Depois, Fase 12 (consumos internos): acrescenta a origem «consumo interno» e valoriza ao custo de referência, que as receções passaram a atualizar. |
 | 2026-10-26 (3ª) | 10 | **Fase 10: vendas a partir do SAF-T.** App nova `sales`.<br>• **Leitura (`sales/saft.py`):** streaming com `defusedxml` (nova dependência em `requirements.txt`), XML ou .zip, sem DTDs nem entidades. Só o cabeçalho, os produtos e `SalesInvoices`; os clientes nunca se leem; `WorkingDocuments` e `Payments` saltam-se.<br>• **Importação (`sales/services.py`):** NIF, versão, período e programa validados antes de gravar; tudo numa transação. Documentos únicos por número: o mesmo ficheiro é recusado, um sobreposto acrescenta os novos e atualiza o estado. Anulados (A) e faturados (F) não contam; notas de crédito com sinal negativo. Séries por casa, obrigatórias quando há outra casa com o mesmo NIF. Dia de serviço com hora de corte (5h). Totais de controlo comparados, só com aviso.<br>• **Modelos:** `SalesImport`, `SalesDocument`, `SalesLine`, `PosProduct`, `SalesSettings` (migração `sales/0001`).<br>• **Ecrãs:** Vendas (resumo com comparação, por dia com horas do ponto e vendas por hora trabalhada, mapa da semana por hora, produtos, famílias, dois CSV), Importar (com o histórico de importações) e Regras (só o Admin, também em Configuração). Entrada Vendas no rail para o Admin e o Gerente. Aviso no dashboard com mais de 7 dias sem importar, e vendas do mês no painel do grupo.<br>• **Demo:** NIF nas duas casas e um SAF-T sintético de cada uma (`sales/sintetico.py`), do dia 1 do mês passado até ontem.<br>28 testes novos, 285 no total; `check` e `makemigrations --check` limpos; migração e `demo` aplicados ao `db.sqlite3` (cópia de segurança fora do repositório). CSS reconstruído e service worker para v8.<br>No browser, como `dono@tasca.pt`: Vendas de setembro e outubro, Importar e painel do grupo. Daí saíram três correções: a variação do número de documentos rebentava com inteiros (`float` sem `quantize`), o rodapé da tabela estava desalinhado, e outubro incompleto aparecia comparado com setembro inteiro. | Ficheiro real do cliente de teste por importar: é o critério de aceitação (o total do mês igual ao do relatório do POS). Vendas por serviço por fazer, à espera da decisão nova da secção 12. O carregamento de um ficheiro pelo browser só foi testado pelos testes, não à mão. Nada commitado. | Pedir ao cliente de teste o SAF-T de um mês e o relatório de vendas do POS desse mês; importar e comparar o total ao cêntimo. Confirmar as séries, o estado F e os totais de controlo (Notas de desvio). Depois, Fase 11. |
 | 2026-10-26 (2ª) | 9 | **Fase 9 arrancada: várias casas no mesmo grupo.**<br>• **Dados:** `Organization`; `Restaurant.organization`, `nif`, `address` e `municipality`; `User.organization` e `is_group_admin`; `Membership` (acesso e perfil por casa); `StockTransfer`, `StockMovement.origin` e `transfer`. Migrações `core/0003`, `accounts/0004` e `inventory/0002`, com data migrations.<br>• **Casa ativa:** `core.middleware.ActiveRestaurantMiddleware` põe `request.restaurant` e `request.role`. As views passaram todas para `restaurant_scope(request, …)` e os mixins para `request.role`; saíram o «sem restaurante vê tudo» e os seis `Restaurant.objects.first()`. Seletor de casa no rail e recusa de POSTs abertos noutra casa (`static/js/casa.js`, `X-Opero-Casa`).<br>• **Grupo:** painel com uma linha por casa, casas e acessos, só para o Admin do grupo. O gerente muda o perfil de uma conta só na casa onde está.<br>• **Stock:** transferência entre casas, com a criação do artigo no destino se faltar.<br>• **Quiosque:** só a equipa da casa do tablet; um cookie sem casa já não abre o quiosque.<br>• **Demo:** Grupo Tasca com a Tasca da Esquina e a Tasca da Ribeira, `dono@tasca.pt` como Admin do grupo e o gerente com acesso às duas.<br>23 testes novos, 257 no total; `check` e `makemigrations --check` limpos; migrações e `demo` aplicados ao `db.sqlite3` (cópia de segurança fora do repositório). No `db.sqlite3`, o superuser sem casa passou a Admin do grupo. CSS reconstruído e service worker para v7.<br>No browser, como `dono@tasca.pt`: painel do grupo, «Abrir» a Ribeira, transferir 5 kg de arroz para a Esquina (cria o artigo lá), mudar de casa no seletor e ver a entrada no histórico da Esquina, ecrã de acessos. | As duas decisões da secção 12 (catálogo de artigos do grupo, trabalhador em várias casas) não foram tomadas: tudo continua por casa. `User.restaurant` e `User.role` ainda existem, como casa e perfil por omissão. A recusa de POSTs de outra casa depende de JavaScript nos formulários normais (no HTMX vai no cabeçalho); sem JavaScript, o POST passa. Nada commitado. | Fechar com a AT as duas decisões da secção 12 e, com elas, acabar a Fase 9. Depois, Fase 10 (SAF-T). |
 | 2026-10-26 | 9–15 | **Roteiro depois do MVP no plano, sem código.** Pedido do TM: o cliente de teste já extrai o SAF-T do POS (Zone Soft), e o produto tem de cobrir stock e movimentos, compras e fornecedores, trabalhadores, ponto e férias, consumos internos, fichas técnicas, atualização de stock por vendas, extração e análise de dados e, sobretudo, vários restaurantes.<br>Mapa do produto na secção 1, a confirmar onde está cada área. Fases novas: 9 (vários restaurantes), 10 (vendas pelo SAF-T), 11 (fornecedores e compras), 12 (consumos internos), 13 (fichas técnicas), 14 (stock pelas vendas) e 15 (extração e análise). Acertos nas secções 2, 6, 7, 10, 11 e 12.<br>Antes, a 2026-10-25, um estudo da Zone Soft feito com fontes públicas: a «BMS Mobile» é o ZS bms mobile, e a API não tem documentação pública. | Âmbito e ordem por aprovar pela AT. Sete decisões novas na secção 12, das quais o catálogo de artigos e o trabalhador em várias casas mexem no modelo da Fase 9. | Pedir ao cliente de teste um SAF-T de um mês e saber se o POS exporta um período à escolha. Levar à AT a ordem das fases e as decisões novas. |
@@ -1131,6 +1139,11 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 
 Alterações ao plano decididas durante a execução. Se algo aqui contradiz uma secção acima, **corrigir também a secção** — este registo é o histórico, não a fonte de verdade.
 
+- **2026-10-26 · Fornecedor do grupo, artigos da casa.** O catálogo de artigos continua por casa (decisão da secção 12 por tomar), por isso a ligação fornecedor–artigo (`SupplierItem`) é a um artigo de uma casa. Se o catálogo passar a ser do grupo, a ligação muda para o artigo do grupo.
+- **2026-10-26 · Uma encomenda recebida em parte não se cancela.** O que chegou já entrou no stock. O que falta continua a contar como «já encomendado» na lista de compras até chegar. Se o fornecedor não vai mandar o resto, falta um «dar por fechada»; fica para quando houver uso real.
+- **2026-10-26 · Fornecedor arquivado ainda entrega.** Um fornecedor arquivado não recebe encomendas novas, mas uma receção de uma encomenda que já tinha ainda se regista.
+- **2026-10-26 · Lista de compras com «no mínimo ou abaixo».** O plano dizia «abaixo do mínimo»; ficou o mesmo critério do «Stock baixo» do dashboard e do stock (`current_stock <= minimum_stock`). Um artigo exatamente no mínimo aparece com sugestão zero.
+- **2026-10-26 · Service worker para v9.** O CSS mudou com as Compras.
 - **2026-10-26 · Regras de vendas num modelo à parte.** A Fase 9 dizia que as séries de faturação entravam no `Restaurant`. Ficaram em `sales.SalesSettings`, com a hora de corte e o custo médio por hora, para a app `sales` não mexer no modelo do `core`. O NIF continua no `Restaurant`, em Grupo → Casas.
 - **2026-10-26 · Estado F não conta.** Um documento «faturado» (F) já foi incluído noutro, e contá-lo seria contar a venda duas vezes. A especificação não é clara sobre se entra nos totais de controlo, por isso o aviso de totais diferentes aceita as duas somas. Confirmar com o ficheiro real.
 - **2026-10-26 · Totais de controlo só avisam.** Uma diferença entre os totais de `SalesInvoices` e as linhas lidas assinala a importação em vez de a recusar: recusar podia bloquear um ficheiro real por uma diferença de interpretação. O critério de aceitação continua a ser o total do mês igual ao do relatório do POS.

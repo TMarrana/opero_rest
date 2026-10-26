@@ -1,0 +1,147 @@
+{% extends "base_manage.html" %}
+{% load vendas %}
+{% block title %}Encomenda {{ encomenda.reference }}{% endblock %}
+{% block content %}
+{% comment %}Encomenda (Fase 11). Em rascunho, as linhas mudam-se aqui. Enviar
+é marcar como enviada: o envio em si faz-se com o texto copiado, por email
+ou WhatsApp, até haver envio de emails (secção 12).{% endcomment %}
+<a href="{% url 'purchasing:encomendas' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Encomendas</a>
+<div class="mt-2 flex flex-wrap items-center justify-between gap-4">
+  <div class="flex flex-wrap items-center gap-3">
+    <h1 class="font-display text-2xl font-bold"><span class="font-dados">{{ encomenda.reference }}</span> · {{ encomenda.supplier.name }}</h1>
+    {% include "manage/purchasing/_estado.html" %}
+  </div>
+  <div class="flex flex-wrap gap-3">
+    {% url 'purchasing:encomenda_imprimir' encomenda.pk as url_imprimir %}
+    {% include "components/botao.html" with label="Imprimir" variante="fantasma" href=url_imprimir %}
+    {% if pode_receber %}
+    {% url 'purchasing:receber' encomenda.pk as url_receber %}
+    {% include "components/botao.html" with label="Receber" href=url_receber %}
+    {% endif %}
+  </div>
+</div>
+<p class="mt-1 text-sm text-ardosia">
+  Criada por {{ encomenda.created_by }} a <span class="font-dados">{{ encomenda.created_at|date:"d/m/Y H:i" }}</span>
+  {% if encomenda.sent_at %}· enviada por {{ encomenda.sent_by }} a <span class="font-dados">{{ encomenda.sent_at|date:"d/m/Y H:i" }}</span>{% endif %}
+  {% if encomenda.cancelled_at %}· cancelada por {{ encomenda.cancelled_by }} a <span class="font-dados">{{ encomenda.cancelled_at|date:"d/m/Y H:i" }}</span>{% endif %}
+</p>
+
+<div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+  <div class="space-y-6">
+    {% if encomenda.state == "RASCUNHO" %}
+    <form method="post" class="cartao">
+      {% csrf_token %}
+      <div class="overflow-x-auto">
+        <table class="tabela">
+          <thead><tr><th>Artigo</th><th class="th-dados">Quantidade</th><th class="th-dados">Preço previsto</th><th class="th-dados">Total</th></tr></thead>
+          <tbody>
+            {% for l in linhas %}
+            <tr>
+              <td class="font-medium">{{ l.item.name }}</td>
+              <td class="td-dados">
+                <span class="inline-flex items-center gap-2 whitespace-nowrap">
+                  <input type="text" inputmode="decimal" name="qtd-{{ l.item_id }}" value="{{ l.quantity|campo }}" aria-label="Quantidade de {{ l.item.name }}" class="campo-input font-dados w-24 text-right">
+                  <span class="w-8 text-left text-xs text-ardosia">{{ l.item.unit }}</span>
+                </span>
+              </td>
+              <td class="td-dados"><input type="text" inputmode="decimal" name="preco-{{ l.item_id }}" value="{{ l.unit_price|campo_preco }}" aria-label="Preço de {{ l.item.name }}" class="campo-input font-dados w-28 text-right"></td>
+              <td class="td-dados text-ardosia">{% if l.total is not None %}{{ l.total|euros }}{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="py-6 text-center text-sm text-ardosia">Ainda não há linhas. Acrescente o primeiro artigo em baixo.</td></tr>
+            {% endfor %}
+            <tr class="bg-aco/40">
+              <td>
+                <select name="novo_item" class="campo-input" aria-label="Acrescentar artigo">
+                  <option value="">Acrescentar artigo…</option>
+                  {% for a in artigos %}<option value="{{ a.pk }}">{{ a.name }} ({{ a.unit }})</option>{% endfor %}
+                </select>
+              </td>
+              <td class="td-dados"><span class="inline-flex items-center gap-2"><input type="text" inputmode="decimal" name="novo_qtd" aria-label="Quantidade do artigo novo" class="campo-input font-dados w-24 text-right"><span class="w-8"></span></span></td>
+              <td class="td-dados"><input type="text" inputmode="decimal" name="novo_preco" aria-label="Preço do artigo novo" placeholder="último" class="campo-input font-dados w-28 text-right"></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="grid gap-4 border-t border-ardosia/10 p-4 sm:grid-cols-[12rem_minmax(0,1fr)]">
+        <div class="space-y-1.5">
+          <label for="expected_date" class="block text-sm font-medium">Entrega pretendida</label>
+          <input id="expected_date" type="date" name="expected_date" value="{{ encomenda.expected_date|date:'Y-m-d' }}" class="campo-input font-dados">
+        </div>
+        <div class="space-y-1.5">
+          <label for="notes" class="block text-sm font-medium">Observações para o fornecedor</label>
+          <input id="notes" type="text" name="notes" maxlength="300" value="{{ encomenda.notes }}" class="campo-input">
+        </div>
+      </div>
+      <p class="px-4 text-xs text-ardosia">Uma quantidade a zero tira a linha.</p>
+      <div class="flex flex-wrap justify-end gap-3 px-4 py-3">
+        <button type="submit" name="acao" value="guardar" class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-5 py-2.5 text-sm font-semibold hover:bg-carvao/5">Guardar</button>
+        <button type="submit" name="acao" value="enviar" class="inline-flex min-h-toque items-center rounded-md bg-carvao px-5 py-2.5 text-sm font-semibold text-superficie hover:bg-carvao/85">Marcar como enviada</button>
+      </div>
+    </form>
+    {% else %}
+    <section class="cartao">
+      <div class="overflow-x-auto">
+        <table class="tabela">
+          <thead><tr><th>Artigo</th><th class="th-dados">Encomendado</th><th class="th-dados">Recebido</th><th class="th-dados">Falta</th><th class="th-dados">Preço previsto</th></tr></thead>
+          <tbody>
+            {% for l in linhas %}
+            <tr>
+              <td class="font-medium">{{ l.item.name }}</td>
+              <td class="td-dados">{{ l.quantity|numero }} {{ l.item.unit }}</td>
+              <td class="td-dados">{{ l.recebido|numero }}</td>
+              <td class="td-dados {% if l.falta and encomenda.state == 'PARCIAL' %}font-semibold{% endif %}">{% if l.falta %}{{ l.falta|numero }}{% else %}<span class="text-ardosia">—</span>{% endif %}</td>
+              <td class="td-dados text-ardosia">{{ l.unit_price|preco }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if encomenda.notes %}<p class="border-t border-ardosia/10 px-4 py-3 text-sm">{{ encomenda.notes }}</p>{% endif %}
+    </section>
+    {% endif %}
+
+    {% if rececoes %}
+    <section class="cartao">
+      <h2 class="border-b border-ardosia/15 px-4 py-3 font-display text-base font-bold">Receções</h2>
+      {% for r in rececoes %}
+      <article class="talao">
+        <time class="block text-xs text-ardosia">{{ r.received_at|date:"d/m/Y · H:i" }} · {{ r.received_by }}</time>
+        <p class="mt-0.5 text-sm font-semibold"><a href="{% url 'purchasing:rececao' r.pk %}" class="underline underline-offset-2">{{ r.reference }}</a> · {{ r.document_number }} de {{ r.document_date|date:"d/m/Y" }}</p>
+        <p class="text-sm">{% for l in r.lines.all %}{{ l.item.name }} {{ l.quantity|numero }} {{ l.item.unit }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
+      </article>
+      {% endfor %}
+    </section>
+    {% endif %}
+  </div>
+
+  <aside class="space-y-4 self-start">
+    <section class="cartao p-4" x-data="{ copiado: false }">
+      <div class="flex items-baseline justify-between">
+        <h2 class="font-display text-base font-bold">Texto para enviar</h2>
+        <button type="button" class="text-sm font-semibold underline underline-offset-2"
+                x-on:click="navigator.clipboard.writeText($refs.texto.value).then(() => { copiado = true; setTimeout(() => copiado = false, 2000) })">
+          <span x-show="!copiado">Copiar</span><span x-show="copiado" x-cloak>Copiado</span>
+        </button>
+      </div>
+      <textarea x-ref="texto" readonly rows="10" class="campo-input mt-2 font-dados text-xs">{{ texto }}</textarea>
+      <p class="mt-2 text-xs text-ardosia">
+        {% if encomenda.supplier.email %}Email: {{ encomenda.supplier.email }}. {% endif %}{% if encomenda.supplier.phone %}Telefone: <span class="font-dados">{{ encomenda.supplier.phone }}</span>.{% endif %}
+        {% if encomenda.state == "RASCUNHO" %}Depois de enviar, marque a encomenda como enviada.{% endif %}
+      </p>
+    </section>
+    {% if pode_cancelar %}
+    <form method="post" class="cartao p-4" x-data="{ confirmar: false }">
+      {% csrf_token %}
+      <input type="hidden" name="acao" value="cancelar">
+      <button type="button" x-show="!confirmar" x-on:click="confirmar = true" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Cancelar a encomenda</button>
+      <div x-show="confirmar" x-cloak class="space-y-2">
+        <p class="text-sm">A encomenda fica cancelada e não pode receber mercadoria. {% if encomenda.state == "ENVIADA" %}Avise o fornecedor.{% endif %}</p>
+        <button type="submit" class="text-sm font-semibold text-chama underline underline-offset-2">Cancelar {{ encomenda.reference }}</button>
+      </div>
+    </form>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}
