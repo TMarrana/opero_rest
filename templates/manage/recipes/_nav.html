@@ -1,0 +1,7 @@
+{# Separadores das fichas técnicas (Fase 13). #}
+<nav class="mt-4 flex flex-wrap gap-4 border-b border-ardosia/20 text-sm" aria-label="Fichas técnicas">
+  {% url 'recipes:lista' as url_lista %}
+  {% url 'recipes:pos' as url_pos %}
+  <a href="{{ url_lista }}" class="-mb-px border-b-2 px-1 pb-2 {% if request.path != url_pos %}border-carvao font-semibold{% else %}border-transparent text-ardosia hover:text-carvao{% endif %}">Fichas</a>
+  <a href="{{ url_pos }}" class="-mb-px border-b-2 px-1 pb-2 {% if request.path == url_pos %}border-carvao font-semibold{% else %}border-transparent text-ardosia hover:text-carvao{% endif %}">Produtos do POS sem ficha</a>
+</nav>

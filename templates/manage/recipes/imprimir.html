@@ -1,0 +1,49 @@
+{% load static vendas %}<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ ficha.name }} · Opero</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+{# Ficha para a cozinha (Fase 13), sem o rail e sem preços. #}
+<body class="bg-superficie text-carvao">
+  <main class="mx-auto max-w-2xl px-8 py-10">
+    <form method="get" class="print:hidden mb-6 flex flex-wrap items-center gap-4 text-sm">
+      <a href="{% url 'recipes:ficha' ficha.pk %}" class="underline underline-offset-2">Voltar</a>
+      <label class="inline-flex items-center gap-2">Doses
+        <input type="text" inputmode="decimal" name="doses" value="{{ doses|campo }}" class="campo-input font-dados w-20 text-right">
+      </label>
+      <button type="submit" class="underline underline-offset-2">Calcular</button>
+      <button type="button" onclick="window.print()" class="font-semibold underline underline-offset-2">Imprimir</button>
+    </form>
+    <header class="flex items-start justify-between gap-6 border-b border-carvao pb-4">
+      <div>
+        <h1 class="font-display text-2xl font-bold">{{ ficha.name }}</h1>
+        <p class="mt-1 text-sm">{{ ficha.get_kind_display }} · versão {{ versao.number }}, desde <span class="font-dados">{{ versao.valid_from|date:"d/m/Y" }}</span></p>
+      </div>
+      <p class="text-right font-display text-xl font-bold">{{ doses|numero }} dose{{ doses|pluralize:"s" }}</p>
+    </header>
+    <table class="mt-6 w-full text-sm">
+      <thead>
+        <tr class="border-b border-ardosia/40 text-left text-xs uppercase tracking-wide text-ardosia">
+          <th class="py-2">Artigo</th><th class="py-2 text-right">Limpa</th><th class="py-2 text-right">Bruta</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in linhas %}
+        <tr class="border-b border-ardosia/15">
+          <td class="py-2">{{ l.line.label }}</td>
+          <td class="py-2 text-right font-dados">{{ l.net|numero:3 }} {{ l.line.unit_label }}</td>
+          <td class="py-2 text-right font-dados">{% if l.gross != l.net %}{{ l.gross|numero:3 }} {{ l.line.unit_label }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if versao.notes %}
+    <h2 class="mt-8 font-display text-base font-bold">Preparação</h2>
+    <p class="mt-2 whitespace-pre-line text-sm">{{ versao.notes }}</p>
+    {% endif %}
+  </main>
+</body>
+</html>

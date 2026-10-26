@@ -157,6 +157,7 @@ class Command(BaseCommand):
         self._vendas(restaurant, ribeira, gerente)
         self._compras(restaurant, resp_stock)
         self._consumos(restaurant, gerente, [marta, rui])
+        self._fichas(restaurant, ribeira, gerente)
 
         self.stdout.write(self.style.SUCCESS("Dados de demonstração prontos."))
         self.stdout.write(
@@ -318,3 +319,62 @@ class Command(BaseCommand):
             restaurant=esquina, worker=None, reason=InternalConsumption.Reason.OFERTA, day=ontem, user=gerente,
             lines=[(vinho, Decimal(1))], note="mesa 4, aniversário",
         )
+
+    def _fichas(self, esquina, ribeira, gerente):
+        """Fase 13: o Bitoque, com duas versões e um molho como preparação, e
+        o café, ligados aos produtos do POS das duas casas. O Bacalhau à Brás
+        e o resto ficam sem ficha, para a lista dos produtos do POS."""
+        from recipes.models import Recipe
+        from recipes.services import create_recipe, link_product, save_version
+        from sales.models import PosProduct
+
+        categorias = {c.name: c for c in Category.objects.filter(restaurant=esquina)}
+        for nome, cat, unidade, custo, stock in [
+            ("Bife da vazia", "Frescos", Item.Unit.KG, "12.00", "6"),
+            ("Ovo", "Frescos", Item.Unit.UN, "0.20", "60"),
+            ("Batata", "Frescos", Item.Unit.KG, "0.80", "20"),
+            ("Arroz carolino", "Mercearia", Item.Unit.KG, "1.10", "10"),
+        ]:
+            item, novo = Item.objects.get_or_create(
+                restaurant=esquina, name=nome,
+                defaults={"category": categorias[cat], "unit": unidade, "minimum_stock": Decimal(1), "reference_cost": Decimal(custo)},
+            )
+            if novo:
+                register_movement(item=item, movement_type="ENTRADA", quantity=Decimal(stock), user=gerente,
+                                  reason="stock inicial de demonstração")
+        # Os artigos que já existiam sem custo (o arroz que veio da Ribeira) ganham um.
+        for nome, custo in (("Azeite virgem extra", "6.40"), ("Vinho tinto da casa", "2.50"), ("Arroz carolino", "1.10")):
+            Item.objects.filter(restaurant=esquina, name=nome, reference_cost__isnull=True).update(reference_cost=Decimal(custo))
+        grupo = esquina.organization
+        if Recipe.objects.filter(organization=grupo).exists():
+            return
+        hoje = timezone.localdate()
+        molho = create_recipe(
+            organization=grupo, name="Molho do bitoque", kind=Recipe.Kind.PREPARACAO, user=gerente,
+            portions=Decimal(10), valid_from=hoje - datetime.timedelta(days=60),
+            notes="Alourar o alho no azeite, juntar o vinho e deixar reduzir a metade.",
+            lines=[(("Azeite virgem extra", "L"), Decimal("0.2"), None), (("Vinho tinto da casa", "UN"), Decimal(1), None)],
+        )
+        linhas = [
+            (("Bife da vazia", "KG"), Decimal("0.160"), None),
+            (("Ovo", "UN"), Decimal(1), None),
+            (("Batata", "KG"), Decimal("0.250"), Decimal(20)),
+            (("Arroz carolino", "KG"), Decimal("0.100"), None),
+            (molho, Decimal(1), None),
+        ]
+        bitoque = create_recipe(
+            organization=grupo, name="Bitoque", kind=Recipe.Kind.PRATO, user=gerente, lines=linhas,
+            valid_from=hoje - datetime.timedelta(days=60), notes="Bife na chapa, ovo estrelado por cima. Batata frita e arroz.",
+        )
+        linhas[0] = (("Bife da vazia", "KG"), Decimal("0.180"), None)
+        save_version(recipe=bitoque, portions=1, lines=linhas, user=gerente, valid_from=hoje - datetime.timedelta(days=10),
+                     notes="Bife na chapa, ovo estrelado por cima. Batata frita e arroz.")
+        cafe = create_recipe(
+            organization=grupo, name="Café", kind=Recipe.Kind.BEBIDA, user=gerente,
+            lines=[(("Café (dose)", "UN"), Decimal(1), None)], valid_from=hoje - datetime.timedelta(days=60),
+        )
+        for casa in (esquina, ribeira):
+            for ficha, codigo in ((bitoque, "P001"), (cafe, "C001")):
+                produto = PosProduct.objects.filter(restaurant=casa, code=codigo).first()
+                if produto is not None:
+                    link_product(recipe=ficha, product=produto, user=gerente)

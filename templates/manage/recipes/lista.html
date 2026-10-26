@@ -1,0 +1,47 @@
+{% extends "base_manage.html" %}
+{% load vendas %}
+{% block title %}Fichas técnicas{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <h1 class="font-display text-2xl font-bold">Fichas técnicas</h1>
+  {% url 'recipes:nova' as url_nova %}
+  {% include "components/botao.html" with label="Nova ficha" href=url_nova %}
+</div>
+{% include "manage/recipes/_nav.html" %}
+<p class="mt-4 text-sm text-ardosia">As fichas são de todo o grupo. O custo é o de {{ request.restaurant }}, com o custo de referência dos artigos desta casa.</p>
+
+<form method="get" class="mt-4 flex flex-wrap items-center gap-3">
+  <input type="search" name="q" value="{{ q }}" placeholder="Pesquisar ficha…" aria-label="Pesquisar ficha" class="campo-input max-w-xs">
+  <select name="tipo" aria-label="Tipo" class="campo-input w-40" onchange="this.form.requestSubmit()">
+    <option value="">Todos os tipos</option>
+    {% for valor, nome in tipos %}<option value="{{ valor }}"{% if tipo == valor %} selected{% endif %}>{{ nome }}</option>{% endfor %}
+  </select>
+  <label class="inline-flex min-h-toque items-center gap-2 text-sm"><input type="checkbox" name="arquivadas" value="1" {% if arquivadas %}checked{% endif %} onchange="this.form.requestSubmit()" class="h-4 w-4"> Arquivadas</label>
+  <noscript><button type="submit" class="text-sm underline">Filtrar</button></noscript>
+</form>
+
+<div class="mt-4 cartao">
+  {% if linhas %}
+  <div class="overflow-x-auto">
+    <table class="tabela">
+      <thead><tr><th>Ficha</th><th>Tipo</th><th class="th-dados">Doses</th><th class="th-dados">Custo por dose</th><th class="th-dados">Preço sem IVA</th><th class="th-dados">Food cost</th></tr></thead>
+      <tbody>
+        {% for l in linhas %}
+        <tr>
+          <td class="font-medium"><a href="{% url 'recipes:ficha' l.recipe.pk %}" class="underline underline-offset-2">{{ l.recipe.name }}</a>
+            {% if l.cost.problems %}<span class="block text-xs font-normal text-chama">{{ l.cost.problems|length }} linha{{ l.cost.problems|length|pluralize:"s" }} sem custo nesta casa</span>{% elif not l.version or not l.cost.lines %}<span class="block text-xs font-normal text-ardosia">sem receita</span>{% endif %}</td>
+          <td class="text-sm text-ardosia">{{ l.recipe.get_kind_display }}</td>
+          <td class="td-dados">{% if l.version %}{{ l.version.portions|numero }}{% endif %}</td>
+          <td class="td-dados">{% if l.cost.per_dose is not None %}{% if not l.cost.complete %}<span class="text-ardosia" title="Incompleto: há linhas sem custo">≥ </span>{% endif %}{{ l.cost.per_dose|euros }}{% else %}<span class="text-ardosia">—</span>{% endif %}</td>
+          <td class="td-dados">{% if l.price %}{{ l.price|preco }}{% if not l.product %} <span class="text-xs text-ardosia" title="Preço de referência da ficha">ref.</span>{% endif %}{% elif l.recipe.kind != "PREPARACAO" %}<span class="text-ardosia">—</span>{% endif %}</td>
+          <td class="td-dados font-semibold">{% if l.food_cost is not None %}{{ l.food_cost|numero:1 }} %{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="px-4 py-8 text-center text-sm text-ardosia">{% if q or tipo %}Nenhuma ficha com estes filtros.{% elif arquivadas %}Não há fichas arquivadas.{% else %}Ainda não há fichas. Comece pelo prato que mais vende.{% endif %}</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "inventory",
     "sales",
     "purchasing",
+    "recipes",
     "dashboard",
     "staff",
     "kiosk",

@@ -1,0 +1,181 @@
+{% extends "base_manage.html" %}
+{% load vendas %}
+{% block title %}{{ ficha.name }}{% endblock %}
+{% block content %}
+<a href="{% url 'recipes:lista' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Fichas técnicas</a>
+<div class="mt-2 flex flex-wrap items-center justify-between gap-4">
+  <div class="flex flex-wrap items-center gap-3">
+    <h1 class="font-display text-2xl font-bold">{{ ficha.name }}{% if not ficha.is_active %} <span class="text-base font-normal text-ardosia">(arquivada)</span>{% endif %}</h1>
+    {% include "components/badge.html" with label=ficha.get_kind_display %}
+  </div>
+  <div class="flex flex-wrap gap-3">
+    {% if versao %}
+    {% url 'recipes:imprimir' ficha.pk as url_imprimir %}
+    {% include "components/botao.html" with label="Ficha para a cozinha" variante="fantasma" href=url_imprimir %}
+    {% endif %}
+    {% url 'recipes:editar' ficha.pk as url_editar %}
+    {% include "components/botao.html" with label="Editar" href=url_editar %}
+  </div>
+</div>
+
+<div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+  <div class="space-y-6">
+    {% if versao %}
+    <section class="cartao">
+      <div class="flex flex-wrap items-baseline justify-between gap-2 border-b border-ardosia/15 px-4 py-3">
+        <h2 class="font-display text-base font-bold">Receita · versão {{ versao.number }}</h2>
+        <p class="text-xs text-ardosia">
+          {% if versao == em_vigor %}Em vigor desde {{ versao.valid_from|date:"d/m/Y" }}{% elif versao.valid_from > em_vigor.valid_from %}Começa a {{ versao.valid_from|date:"d/m/Y" }}{% else %}Versão antiga, de {{ versao.valid_from|date:"d/m/Y" }}{% endif %}
+          · {{ versao.portions|numero }} dose{{ versao.portions|pluralize:"s" }} · custo em {{ request.restaurant }}
+        </p>
+      </div>
+      {% if custo.lines %}
+      <div class="overflow-x-auto">
+        <table class="tabela">
+          <thead><tr><th>Artigo</th><th class="th-dados">Limpa</th><th class="th-dados">Quebra</th><th class="th-dados">Bruta</th><th class="th-dados">Custo unitário</th><th class="th-dados">Custo</th></tr></thead>
+          <tbody>
+            {% for c in custo.lines %}
+            <tr>
+              <td class="font-medium">{% if c.line.preparation_id %}<a href="{% url 'recipes:ficha' c.line.preparation_id %}" class="underline underline-offset-2">{{ c.line.label }}</a>{% else %}{{ c.line.label }}{% endif %}
+                {% if c.problem %}<span class="block text-xs font-normal text-chama">{{ c.problem }}</span>{% endif %}</td>
+              <td class="td-dados">{{ c.line.quantity|numero:3 }} <span class="text-xs text-ardosia">{{ c.line.unit_label }}</span></td>
+              <td class="td-dados text-ardosia">{% if c.line.waste_pct %}{{ c.line.waste_pct|numero:1 }} %{% else %}—{% endif %}</td>
+              <td class="td-dados">{{ c.gross|numero:3 }}</td>
+              <td class="td-dados text-ardosia">{{ c.unit_cost|preco }}</td>
+              <td class="td-dados">{% if c.cost is not None %}{{ c.cost|euros }}{% else %}<span class="text-ardosia">—</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr class="font-semibold">
+              <td colspan="5">Total{% if not custo.complete %} <span class="text-xs font-normal text-ardosia">(incompleto: faltam linhas sem custo)</span>{% endif %}</td>
+              <td class="td-dados">{{ custo.total|euros }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      {% else %}
+      <p class="px-4 py-6 text-center text-sm text-ardosia">Esta versão não tem linhas. Edite a ficha para acrescentar os artigos.</p>
+      {% endif %}
+      {% if versao.notes %}
+      <div class="border-t border-ardosia/10 px-4 py-3">
+        <h3 class="text-xs uppercase tracking-wide text-ardosia">Preparação</h3>
+        <p class="mt-1 whitespace-pre-line text-sm">{{ versao.notes }}</p>
+      </div>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {% if ficha.kind != "PREPARACAO" %}
+    <section class="cartao">
+      <div class="border-b border-ardosia/15 px-4 py-3">
+        <h2 class="font-display text-base font-bold">Produtos do POS em {{ request.restaurant }}</h2>
+        <p class="text-xs text-ardosia">O mesmo prato pode ter um código em cada casa ou em cada menu. Cada produto do POS tem uma só ficha.{% if noutras_casas %} Está ligada a {{ noutras_casas }} produto{{ noutras_casas|pluralize:"s" }} noutras casas.{% endif %}</p>
+      </div>
+      {% if ligados %}
+      <div class="overflow-x-auto">
+        <table class="tabela">
+          <thead><tr><th>Código</th><th>Produto</th><th class="th-dados">Último preço sem IVA</th><th class="th-dados">Food cost</th><th><span class="sr-only">Ações</span></th></tr></thead>
+          <tbody>
+            {% for l in ligados %}
+            <tr>
+              <td class="font-dados text-sm">{{ l.product.code }}</td>
+              <td>{{ l.product.description }}{% if l.product.group %} <span class="text-xs text-ardosia">{{ l.product.group }}</span>{% endif %}</td>
+              <td class="td-dados">{{ l.product.last_price|preco }}</td>
+              <td class="td-dados font-semibold">{% if l.food_cost is not None %}{{ l.food_cost|numero:1 }} %{% endif %}</td>
+              <td class="text-right">
+                <form method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="acao" value="desligar">
+                  <input type="hidden" name="ligacao" value="{{ l.pk }}">
+                  <button type="submit" class="text-xs text-ardosia underline underline-offset-2 hover:text-carvao">Desligar</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+      {% if por_ligar and ficha.is_active %}
+      <form method="post" class="flex flex-wrap items-end gap-3 {% if ligados %}border-t border-ardosia/10{% endif %} p-4">
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="ligar">
+        <div class="space-y-1.5">
+          <label for="produto" class="block text-sm font-medium">Ligar um produto do POS</label>
+          <select id="produto" name="produto" required class="campo-input w-80">
+            <option value="">Escolher…</option>
+            {% for p in por_ligar %}<option value="{{ p.pk }}">{{ p.code }} · {{ p.description }}</option>{% endfor %}
+          </select>
+        </div>
+        {% include "components/botao.html" with label="Ligar" %}
+      </form>
+      {% elif not ligados %}
+      <p class="px-4 py-6 text-center text-sm text-ardosia">Os produtos do POS chegam com a importação do SAF-T em Vendas.</p>
+      {% endif %}
+    </section>
+    {% endif %}
+  </div>
+
+  <aside class="space-y-4 self-start">
+    {% if custo.lines %}
+    <section class="cartao p-4">
+      <dl class="space-y-3">
+        <div>
+          <dt class="text-xs text-ardosia">Custo por dose</dt>
+          <dd class="font-dados text-2xl font-semibold">{% if not custo.complete and custo.priced %}<span class="text-base text-ardosia">≥ </span>{% endif %}{{ custo.per_dose|euros }}</dd>
+          {% if not custo.priced %}<dd class="text-xs text-chama">Nenhuma linha tem custo nesta casa.</dd>{% elif not custo.complete %}<dd class="text-xs text-chama">Há linhas sem custo nesta casa: o valor é um mínimo.</dd>{% endif %}
+        </div>
+        {% if ficha.kind != "PREPARACAO" %}
+        <div>
+          <dt class="text-xs text-ardosia">Preço de venda sem IVA</dt>
+          <dd class="font-dados">{{ preco|preco }}</dd>
+          <dd class="text-xs text-ardosia">{% if produto_preco %}Do POS: {{ produto_preco.code }}, vendido a {{ produto_preco.last_price_at|date:"d/m/Y" }}.{% elif preco %}Preço de referência da ficha.{% else %}Sem preço: ligue um produto do POS ou indique o preço de referência.{% endif %}</dd>
+        </div>
+        <div>
+          <dt class="text-xs text-ardosia">Food cost</dt>
+          <dd class="font-dados text-2xl font-semibold">{% if food_cost is not None %}{{ food_cost|numero:1 }} %{% else %}—{% endif %}</dd>
+        </div>
+        {% endif %}
+      </dl>
+    </section>
+    {% endif %}
+
+    {% if usada_em %}
+    <section class="cartao">
+      <h2 class="border-b border-ardosia/15 px-4 py-3 font-display text-base font-bold">Entra em</h2>
+      <ul class="divide-y divide-ardosia/10">
+        {% for r in usada_em %}<li class="px-4 py-2.5 text-sm"><a href="{% url 'recipes:ficha' r.pk %}" class="underline underline-offset-2">{{ r.name }}</a></li>{% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    {% if versoes %}
+    <section class="cartao">
+      <h2 class="border-b border-ardosia/15 px-4 py-3 font-display text-base font-bold">Versões</h2>
+      <ul class="divide-y divide-ardosia/10">
+        {% for v in versoes %}
+        <li class="flex items-baseline justify-between gap-3 px-4 py-2.5 text-sm {% if v == versao %}bg-aco/40{% endif %}">
+          <a href="?versao={{ v.number }}" class="font-dados underline underline-offset-2">v{{ v.number }}</a>
+          <span class="flex-1 text-xs text-ardosia">{{ v.created_by }}</span>
+          <span class="font-dados text-xs">desde {{ v.valid_from|date:"d/m/Y" }}{% if v == em_vigor %} · em vigor{% endif %}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    <form method="post" class="cartao p-4">
+      {% csrf_token %}
+      {% if ficha.is_active %}
+      <input type="hidden" name="acao" value="arquivar">
+      <button type="submit" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Arquivar ficha</button>
+      <p class="mt-1 text-xs text-ardosia">Deixa de aparecer na lista e nas escolhas. As versões e as ligações ao POS ficam.</p>
+      {% else %}
+      <input type="hidden" name="acao" value="reativar">
+      <button type="submit" class="text-sm font-semibold underline underline-offset-2">Reativar ficha</button>
+      {% endif %}
+    </form>
+  </aside>
+</div>
+{% endblock %}

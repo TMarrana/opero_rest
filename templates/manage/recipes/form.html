@@ -1,0 +1,96 @@
+{% extends "base_manage.html" %}
+{% block title %}{% if ficha %}Editar {{ ficha.name }}{% else %}Nova ficha{% endif %}{% endblock %}
+{% block content %}
+{% comment %}Ficha técnica (Fase 13). Guardar uma receita diferente cria uma
+versão nova, a valer a partir da data escolhida; as anteriores ficam como
+estavam, para o consumo de um dia passado usar a desse dia.{% endcomment %}
+{% if ficha %}
+<a href="{% url 'recipes:ficha' ficha.pk %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">{{ ficha.name }}</a>
+<h1 class="mt-2 font-display text-2xl font-bold">Editar ficha</h1>
+<p class="mt-1 text-sm text-ardosia">Mudar a receita cria uma versão nova. O nome, o tipo e o preço mudam sem versão.</p>
+{% else %}
+<a href="{% url 'recipes:lista' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Fichas técnicas</a>
+<h1 class="mt-2 font-display text-2xl font-bold">Nova ficha</h1>
+{% if produto %}<p class="mt-1 text-sm text-ardosia">Fica ligada ao produto do POS <span class="font-dados">{{ produto.code }}</span> · {{ produto.description }}.</p>{% endif %}
+{% endif %}
+
+<form method="post" class="mt-6 max-w-4xl space-y-5">
+  {% csrf_token %}
+  <input type="hidden" name="produto" value="{{ dados.produto|default:'' }}">
+  <input type="hidden" name="n_linhas" value="{{ n_linhas }}">
+  {% if erro %}<p class="rounded-md bg-chama/10 px-4 py-3 text-sm font-medium text-chama" role="alert">{{ erro }}</p>{% endif %}
+
+  <div class="cartao grid gap-5 p-6 sm:grid-cols-[minmax(0,1fr)_12rem_12rem]">
+    <div class="space-y-1.5">
+      <label for="nome" class="block text-sm font-medium">Nome <span class="text-ardosia" aria-hidden="true">*</span></label>
+      <input id="nome" type="text" name="nome" value="{{ dados.nome }}" maxlength="120" required class="campo-input">
+    </div>
+    <div class="space-y-1.5">
+      <label for="tipo" class="block text-sm font-medium">Tipo</label>
+      <select id="tipo" name="tipo" class="campo-input">
+        {% for valor, nome in tipos %}<option value="{{ valor }}"{% if dados.tipo == valor %} selected{% endif %}>{{ nome }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="space-y-1.5">
+      <label for="preco" class="block text-sm font-medium">Preço de venda sem IVA</label>
+      <input id="preco" type="text" inputmode="decimal" name="preco" value="{{ dados.preco }}" aria-describedby="preco-ajuda" class="campo-input font-dados text-right">
+    </div>
+    <p id="preco-ajuda" class="text-xs text-ardosia sm:col-span-3">O preço de referência só conta enquanto a ficha não está ligada a um produto do POS com vendas: aí vale o preço do POS, também sem IVA. Uma preparação não tem preço.</p>
+  </div>
+
+  <div class="cartao">
+    <div class="grid gap-5 border-b border-ardosia/15 p-6 sm:grid-cols-[10rem_12rem_minmax(0,1fr)]">
+      <div class="space-y-1.5">
+        <label for="doses" class="block text-sm font-medium">Doses</label>
+        <input id="doses" type="text" inputmode="decimal" name="doses" value="{{ dados.doses }}" required class="campo-input font-dados text-right">
+      </div>
+      <div class="space-y-1.5">
+        <label for="desde" class="block text-sm font-medium">Vale a partir de</label>
+        <input id="desde" type="date" name="desde" value="{{ dados.desde }}" class="campo-input font-dados">
+      </div>
+      <p class="self-end text-xs text-ardosia">As quantidades são as da receita inteira, que dá estas doses. Num prato, é normalmente uma dose.</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="tabela">
+        <thead><tr><th>Artigo ou preparação</th><th class="th-dados">Quantidade limpa</th><th class="th-dados">Quebra</th></tr></thead>
+        <tbody>
+          {% for l in linhas %}
+          <tr>
+            <td>
+              <select name="ing-{{ forloop.counter0 }}" class="campo-input" aria-label="Artigo da linha {{ forloop.counter }}">
+                <option value="">—</option>
+                <optgroup label="Artigos">
+                  {% for a in artigos %}<option value="{{ a.valor }}"{% if l.ing == a.valor %} selected{% endif %}>{{ a.nome }} ({{ a.unidade }}){% if a.fora %} · não há nesta casa{% endif %}</option>{% endfor %}
+                </optgroup>
+                {% if preparacoes and dados.tipo != "PREPARACAO" %}
+                <optgroup label="Preparações (quantidade em doses)">
+                  {% for p in preparacoes %}<option value="{{ p.valor }}"{% if l.ing == p.valor %} selected{% endif %}>{{ p.nome }}</option>{% endfor %}
+                </optgroup>
+                {% endif %}
+              </select>
+            </td>
+            <td class="td-dados"><input type="text" inputmode="decimal" name="qtd-{{ forloop.counter0 }}" value="{{ l.qtd }}" aria-label="Quantidade da linha {{ forloop.counter }}" class="campo-input font-dados w-28 text-right"></td>
+            <td class="td-dados"><span class="inline-flex items-center gap-1.5"><input type="text" inputmode="decimal" name="quebra-{{ forloop.counter0 }}" value="{{ l.quebra }}" aria-label="Quebra da linha {{ forloop.counter }}, em percentagem" class="campo-input font-dados w-20 text-right"><span class="text-xs text-ardosia">%</span></span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="border-t border-ardosia/10 px-4 py-2.5 text-xs text-ardosia">
+      A quantidade é a limpa, na unidade do artigo. A quebra é o que se perde a descascar e a limpar: com 20 %, 200 g limpos gastam 250 g do stock.
+      Uma linha sem artigo ou com a quantidade vazia fica de fora. Precisa de mais linhas? Guarde e volte a editar.
+    </p>
+  </div>
+
+  <div class="cartao p-6">
+    <label for="notas" class="block text-sm font-medium">Preparação</label>
+    <textarea id="notas" name="notas" rows="5" class="campo-input mt-1.5">{{ dados.notas }}</textarea>
+  </div>
+
+  <div class="flex justify-end gap-3">
+    {% if ficha %}{% url 'recipes:ficha' ficha.pk as url_voltar %}{% else %}{% url 'recipes:lista' as url_voltar %}{% endif %}
+    {% include "components/botao.html" with label="Cancelar" variante="fantasma" href=url_voltar %}
+    {% include "components/botao.html" with label="Guardar ficha" %}
+  </div>
+</form>
+{% endblock %}

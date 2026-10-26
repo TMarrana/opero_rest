@@ -1,0 +1,56 @@
+{% extends "base_manage.html" %}
+{% load vendas %}
+{% block title %}Produtos do POS sem ficha{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <h1 class="font-display text-2xl font-bold">Fichas técnicas</h1>
+  {% url 'recipes:nova' as url_nova %}
+  {% include "components/botao.html" with label="Nova ficha" href=url_nova %}
+</div>
+{% include "manage/recipes/_nav.html" %}
+<p class="mt-4 text-sm text-ardosia">
+  Os produtos do POS de {{ request.restaurant }} que ainda não têm ficha, do que mais vendeu nos últimos {{ dias }} dias para o que menos vendeu.
+  {% if parte is not None %}São <span class="font-dados font-semibold text-carvao">{{ parte|numero:1 }} %</span> das vendas desse período.{% endif %}
+</p>
+
+<div class="mt-4 cartao">
+  {% if linhas %}
+  <div class="overflow-x-auto">
+    <table class="tabela">
+      <thead><tr><th>Produto</th><th class="th-dados">Vendidos</th>{% if ve_vendas %}<th class="th-dados">Vendas sem IVA</th>{% endif %}<th class="th-dados">Peso</th><th>Ficha</th></tr></thead>
+      <tbody>
+        {% for l in linhas %}
+        <tr>
+          <td class="font-medium">{{ l.product.description }}
+            <span class="block font-dados text-xs font-normal text-ardosia">{{ l.product.code }}{% if l.product.group %} · {{ l.product.group }}{% endif %}</span></td>
+          <td class="td-dados">{{ l.quantity|numero }}</td>
+          {% if ve_vendas %}<td class="td-dados">{{ l.value|euros }}</td>{% endif %}
+          <td class="td-dados">{% if l.share %}{{ l.share|numero:1 }} %{% else %}<span class="text-ardosia">—</span>{% endif %}</td>
+          <td>
+            <div class="flex flex-wrap items-center gap-3">
+              {% if fichas %}
+              <form method="post" class="flex items-center gap-2">
+                {% csrf_token %}
+                <input type="hidden" name="produto" value="{{ l.product.pk }}">
+                <select name="ficha" required aria-label="Ficha de {{ l.product.description }}" class="campo-input w-48">
+                  <option value="">Ligar a…</option>
+                  {% for f in fichas %}<option value="{{ f.pk }}">{{ f.name }}</option>{% endfor %}
+                </select>
+                <button type="submit" class="text-sm font-semibold underline underline-offset-2">Ligar</button>
+              </form>
+              {% endif %}
+              <a href="{% url 'recipes:nova' %}?produto={{ l.product.pk }}" class="text-sm underline underline-offset-2">Criar ficha</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% elif tem_produtos %}
+  <p class="px-4 py-8 text-center text-sm text-ardosia">Todos os produtos do POS desta casa têm ficha.</p>
+  {% else %}
+  <p class="px-4 py-8 text-center text-sm text-ardosia">Ainda não há produtos do POS nesta casa. Chegam com a importação do SAF-T, em Vendas.</p>
+  {% endif %}
+</div>
+{% endblock %}
