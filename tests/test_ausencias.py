@@ -26,8 +26,9 @@ D = datetime.date
 
 @pytest.fixture
 def worker(restaurant, staff_user):
-    staff_user.set_staff_pin("2468")
-    return Worker.objects.create(restaurant=restaurant, full_name="Marta Silva", user=staff_user)
+    w = Worker.objects.create(restaurant=restaurant, full_name="Marta Silva", user=staff_user)
+    w.set_kiosk_code("2468")
+    return w
 
 
 @pytest.fixture

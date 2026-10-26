@@ -1,0 +1,17 @@
+{% extends "base_manage.html" %}
+{% block title %}Código de ponto{% endblock %}
+{% block content %}
+<h1 class="font-display text-2xl font-bold">Código de ponto</h1>
+<p class="mt-1 text-sm text-ardosia">{{ worker.full_name }}. O código serve só para picar o ponto no tablet do restaurante. Nunca abre a app nem o backoffice.</p>
+
+<form method="post" class="mt-6 max-w-sm space-y-5">
+  {% csrf_token %}
+  <div class="cartao space-y-4 p-6">
+    {% include "components/campo.html" with field=form.codigo ajuda="4 a 6 algarismos. Substitui o código anterior." %}
+  </div>
+  <div class="flex justify-end gap-3">
+    {% include "components/botao.html" with label="Cancelar" variante="fantasma" href="/gestao/trabalhadores/" %}
+    {% include "components/botao.html" with label="Definir código" %}
+  </div>
+</form>
+{% endblock %}

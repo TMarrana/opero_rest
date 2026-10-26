@@ -1,9 +1,0 @@
-{% extends "base_staff.html" %}
-{% block title %}Dispositivo não ativado{% endblock %}
-{% block content %}
-<div class="flex flex-1 flex-col items-center justify-center text-center">
-  <p class="font-display text-xl font-bold">Este dispositivo não está ativado</p>
-  <p class="mt-3 max-w-xs text-sm text-ardosia">O login por PIN só funciona em dispositivos do restaurante. Peça ao gerente para entrar aqui com a conta dele e ativar este dispositivo.</p>
-  <a href="{% url 'accounts:login' %}" class="mt-6 text-sm text-aco/70 underline underline-offset-4">Entrar com email e palavra-passe</a>
-</div>
-{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base_manage.html" %}
+{% block title %}Conta da app{% endblock %}
+{% block content %}
+<h1 class="font-display text-2xl font-bold">Conta da app</h1>
+<p class="mt-1 text-sm text-ardosia">{{ worker.full_name }}. Com a conta, vê no telemóvel os seus turnos, o histórico e as férias, e faz pedidos. O ponto continua a picar-se no tablet, com o código.</p>
+
+{% if conta %}
+<div class="mt-6 max-w-xl cartao p-6">
+  <dl class="grid grid-cols-3 gap-y-3 text-sm">
+    <dt class="text-ardosia">Email</dt><dd class="col-span-2 font-medium">{{ conta.email }}</dd>
+    <dt class="text-ardosia">Perfil</dt><dd class="col-span-2">{{ conta.get_role_display }}</dd>
+    <dt class="text-ardosia">Último acesso</dt><dd class="col-span-2 font-dados">{{ conta.last_login|date:"d/m/Y H:i"|default:"—" }}</dd>
+    <dt class="text-ardosia">Palavra-passe</dt>
+    <dd class="col-span-2">{% if conta.must_change_password %}{% include "components/badge.html" with label="Provisória" %}{% else %}Escolhida pelo titular{% endif %}</dd>
+  </dl>
+</div>
+
+{% if pode_gerir %}
+<div class="mt-6 grid max-w-xl gap-6">
+  <form method="post" class="cartao space-y-4 p-6">
+    {% csrf_token %}
+    <input type="hidden" name="acao" value="repor">
+    <h2 class="font-semibold">Esqueceu-se da palavra-passe?</h2>
+    <p class="text-sm text-ardosia">Gera uma palavra-passe provisória nova. A anterior deixa de funcionar, e o titular escolhe uma sua no próximo login.</p>
+    {% include "components/botao.html" with label="Gerar palavra-passe provisória" variante="fantasma" %}
+  </form>
+  <form method="post" class="cartao space-y-4 p-6">
+    {% csrf_token %}
+    <input type="hidden" name="acao" value="perfil">
+    {% include "components/campo.html" with field=form_perfil.role %}
+    {% include "components/botao.html" with label="Guardar perfil" variante="fantasma" %}
+  </form>
+</div>
+{% else %}
+<p class="mt-6 max-w-xl text-sm text-ardosia">{% if conta == request.user %}Esta é a sua conta: a palavra-passe e o perfil não se mudam aqui.{% else %}Contas de Gerente e de Administrador só o administrador as gere.{% endif %}</p>
+{% endif %}
+
+{% else %}
+<form method="post" class="mt-6 max-w-xl space-y-5">
+  {% csrf_token %}
+  <input type="hidden" name="acao" value="criar">
+  <div class="cartao space-y-5 p-6">
+    {% for erro in form.non_field_errors %}<p class="text-sm font-medium text-chama">{{ erro }}</p>{% endfor %}
+    {% include "components/campo.html" with field=form.email ajuda="É com este email que entra na app." %}
+    {% include "components/campo.html" with field=form.role %}
+    <p class="text-xs text-ardosia">O sistema gera uma palavra-passe provisória, que aparece uma só vez no ecrã seguinte. Entregue-a ao titular, que no primeiro login escolhe uma sua.</p>
+  </div>
+  <div class="flex justify-end gap-3">
+    {% include "components/botao.html" with label="Cancelar" variante="fantasma" href="/gestao/trabalhadores/" %}
+    {% include "components/botao.html" with label="Criar conta" %}
+  </div>
+</form>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base_kiosk.html" %}
+{% block title %}Picar{% endblock %}
+{% block content %}
+{% comment %}Só as ações possíveis no estado atual (secção 5). Cada botão
+leva o token de marcação desta pessoa, que vale uma vez e durante um
+minuto. As pausas aparecem ao lado da Saída, sem passo extra.{% endcomment %}
+{% include "kiosk/_voltar.html" %}
+<header class="flex items-baseline justify-between gap-4">
+  <h1 class="font-display text-3xl font-extrabold">Olá, {{ worker.full_name }}</h1>
+  <a href="{% url 'kiosk:inicio' %}" class="min-h-toque py-2 text-base text-aco/70 underline underline-offset-4">Cancelar</a>
+</header>
+
+<p class="mt-2 font-dados text-lg text-aco/80">
+  {% if pausa %}{{ pausa.break_type.name }} desde {{ pausa.start|date:"H:i" }}
+  {% elif entry %}Em turno desde {% if entry.work_date != hoje %}{{ entry.check_in|date:"d/m" }} às {% endif %}{{ entry.check_in|date:"H:i" }}
+  {% else %}Fora de turno{% endif %}
+</p>
+{% if saida_esquecida %}
+<p class="mt-3 rounded-md border border-chama px-4 py-3 text-base">Já passou da hora prevista de saída. Se acabou de chegar para outro turno, pique primeiro a saída e depois a entrada, e {% if worker.user_id %}peça na app{% else %}peça ao gerente{% endif %} a correção da hora de saída.</p>
+{% endif %}
+
+<div class="mt-8 space-y-4">
+  {% if pausa %}
+  <form method="post" action="{% url 'kiosk:marcar' worker.pk %}" hx-disabled-elt="find button">
+    {% csrf_token %}
+    <input type="hidden" name="token" value="{{ token }}">
+    <input type="hidden" name="acao" value="fim_pausa">
+    <button type="submit" class="min-h-[30vh] w-full rounded-lg border-2 border-aco bg-aco/10 font-display text-5xl font-extrabold uppercase tracking-wide text-aco hover:bg-aco/20">Terminar pausa</button>
+  </form>
+  {% elif entry %}
+  <form method="post" action="{% url 'kiosk:marcar' worker.pk %}" hx-disabled-elt="find button">
+    {% csrf_token %}
+    <input type="hidden" name="token" value="{{ token }}">
+    <input type="hidden" name="acao" value="saida">
+    <button type="submit" class="min-h-[30vh] w-full rounded-lg bg-chama font-display text-5xl font-extrabold uppercase tracking-wide text-superficie hover:bg-chama/90">Saída</button>
+  </form>
+  {% if tipos_pausa %}
+  <div class="grid gap-3 {% if tipos_pausa|length > 1 %}grid-cols-2{% endif %}">
+    {% for tipo in tipos_pausa %}
+    <form method="post" action="{% url 'kiosk:marcar' worker.pk %}" hx-disabled-elt="find button">
+      {% csrf_token %}
+      <input type="hidden" name="token" value="{{ token }}">
+      <input type="hidden" name="acao" value="pausa">
+      <input type="hidden" name="tipo_pausa" value="{{ tipo.pk }}">
+      <button type="submit" class="min-h-[72px] w-full rounded-lg border border-aco/40 px-3 py-3 text-lg font-semibold text-aco hover:bg-aco/10">
+        {% if tipos_pausa|length > 1 %}Pausa · {{ tipo.name }}{% else %}Iniciar pausa{% endif %}
+      </button>
+    </form>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% else %}
+  <form method="post" action="{% url 'kiosk:marcar' worker.pk %}" hx-disabled-elt="find button">
+    {% csrf_token %}
+    <input type="hidden" name="token" value="{{ token }}">
+    <input type="hidden" name="acao" value="entrada">
+    <button type="submit" class="min-h-[30vh] w-full rounded-lg bg-servico font-display text-5xl font-extrabold uppercase tracking-wide text-carvao hover:bg-servico/90">Entrada</button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

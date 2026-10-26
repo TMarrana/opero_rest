@@ -1,150 +1,311 @@
-"""Fase 3: login por PIN, ecrã de ponto do colaborador e fila offline."""
+"""Fase 7: quiosque do tablet partilhado (nome → código → ação) e app do
+colaborador sem botão de ponto. Também o que ficou da Fase 3: histórico,
+férias, PWA e dashboard."""
 import datetime
 
 import pytest
-from django.urls import reverse
+from django.core import signing
+from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 
+from accounts.views import DEVICE_COOKIE
+from attendance.models import TimeEntry
 from attendance.services import open_shift
-from core.mixins import PIN_SESSION_KEY
+from core.models import Restaurant, WorkArea
+from kiosk import views as kiosk_views
+from shifts.models import Shift
 from vacations.models import VacationRequest
 from workers.models import Worker
 
+from .quiosque import ativar_tablet, escrever_codigo, picar
+
 pytestmark = pytest.mark.django_db
+
+H = datetime.timedelta(hours=1)
 
 
 @pytest.fixture
-def worker_com_pin(restaurant, staff_user):
-    staff_user.set_staff_pin("2468")
-    return Worker.objects.create(
-        restaurant=restaurant, full_name="Marta Silva", job_title="sala", user=staff_user
+def marta(restaurant, staff_user):
+    w = Worker.objects.create(restaurant=restaurant, full_name="Marta Silva", job_title="sala", user=staff_user)
+    w.set_kiosk_code("2468")
+    return w
+
+
+@pytest.fixture
+def rui(restaurant):
+    """Sem conta da app: pica no tablet na mesma."""
+    w = Worker.objects.create(restaurant=restaurant, full_name="Rui Costa")
+    w.set_kiosk_code("1122")
+    return w
+
+
+@pytest.fixture
+def tablet(client, manager):
+    ativar_tablet(client, manager)
+    return client
+
+
+def _turno_publicado(worker, inicio, horas=4):
+    return Shift.objects.create(
+        restaurant=worker.restaurant,
+        worker=worker,
+        start_at=inicio,
+        end_at=inicio + horas * H,
+        state=Shift.State.PUBLICADO,
     )
 
 
-def _ativar_dispositivo(client, manager):
-    client.force_login(manager)
-    client.post(reverse("accounts:dispositivo"))
-    client.post(reverse("accounts:logout"))
+class TestQuiosqueAcesso:
+    def test_dispositivo_nao_ativado_bloqueia(self, client, marta):
+        for url in [reverse("kiosk:inicio"), reverse("kiosk:codigo", args=[marta.pk])]:
+            resp = client.get(url)
+            assert resp.status_code == 403
+            assert "não está ativado" in resp.content.decode()
 
+    def test_lista_so_tem_ativos_com_codigo_do_restaurante(self, tablet, restaurant, marta):
+        Worker.objects.create(restaurant=restaurant, full_name="Sem Código")
+        inativo = Worker.objects.create(restaurant=restaurant, full_name="Saiu da Casa", is_active=False)
+        inativo.set_kiosk_code("9999")
+        outra = Restaurant.objects.create(name="Outra Casa", slug="outra-casa")
+        alheio = Worker.objects.create(restaurant=outra, full_name="De Outra Casa")
+        alheio.set_kiosk_code("9999")
+        corpo = tablet.get(reverse("kiosk:inicio")).content.decode()
+        assert "Marta Silva" in corpo
+        for nome in ["Sem Código", "Saiu da Casa", "De Outra Casa"]:
+            assert nome not in corpo
+        assert tablet.get(reverse("kiosk:codigo", args=[alheio.pk])).status_code == 404
 
-class TestPinLogin:
-    def test_dispositivo_nao_ativado_bloqueia(self, client, worker_com_pin):
-        resp = client.get(reverse("staff:pin_login"))
-        assert resp.status_code == 403
-        assert "não está ativado" in resp.content.decode()
-
-    def test_login_por_pin_em_dispositivo_ativado(self, client, manager, worker_com_pin):
-        _ativar_dispositivo(client, manager)
-        resp = client.get(reverse("staff:pin_login"))
+    def test_cookie_antigo_sem_modo_conta_como_partilhado(self, client, manager, marta):
+        client.cookies[DEVICE_COOKIE] = signing.dumps({"por": manager.pk}, salt=DEVICE_COOKIE)
+        resp = client.get(reverse("kiosk:inicio"))
         assert resp.status_code == 200
         assert "Marta Silva" in resp.content.decode()
-        resp = client.post(
-            reverse("staff:pin_login"), {"worker": worker_com_pin.pk, "pin": "2468"}
-        )
-        assert resp.status_code == 302
-        assert resp.url == reverse("staff:home")
-        assert client.session.get(PIN_SESSION_KEY) is True
 
-    def test_pin_errado_rejeitado(self, client, manager, worker_com_pin):
-        _ativar_dispositivo(client, manager)
-        resp = client.post(
-            reverse("staff:pin_login"), {"worker": worker_com_pin.pk, "pin": "0000"}
-        )
-        assert resp.status_code == 200
-        assert "PIN errado" in resp.content.decode()
+    def test_cookie_antigo_de_telemovel_pessoal_nao_abre_o_quiosque(self, client, manager, marta):
+        client.cookies[DEVICE_COOKIE] = signing.dumps({"por": manager.pk, "partilhado": False}, salt=DEVICE_COOKIE)
+        assert client.get(reverse("kiosk:inicio")).status_code == 403
 
-    def test_throttling_apos_cinco_falhas(self, client, manager, worker_com_pin):
-        _ativar_dispositivo(client, manager)
+    def test_pagina_do_dispositivo_sem_modo_pessoal(self, client, manager):
+        client.force_login(manager)
+        client.post(reverse("accounts:dispositivo"))
+        corpo = client.get(reverse("accounts:dispositivo")).content.decode()
+        assert "Ativado" in corpo and "/quiosque/" in corpo
+        assert "Uma só pessoa" not in corpo
+
+
+class TestQuiosqueCodigo:
+    def test_codigo_errado(self, tablet, marta):
+        resp = escrever_codigo(tablet, marta, "0000")
+        assert "Código errado" in resp.content.decode()
+        assert "token" not in resp.context
+
+    def test_bloqueio_ao_fim_de_cinco_falhas(self, tablet, marta):
         for _ in range(5):
-            client.post(reverse("staff:pin_login"), {"worker": worker_com_pin.pk, "pin": "0000"})
-        resp = client.post(
-            reverse("staff:pin_login"), {"worker": worker_com_pin.pk, "pin": "2468"}
-        )
+            escrever_codigo(tablet, marta, "0000")
+        resp = escrever_codigo(tablet, marta)
         assert "Demasiadas tentativas" in resp.content.decode()
 
-    def test_sessao_pin_real_nao_abre_backoffice(self, client, manager_com_pin_e_worker):
-        """A fronteira da secção 7 com um login PIN verdadeiro: o titular
-        é gerente, mas a sessão criada por PIN não abre o backoffice."""
-        worker, gerente = manager_com_pin_e_worker
-        resp = client.post(reverse("staff:pin_login"), {"worker": worker.pk, "pin": "1357"})
-        assert resp.status_code == 302
-        assert client.get(reverse("dashboard:home")).status_code == 403
-        assert client.get(reverse("staff:home")).status_code == 200
+    def test_codigo_certo_mostra_so_as_acoes_do_estado(self, tablet, marta):
+        corpo = escrever_codigo(tablet, marta).content.decode()
+        assert "Fora de turno" in corpo
+        assert 'value="entrada"' in corpo and 'value="saida"' not in corpo
+
+        picar(tablet, marta, "entrada")
+        corpo = escrever_codigo(tablet, marta).content.decode()
+        assert "Em turno desde" in corpo
+        assert 'value="saida"' in corpo and 'value="entrada"' not in corpo
+        assert "Pausa · Refeição" in corpo and "Pausa · Pausa curta" in corpo
 
 
-@pytest.fixture
-def manager_com_pin_e_worker(client, restaurant, manager):
-    manager.set_staff_pin("1357")
-    worker = Worker.objects.create(restaurant=restaurant, full_name="Gerente Chefe", user=manager)
-    _ativar_dispositivo(client, manager)
-    return worker, manager
+class TestQuiosqueMarcacao:
+    def test_entrada_fica_com_origem_e_area_do_tablet(self, client, manager, restaurant, marta):
+        cozinha = WorkArea.objects.get(restaurant=restaurant, name="Cozinha")
+        ativar_tablet(client, manager, area=cozinha)
+        picar(client, marta, "entrada")
+        entry = TimeEntry.objects.get(worker=marta)
+        assert entry.source == TimeEntry.Source.QUIOSQUE
+        assert entry.work_area == cozinha
+
+    def test_kiosk_code_never_opens_a_session(self, tablet, restaurant, manager):
+        """Secção 7: depois de picar com código, quem está no tablet
+        continua anónimo, mesmo que o titular seja gerente."""
+        gerente = Worker.objects.create(restaurant=restaurant, full_name="Gerente Chefe", user=manager)
+        gerente.set_kiosk_code("1357")
+        resp = picar(tablet, gerente, "entrada", codigo="1357")
+        assert "Entrada às" in resp.content.decode()
+        assert gerente.open_entry is not None
+        assert "_auth_user_id" not in tablet.session
+        for url in [reverse("dashboard:home"), reverse("staff:home")]:
+            resp = tablet.get(url)
+            assert resp.status_code == 302 and reverse("accounts:login") in resp.url
+
+    def test_next_person_does_not_inherit_previous(self, tablet, marta, rui):
+        resp = escrever_codigo(tablet, marta)
+        token_da_marta = resp.context["token"]
+        tablet.post(reverse("kiosk:marcar", args=[marta.pk]), {"token": token_da_marta, "acao": "entrada"})
+        # O seguinte não consegue picar em nome dele com o token da Marta,
+        # nem com o token da Marta noutra pessoa.
+        resp = tablet.post(reverse("kiosk:marcar", args=[rui.pk]), {"token": token_da_marta, "acao": "entrada"})
+        assert "Não registado" in resp.content.decode()
+        assert rui.open_entry is None
+        # Com o próprio código, pica normalmente.
+        picar(tablet, rui, "entrada", codigo="1122")
+        assert rui.open_entry is not None
+
+    def test_action_token_expires(self, tablet, marta, monkeypatch):
+        token = escrever_codigo(tablet, marta).context["token"]
+        monkeypatch.setattr(kiosk_views, "TOKEN_MAX_AGE", -1)
+        resp = tablet.post(reverse("kiosk:marcar", args=[marta.pk]), {"token": token, "acao": "entrada"})
+        assert "O tempo para picar acabou" in resp.content.decode()
+        assert not TimeEntry.objects.exists()
+
+    def test_token_forjado_recusado(self, tablet, marta):
+        resp = tablet.post(reverse("kiosk:marcar", args=[marta.pk]), {"token": "falso", "acao": "entrada"})
+        assert "Não registado" in resp.content.decode()
+        assert not TimeEntry.objects.exists()
+
+    def test_token_so_vale_uma_vez(self, tablet, marta):
+        token = escrever_codigo(tablet, marta).context["token"]
+        url = reverse("kiosk:marcar", args=[marta.pk])
+        tablet.post(url, {"token": token, "acao": "entrada"})
+        resp = tablet.post(url, {"token": token, "acao": "saida"})
+        assert "já foi feita" in resp.content.decode()
+        assert marta.open_entry is not None
+
+    def test_pausa_e_fim_de_pausa(self, tablet, restaurant, marta):
+        from attendance.models import Break, BreakType
+
+        refeicao = BreakType.objects.get(restaurant=restaurant, name="Refeição")
+        picar(tablet, marta, "entrada")
+        resp = picar(tablet, marta, "pausa", tipo_pausa=refeicao.pk)
+        assert "Início de pausa · Refeição às" in resp.content.decode()
+        corpo = escrever_codigo(tablet, marta).content.decode()
+        assert 'value="fim_pausa"' in corpo and 'value="saida"' not in corpo
+        picar(tablet, marta, "fim_pausa")
+        assert Break.objects.get().end is not None
+
+    def test_pausa_de_outro_restaurante_recusada(self, tablet, marta):
+        from attendance.models import Break, BreakType
+
+        outra = Restaurant.objects.create(name="Outra Casa", slug="outra-casa")
+        alheio = BreakType.objects.filter(restaurant=outra).first()
+        picar(tablet, marta, "entrada")
+        resp = picar(tablet, marta, "pausa", tipo_pausa=alheio.pk)
+        assert "Escolha o tipo de pausa" in resp.content.decode()
+        assert not Break.objects.exists()
+
+    def test_erro_do_servico_aparece_como_nao_registado(self, tablet, marta):
+        resp = picar(tablet, marta, "saida")
+        corpo = resp.content.decode()
+        assert "Não registado" in corpo and "não tem turno aberto" in corpo
 
 
-class TestEcraDePonto:
+class TestQuiosqueConfirmacao:
+    def test_entry_confirmation_shows_planned_exit_and_forgotten_exit(self, tablet, marta):
+        # 30 horas: o dia de trabalho é sempre o anterior, e o turno de hoje não lhe estende o limite.
+        antiga = open_shift(worker=marta, at=timezone.now() - 30 * H)
+        turno = _turno_publicado(marta, timezone.now())
+        resp = picar(tablet, marta, "entrada")
+        corpo = resp.content.decode()
+        assert f"Saída prevista às {timezone.localtime(turno.end_at):%H:%M}" in corpo
+        assert "A saída anterior ficou por picar" in corpo
+        assert f"{timezone.localtime(antiga.check_in):%d/%m às %H:%M}" in corpo
+        assert "Peça a correção na app" in corpo
+        assert resp.context["espera"] == kiosk_views.ESPERA_ENTRADA == 15
+
+    def test_entrada_sem_turno_previsto(self, tablet, marta):
+        corpo = picar(tablet, marta, "entrada").content.decode()
+        assert "Sem turno previsto hoje" in corpo
+        assert "por picar" not in corpo and "por resolver" not in corpo
+
+    def test_entrada_conta_os_registos_por_resolver(self, tablet, marta):
+        esquecida = open_shift(worker=marta, at=timezone.now() - 30 * H)
+        esquecida.missing_exit = True
+        esquecida.save()
+        corpo = picar(tablet, marta, "entrada").content.decode()
+        assert "Tem <span" in corpo and "1</span> registo por resolver" in corpo
+        assert "A saída anterior" not in corpo
+
+    def test_quem_nao_tem_app_fala_com_o_gerente(self, tablet, rui):
+        open_shift(worker=rui, at=timezone.now() - 30 * H)
+        corpo = picar(tablet, rui, "entrada", codigo="1122").content.decode()
+        assert "Fale com o gerente" in corpo and "na app" not in corpo
+
+    def test_saida_tem_confirmacao_minima(self, tablet, marta):
+        _turno_publicado(marta, timezone.now())
+        picar(tablet, marta, "entrada")
+        resp = picar(tablet, marta, "saida")
+        corpo = resp.content.decode()
+        assert "Saída às" in corpo
+        assert "Saída prevista" not in corpo
+        assert resp.context["espera"] == kiosk_views.ESPERA_CURTA == 5
+
+    def test_aviso_de_saida_esquecida_no_ecra_de_acoes(self, tablet, marta):
+        open_shift(worker=marta, at=timezone.now() - 11 * H)
+        corpo = escrever_codigo(tablet, marta).content.decode()
+        assert "Já passou da hora prevista de saída" in corpo
+
+    def test_turno_em_curso_sem_aviso(self, tablet, marta):
+        _turno_publicado(marta, timezone.now() - 2 * H, horas=8)
+        open_shift(worker=marta, at=timezone.now() - 2 * H)
+        corpo = escrever_codigo(tablet, marta).content.decode()
+        assert "Já passou da hora prevista" not in corpo
+
+
+class TestAppColaborador:
     def test_home_sem_ficha(self, client, staff_user):
         client.force_login(staff_user)
         resp = client.get(reverse("staff:home"))
         assert resp.status_code == 200
         assert "Falta a ficha de trabalhador" in resp.content.decode()
 
-    def test_home_fora_de_turno_mostra_entrada(self, client, worker_com_pin, staff_user):
+    def test_staff_app_has_no_mark_button(self, client, marta, staff_user):
         client.force_login(staff_user)
         corpo = client.get(reverse("staff:home")).content.decode()
-        assert "Entrada" in corpo
-        assert "bg-servico" in corpo
+        assert 'name="acao"' not in corpo
+        assert "O ponto pica-se no tablet" in corpo
+        with pytest.raises(NoReverseMatch):
+            reverse("staff:marcar")
+        assert client.post("/equipa/marcar/", {"acao": "entrada"}).status_code == 404
+        assert not TimeEntry.objects.exists()
 
-    def test_marcar_alterna_estado(self, client, worker_com_pin, staff_user):
+    def test_home_mostra_o_estado_e_o_turno_de_hoje(self, client, marta, staff_user):
+        turno = _turno_publicado(marta, timezone.now())
+        open_shift(worker=marta, at=timezone.now())
         client.force_login(staff_user)
-        resp = client.post(reverse("staff:marcar"), HTTP_HX_REQUEST="true")
-        corpo = resp.content.decode()
-        assert "Saída" in corpo and "bg-chama" in corpo
-        assert worker_com_pin.open_entry is not None
-        resp = client.post(reverse("staff:marcar"), HTTP_HX_REQUEST="true")
-        corpo = resp.content.decode()
-        assert "Entrada" in corpo and "bg-servico" in corpo
-        worker_com_pin.refresh_from_db()
-        assert worker_com_pin.open_entry is None
-        assert worker_com_pin.time_entries.count() == 1
+        corpo = client.get(reverse("staff:home")).content.decode()
+        assert "Em turno" in corpo
+        assert f"{timezone.localtime(turno.start_at):%H:%M}" in corpo
 
-    def test_marcado_em_da_fila_offline(self, client, worker_com_pin, staff_user):
-        """A marcação sincronizada guarda o timestamp da marcação, não o
-        do envio (requisito da Fase 3)."""
+    def test_home_sem_turno_publicado(self, client, marta, staff_user):
         client.force_login(staff_user)
-        ha_duas_horas = timezone.now() - datetime.timedelta(hours=2)
-        client.post(
-            reverse("staff:marcar"),
-            {"marcado_em": ha_duas_horas.isoformat()},
-            HTTP_HX_REQUEST="true",
-        )
-        entry = worker_com_pin.open_entry
-        assert entry is not None
-        assert abs((entry.check_in - ha_duas_horas).total_seconds()) < 1
+        corpo = client.get(reverse("staff:home")).content.decode()
+        assert "Fora de turno" in corpo and "Sem turno publicado para hoje" in corpo
 
-    def test_marcado_em_no_futuro_e_recusado(self, client, worker_com_pin, staff_user):
-        client.force_login(staff_user)
-        futuro = timezone.now() + datetime.timedelta(hours=3)
-        client.post(
-            reverse("staff:marcar"), {"marcado_em": futuro.isoformat()}, HTTP_HX_REQUEST="true"
-        )
-        entry = worker_com_pin.open_entry
-        assert entry.check_in <= timezone.now()
-
-    def test_totais_do_dia(self, client, worker_com_pin, staff_user):
-        agora = timezone.now()
-        open_shift(worker=worker_com_pin, at=agora - datetime.timedelta(hours=3, minutes=10))
+    def test_totais_do_dia(self, client, marta, staff_user):
+        open_shift(worker=marta, at=timezone.now() - datetime.timedelta(hours=3, minutes=10))
         client.force_login(staff_user)
         corpo = client.get(reverse("staff:home")).content.decode()
         assert "3h1" in corpo  # 3h10 ou 3h11 conforme o segundo
 
+    def test_equipa_sem_sessao_vai_para_o_login(self, client):
+        for nome in ["staff:home", "staff:historico", "staff:ferias", "staff:turnos"]:
+            resp = client.get(reverse(nome))
+            assert resp.status_code == 302
+            assert reverse("accounts:login") in resp.url, nome
+
+    def test_pin_login_ja_nao_existe(self, client):
+        assert client.get("/equipa/entrar/").status_code == 404
+
 
 class TestHistoricoEFerias:
-    def test_historico_proprio(self, client, worker_com_pin, staff_user):
-        open_shift(worker=worker_com_pin)
+    def test_historico_proprio(self, client, marta, staff_user):
+        open_shift(worker=marta)
         client.force_login(staff_user)
         corpo = client.get(reverse("staff:historico")).content.decode()
         assert "em turno" in corpo
 
-    def test_pedido_de_ferias_em_tres_campos(self, client, worker_com_pin, staff_user):
+    def test_pedido_de_ferias_em_tres_campos(self, client, marta, staff_user):
         client.force_login(staff_user)
         resp = client.post(
             reverse("staff:ferias"),
@@ -152,10 +313,10 @@ class TestHistoricoEFerias:
         )
         assert resp.status_code == 302
         pedido = VacationRequest.objects.get()
-        assert pedido.worker == worker_com_pin
+        assert pedido.worker == marta
         assert pedido.status == VacationRequest.Status.PENDENTE
 
-    def test_lista_so_mostra_os_proprios_pedidos(self, client, restaurant, worker_com_pin, staff_user):
+    def test_lista_so_mostra_os_proprios_pedidos(self, client, restaurant, marta, staff_user):
         outro = Worker.objects.create(restaurant=restaurant, full_name="Rui Gomes")
         VacationRequest.objects.create(
             worker=outro,
@@ -182,6 +343,13 @@ class TestPWA:
         assert manifest.exists()
         conteudo = manifest.read_text(encoding="utf-8")
         assert '"start_url": "/equipa/"' in conteudo
+
+    def test_app_js_sem_fila_offline(self, settings):
+        import pathlib
+
+        conteudo = (pathlib.Path(settings.BASE_DIR) / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        assert "serviceWorker" in conteudo
+        assert "localStorage" not in conteudo and "marcado_em" not in conteudo
 
 
 class TestDashboard:
@@ -221,141 +389,6 @@ class TestDashboard:
 
         assert Restaurant.objects.filter(slug="tasca-da-esquina").count() == 1
         assert Worker.objects.filter(full_name="Marta Silva").count() == 1
-
-
-class TestArranqueDaPWA:
-    """A PWA arranca em /equipa/ (start_url do manifest). Sem sessão, o
-    caminho tem de levar ao PIN — não ao login do backoffice."""
-
-    def test_equipa_sem_sessao_vai_para_o_pin(self, client):
-        resp = client.get(reverse("staff:home"))
-        assert resp.status_code == 302
-        assert reverse("staff:pin_login") in resp.url
-        assert reverse("accounts:login") not in resp.url
-
-    def test_todas_as_vistas_staff_vao_para_o_pin(self, client):
-        for nome in ["staff:home", "staff:historico", "staff:ferias"]:
-            resp = client.get(reverse(nome))
-            assert reverse("staff:pin_login") in resp.url, nome
-
-    def test_sair_na_vista_staff_volta_ao_pin(self, client, manager, worker_com_pin, staff_user):
-        _ativar_dispositivo(client, manager)
-        client.post(reverse("staff:pin_login"), {"worker": worker_com_pin.pk, "pin": "2468"})
-        resp = client.post(reverse("accounts:logout"), {"next": reverse("staff:pin_login")})
-        assert resp.status_code == 302
-        assert resp.url == reverse("staff:pin_login")
-
-    def test_backoffice_continua_a_usar_o_login_de_email(self, client):
-        resp = client.get(reverse("dashboard:home"))
-        assert reverse("accounts:login") in resp.url
-
-
-def _entrar_com_pin(client, worker, pin="2468"):
-    return client.post(reverse("staff:pin_login"), {"worker": worker.pk, "pin": pin})
-
-
-class TestModoQuiosque:
-    """Tablet partilhado: a sessão PIN termina a seguir a cada marcação
-    (secção 5 do plano). Telemóvel pessoal: a sessão mantém-se."""
-
-    def test_shared_device_ends_pin_session_after_mark(self, client, manager, worker_com_pin):
-        _ativar_dispositivo(client, manager)
-        _entrar_com_pin(client, worker_com_pin)
-        resp = client.post(reverse("staff:marcar"), {"acao": "entrada"}, HTTP_HX_REQUEST="true")
-        assert resp["HX-Redirect"] == reverse("staff:pin_login")
-        assert worker_com_pin.open_entry is not None
-        # O colaborador seguinte já não herda a sessão.
-        assert client.get(reverse("staff:home")).status_code == 302
-        corpo = client.get(reverse("staff:pin_login")).content.decode()
-        assert "Marta Silva" in corpo and "Entrada às" in corpo
-
-    def test_confirmacao_so_aparece_uma_vez(self, client, manager, worker_com_pin):
-        _ativar_dispositivo(client, manager)
-        _entrar_com_pin(client, worker_com_pin)
-        client.post(reverse("staff:marcar"), {"acao": "entrada"}, HTTP_HX_REQUEST="true")
-        client.get(reverse("staff:pin_login"))
-        assert "Entrada às" not in client.get(reverse("staff:pin_login")).content.decode()
-
-    def test_dispositivo_pessoal_mantem_a_sessao(self, client, manager, worker_com_pin):
-        client.force_login(manager)
-        client.post(reverse("accounts:dispositivo"), {"modo": "pessoal"})
-        client.post(reverse("accounts:logout"))
-        _entrar_com_pin(client, worker_com_pin)
-        resp = client.post(reverse("staff:marcar"), {"acao": "entrada"}, HTTP_HX_REQUEST="true")
-        assert "HX-Redirect" not in resp
-        assert client.get(reverse("staff:home")).status_code == 200
-
-    def test_sessao_no_tablet_partilhado_expira_depressa(self, client, manager, worker_com_pin):
-        from accounts.views import KIOSK_SESSION_AGE
-
-        _ativar_dispositivo(client, manager)
-        _entrar_com_pin(client, worker_com_pin)
-        assert client.session.get_expiry_age() == KIOSK_SESSION_AGE
-
-    def test_cookie_antigo_sem_modo_conta_como_partilhado(self, client, manager, worker_com_pin):
-        from django.core import signing
-
-        from accounts.views import DEVICE_COOKIE
-
-        client.cookies[DEVICE_COOKIE] = signing.dumps({"por": manager.pk}, salt=DEVICE_COOKIE)
-        _entrar_com_pin(client, worker_com_pin)
-        resp = client.post(reverse("staff:marcar"), {"acao": "entrada"}, HTTP_HX_REQUEST="true")
-        assert resp["HX-Redirect"] == reverse("staff:pin_login")
-
-    def test_pagina_do_dispositivo_mostra_o_modo(self, client, manager):
-        client.force_login(manager)
-        client.post(reverse("accounts:dispositivo"), {"modo": "pessoal"})
-        assert "Pessoal" in client.get(reverse("accounts:dispositivo")).content.decode()
-
-
-class TestFilaOffline:
-    """Marcações da fila offline: a ação e quem marcou vão com a marcação,
-    e uma recusa devolve um motivo legível (Fase 3)."""
-
-    def _fila(self, client, dados):
-        return client.post(reverse("staff:marcar"), dados, HTTP_X_OPERO_FILA="1")
-
-    def test_marcacao_da_fila_aceite(self, client, worker_com_pin, staff_user):
-        client.force_login(staff_user)
-        resp = self._fila(client, {"acao": "entrada", "trabalhador": worker_com_pin.pk})
-        assert resp.status_code == 200
-        assert resp.json()["ok"] is True
-        assert worker_com_pin.open_entry is not None
-
-    def test_rejected_offline_mark_reports_reason(self, client, worker_com_pin, staff_user):
-        open_shift(worker=worker_com_pin, at=timezone.now() - datetime.timedelta(hours=1))
-        client.force_login(staff_user)
-        resp = self._fila(client, {"acao": "entrada", "trabalhador": worker_com_pin.pk})
-        assert resp.status_code == 409
-        assert "já tem um turno aberto" in resp.json()["texto"]
-
-    def test_acao_desatualizada_nao_e_aplicada_ao_contrario(self, client, worker_com_pin, staff_user):
-        """Um botão de saída carregado offline depois de o gerente ter
-        fechado o turno não abre um turno novo."""
-        client.force_login(staff_user)
-        resp = self._fila(client, {"acao": "saida", "trabalhador": worker_com_pin.pk})
-        assert resp.status_code == 409
-        assert worker_com_pin.open_entry is None
-        assert worker_com_pin.time_entries.count() == 0
-
-    def test_marcacao_de_outro_colaborador_recusada(self, client, restaurant, worker_com_pin, staff_user):
-        outro = Worker.objects.create(restaurant=restaurant, full_name="Rui Costa")
-        client.force_login(staff_user)
-        resp = self._fila(client, {"acao": "entrada", "trabalhador": outro.pk})
-        assert resp.status_code == 409
-        assert "outro colaborador" in resp.json()["texto"]
-        assert worker_com_pin.open_entry is None
-
-    def test_fila_no_tablet_partilhado_termina_a_sessao(self, client, manager, worker_com_pin):
-        _ativar_dispositivo(client, manager)
-        _entrar_com_pin(client, worker_com_pin)
-        resp = self._fila(client, {"acao": "entrada", "trabalhador": worker_com_pin.pk})
-        assert resp.json()["sessao_terminada"] is True
-        assert client.get(reverse("staff:home")).status_code == 302
-
-    def test_formulario_leva_acao_e_trabalhador(self, client, worker_com_pin, staff_user):
-        client.force_login(staff_user)
-        corpo = client.get(reverse("staff:home")).content.decode()
-        assert 'name="acao" value="entrada"' in corpo
-        assert f'name="trabalhador" value="{worker_com_pin.pk}"' in corpo
-        assert f'data-trabalhador="{worker_com_pin.pk}"' in corpo
+        gustavo = Worker.objects.get(full_name="Gustavo Reis")
+        assert gustavo.user.role == gustavo.user.Role.MANAGER
+        assert gustavo.check_kiosk_code("1357")

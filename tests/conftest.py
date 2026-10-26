@@ -35,3 +35,21 @@ def stock_user(restaurant):
 @pytest.fixture
 def staff_user(restaurant):
     return _user(restaurant, "colaborador@tasca.pt", User.Role.STAFF)
+
+
+@pytest.fixture(autouse=True)
+def _cache_limpa():
+    """O bloqueio do código de ponto e os tokens do quiosque vivem na
+    cache; sem isto, passavam de um teste para o seguinte."""
+    from django.core.cache import cache
+
+    cache.clear()
+    yield
+    cache.clear()
+
+
+@pytest.fixture(autouse=True)
+def _hasher_rapido(settings):
+    """O hasher de produção custa centenas de milissegundos por password ou
+    código; nos testes basta um rápido."""
+    settings.PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]

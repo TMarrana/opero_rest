@@ -4,27 +4,13 @@
 <h1 class="font-display text-2xl font-bold">Dispositivo do restaurante</h1>
 <div class="mt-6 max-w-xl cartao p-6">
   {% if ativo %}
-  <p class="text-sm">
-    {% include "components/badge.html" with label="Ativado" variante="servico" %}
-    {% if partilhado %}{% include "components/badge.html" with label="Partilhado" %}{% else %}{% include "components/badge.html" with label="Pessoal" %}{% endif %}
-  </p>
-  <p class="mt-3 text-sm text-ardosia">Este navegador já está ativado: o ecrã de login por PIN funciona em <span class="font-dados">/equipa/entrar/</span>. A ativação dura 180 dias.</p>
+  <p class="text-sm">{% include "components/badge.html" with label="Ativado" variante="servico" %}</p>
+  <p class="mt-3 text-sm text-ardosia">Este navegador já está ativado: o quiosque de ponto abre em <a href="{% url 'kiosk:inicio' %}" class="font-dados underline underline-offset-2">/quiosque/</a>. A ativação dura 180 dias.</p>
   {% else %}
-  <p class="text-sm text-ardosia">Ativar este navegador como dispositivo do restaurante permite à equipa entrar com PIN em <span class="font-dados">/equipa/entrar/</span>. Faça-o no tablet ou telemóvel que fica no restaurante — não em computadores pessoais.</p>
+  <p class="text-sm text-ardosia">Ativar este navegador como tablet do restaurante abre o quiosque de ponto em <span class="font-dados">/quiosque/</span>: cada pessoa escolhe o nome, escreve o código e pica. Faça-o só no tablet que fica no restaurante, nunca num telemóvel pessoal ou num computador de casa.</p>
   {% endif %}
   <form method="post" class="mt-5 space-y-4">
     {% csrf_token %}
-    <fieldset class="space-y-3">
-      <legend class="text-sm font-medium">Quem usa este dispositivo?</legend>
-      <label class="flex items-start gap-3 text-sm">
-        <input type="radio" name="modo" value="partilhado" class="mt-1" {% if partilhado %}checked{% endif %}>
-        <span><span class="font-semibold">Toda a equipa</span> — tablet à entrada ou na cozinha. Depois de cada marcação a sessão termina e o ecrã volta à escolha de quem está a marcar.</span>
-      </label>
-      <label class="flex items-start gap-3 text-sm">
-        <input type="radio" name="modo" value="pessoal" class="mt-1" {% if not partilhado %}checked{% endif %}>
-        <span><span class="font-semibold">Uma só pessoa</span> — telemóvel de um colaborador. A sessão fica aberta até 12 horas.</span>
-      </label>
-    </fieldset>
     <div>
       <label for="area" class="text-sm font-medium">Área</label>
       <select id="area" name="area" class="campo-input mt-1">
@@ -33,7 +19,7 @@
         <option value="{{ area.pk }}" {% if area.pk == area_atual %}selected{% endif %}>{{ area.name }}</option>
         {% endfor %}
       </select>
-      <p class="mt-1 text-xs text-ardosia">As marcações feitas aqui ficam com esta área. No telemóvel pessoal, deixe sem área.</p>
+      <p class="mt-1 text-xs text-ardosia">As marcações feitas aqui ficam com esta área.</p>
     </div>
     {% if ativo %}
     {% include "components/botao.html" with label="Guardar e renovar ativação" variante="fantasma" %}

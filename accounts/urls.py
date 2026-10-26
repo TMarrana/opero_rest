@@ -8,5 +8,6 @@ urlpatterns = [
     path("entrar/", views.LoginView.as_view(), name="login"),
     path("sair/", views.LogoutView.as_view(), name="logout"),
     path("pos-login/", views.PostLoginRedirectView.as_view(), name="pos_login"),
+    path("password/", views.SetPasswordView.as_view(), name="definir_password"),
     path("dispositivo/", views.DeviceActivateView.as_view(), name="dispositivo"),
 ]

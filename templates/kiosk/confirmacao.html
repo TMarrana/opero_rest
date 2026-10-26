@@ -1,0 +1,39 @@
+{% extends "base_kiosk.html" %}
+{% block title %}{% if erro %}Não registado{% else %}Registado{% endif %}{% endblock %}
+{% block content %}
+{% comment %}A entrada mostra a saída prevista e os esquecimentos, até «OK»
+ou 15 segundos. A saída e as pausas mostram só o nome, a ação e a hora,
+durante 5 segundos (secção 5).{% endcomment %}
+{% include "kiosk/_voltar.html" %}
+<div class="flex flex-1 flex-col justify-center" role="status">
+  {% if erro %}
+  <div class="rounded-lg border-2 border-chama px-6 py-8">
+    <p class="font-display text-3xl font-extrabold uppercase text-chama">Não registado</p>
+    <p class="mt-1 text-lg font-semibold">{{ worker.full_name }}</p>
+    <p class="mt-3 text-base">{{ erro }}</p>
+  </div>
+  {% else %}
+  <div class="rounded-lg {% if entrada %}bg-servico text-carvao{% else %}border-2 border-aco/40{% endif %} px-6 py-8">
+    <p class="font-display text-3xl font-extrabold">{{ worker.full_name }}</p>
+    <p class="mt-1 font-dados text-2xl">{{ acao }}{% if detalhe %} · {{ detalhe }}{% endif %} às {{ hora|date:"H:i" }}</p>
+    {% if entrada %}
+    <p class="mt-4 font-dados text-xl">
+      {% if turno %}Saída prevista às {{ turno.end_at|date:"H:i" }}{% if turno.work_area %} · {{ turno.work_area.name }}{% endif %}
+      {% else %}Sem turno previsto hoje{% endif %}
+    </p>
+    {% endif %}
+  </div>
+
+  {% if esquecida or por_resolver %}
+  <div class="mt-4 rounded-lg border-2 border-chama px-6 py-5 text-base">
+    {% if esquecida %}<p><span class="font-semibold text-chama">A saída anterior ficou por picar.</span> Entrada de <span class="font-dados">{{ esquecida.check_in|date:"d/m" }} às {{ esquecida.check_in|date:"H:i" }}</span>, sem saída.</p>{% endif %}
+    {% if por_resolver %}<p {% if esquecida %}class="mt-2"{% endif %}>{% if esquecida %}Além desta, tem{% else %}Tem{% endif %} <span class="font-dados font-semibold">{{ por_resolver }}</span> registo{{ por_resolver|pluralize }} por resolver.</p>{% endif %}
+    <p class="mt-2 font-semibold">{% if worker.user_id %}Peça a correção na app.{% else %}Fale com o gerente para corrigir.{% endif %}</p>
+  </div>
+  {% endif %}
+  {% endif %}
+
+  <a href="{% url 'kiosk:inicio' %}"
+     class="mt-6 inline-flex min-h-[72px] w-full items-center justify-center rounded-lg bg-aco font-display text-2xl font-extrabold uppercase text-carvao">OK</a>
+</div>
+{% endblock %}

@@ -2,30 +2,20 @@
 Mixins de autorização das views.
 
 Verificação explícita por perfil — não confiar em esconder botões no
-template (secção 2 do plano). A fronteira PIN/backoffice (secção 7)
-também se aplica aqui: uma sessão criada por PIN nunca passa num mixin
-de backoffice, mesmo que o titular seja gerente.
+template (secção 2 do plano). O código de ponto do quiosque nunca cria
+sessão (Fase 7), por isso aqui só chegam sessões de email e password.
 """
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
-from django.urls import reverse_lazy
-
-# Marcador na sessão de que a autenticação foi feita por PIN (Fase 3).
-PIN_SESSION_KEY = "auth_via_pin"
-# Marcador de sessão PIN aberta num dispositivo partilhado (modo quiosque):
-# a sessão termina a seguir a cada marcação.
-KIOSK_SESSION_KEY = "pin_quiosque"
 
 
 class RoleRequiredMixin(LoginRequiredMixin):
-    """Exige um dos perfis em allowed_roles e sessão de email+password."""
+    """Exige um dos perfis em allowed_roles."""
 
     allowed_roles: tuple = ()
 
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
-            if request.session.get(PIN_SESSION_KEY):
-                raise PermissionDenied("Sessão por PIN não dá acesso ao backoffice.")
             if self.allowed_roles and request.user.role not in self.allowed_roles:
                 raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
@@ -68,11 +58,8 @@ class StockRequiredMixin(RoleRequiredMixin):
 
 class StaffViewMixin(LoginRequiredMixin):
     """
-    Vista staff: qualquer utilizador autenticado, incluindo por PIN.
-
-    Sem sessão, reencaminha para o login por PIN e não para o do
-    backoffice: a PWA arranca em /equipa/ e quem a abre está a marcar
-    ponto, não a entrar na gestão.
+    App do colaborador: qualquer utilizador autenticado por email e
+    password, incluindo gerentes, que veem os próprios turnos e férias.
+    Sem sessão, vai para o login de email (Fase 7).
     """
 
-    login_url = reverse_lazy("staff:pin_login")

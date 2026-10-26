@@ -24,6 +24,11 @@ class Worker(TimeStampedModel):
     )
     start_date = models.DateField("data de início", null=True, blank=True)
     notes = models.TextField("notas", blank=True)
+    # Código de ponto do tablet partilhado (Fase 7), guardado com o hasher
+    # de passwords. É da ficha e não da conta: quem não tem conta pica na
+    # mesma. Nunca abre uma sessão.
+    kiosk_code = models.CharField(max_length=128, null=True, blank=True, editable=False)
+    code_set_at = models.DateTimeField(null=True, blank=True, editable=False)
 
     class Meta:
         verbose_name = "trabalhador"
@@ -32,6 +37,25 @@ class Worker(TimeStampedModel):
 
     def __str__(self):
         return self.full_name
+
+    def set_kiosk_code(self, raw_code):
+        from django.contrib.auth.hashers import make_password
+        from django.utils import timezone
+
+        self.kiosk_code = make_password(raw_code)
+        self.code_set_at = timezone.now()
+        self.save(update_fields=["kiosk_code", "code_set_at", "updated_at"])
+
+    def check_kiosk_code(self, raw_code):
+        from django.contrib.auth.hashers import check_password
+
+        if not self.kiosk_code:
+            return False
+        return check_password(raw_code, self.kiosk_code)
+
+    @property
+    def has_code(self):
+        return bool(self.kiosk_code)
 
     @property
     def open_entry(self):

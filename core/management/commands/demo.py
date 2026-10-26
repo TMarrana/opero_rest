@@ -7,7 +7,8 @@ completo de cada perfil. Idempotente: correr duas vezes não duplica.
 
 Contas criadas (password de todas: demo1234):
     admin@tasca.pt · gerente@tasca.pt · stock@tasca.pt · marta@tasca.pt
-PIN da Marta (vista staff): 2468
+Códigos de ponto no quiosque (/quiosque/, Fase 7):
+    Marta 2468 · Rui 1122 · Gustavo (gerente) 1357
 """
 import datetime
 from decimal import Decimal
@@ -55,10 +56,11 @@ class Command(BaseCommand):
         gerente = utilizador("gerente@tasca.pt", User.Role.MANAGER, "Gustavo", "Reis")
         resp_stock = utilizador("stock@tasca.pt", User.Role.STOCK, "Rui", "Gomes")
         marta_user = utilizador("marta@tasca.pt", User.Role.STAFF, "Marta", "Silva")
-        if not marta_user.has_pin:
-            marta_user.set_staff_pin("2468")
 
         def trabalhador(nome, funcao, user=None):
+            # Uma conta que já tem ficha (por exemplo, ligada à mão) fica com ela.
+            if user is not None and Worker.objects.filter(user=user).exists():
+                return user.worker
             w, _ = Worker.objects.get_or_create(
                 restaurant=restaurant, full_name=nome, defaults={"job_title": funcao, "user": user}
             )
@@ -66,8 +68,13 @@ class Command(BaseCommand):
 
         marta = trabalhador("Marta Silva", "sala", marta_user)
         rui = trabalhador("Rui Gomes", "responsável de stock", resp_stock)
+        gustavo = trabalhador("Gustavo Reis", "gerente", gerente)
         joao = trabalhador("João Duarte", "cozinha")
         trabalhador("Beatriz Nunes", "copa")
+        # Gerentes e responsáveis de stock também picam no tablet (Fase 7).
+        for w, codigo in [(marta, "2468"), (rui, "1122"), (gustavo, "1357")]:
+            if not w.has_code:
+                w.set_kiosk_code(codigo)
 
         categorias = {c.name: c for c in Category.objects.filter(restaurant=restaurant)}
         artigos = [
@@ -143,4 +150,6 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS("Dados de demonstração prontos."))
         self.stdout.write(f"Contas (password {PASSWORD}): admin@tasca.pt, gerente@tasca.pt, stock@tasca.pt, marta@tasca.pt")
-        self.stdout.write("PIN da Marta: 2468 (ativar o dispositivo em Configuracao > Dispositivo)")
+        self.stdout.write(
+            "Codigos de ponto: Marta 2468, Rui 1122, Gustavo 1357 (ativar o tablet em Dispositivo e abrir /quiosque/)"
+        )

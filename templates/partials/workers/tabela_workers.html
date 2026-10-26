@@ -3,7 +3,7 @@
   <div class="overflow-x-auto">
     <table class="tabela">
       <thead>
-        <tr><th>Nome</th><th>Função</th><th>Contacto</th><th>Conta</th><th>Estado</th><th><span class="sr-only">Ações</span></th></tr>
+        <tr><th>Nome</th><th>Função</th><th>Contacto</th><th>Código</th><th>App</th><th>Estado</th><th><span class="sr-only">Ações</span></th></tr>
       </thead>
       <tbody>
         {% for w in workers %}
@@ -11,10 +11,12 @@
           <td class="font-medium">{{ w.full_name }}</td>
           <td class="text-ardosia">{{ w.job_title|default:"—" }}</td>
           <td class="text-ardosia">{{ w.contact|default:"—" }}</td>
-          <td>{% if w.user %}{% include "components/badge.html" with label="Com acesso" variante="neutro" %}{% else %}<span class="text-sm text-ardosia">—</span>{% endif %}</td>
+          <td>{% if w.has_code %}{% include "components/badge.html" with label="Definido" variante="neutro" %}{% else %}<span class="text-sm text-ardosia">—</span>{% endif %}</td>
+          <td>{% if w.user %}{% include "components/badge.html" with label="Com conta" variante="neutro" %}{% else %}<span class="text-sm text-ardosia">—</span>{% endif %}</td>
           <td>{% if w.is_active %}{% include "components/badge.html" with label="Ativo" variante="servico" %}{% else %}{% include "components/badge.html" with label="Inativo" %}{% endif %}</td>
           <td class="whitespace-nowrap text-right">
-            {% if w.user %}<a href="{% url 'workers:pin' w.pk %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">{% if w.user.has_pin %}Repor PIN{% else %}Definir PIN{% endif %}</a>{% endif %}
+            <a href="{% url 'workers:codigo' w.pk %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">{% if w.has_code %}Repor código{% else %}Definir código{% endif %}</a>
+            <a href="{% url 'workers:conta' w.pk %}" class="ml-3 text-sm text-ardosia underline underline-offset-2 hover:text-carvao">{% if w.user %}Conta da app{% else %}Dar acesso à app{% endif %}</a>
             <a href="{% url 'workers:editar' w.pk %}" class="ml-3 text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Editar</a>
           </td>
         </tr>

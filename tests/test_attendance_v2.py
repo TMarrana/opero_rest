@@ -21,6 +21,8 @@ from attendance.services import (
 from core.models import WorkArea
 from workers.models import Worker
 
+from .quiosque import ativar_tablet, escrever_codigo, picar
+
 pytestmark = pytest.mark.django_db
 
 LISBOA = zoneinfo.ZoneInfo("Europe/Lisbon")
@@ -32,8 +34,9 @@ def _local(*args):
 
 @pytest.fixture
 def worker(restaurant, staff_user):
-    staff_user.set_staff_pin("2468")
-    return Worker.objects.create(restaurant=restaurant, full_name="Marta Silva", user=staff_user)
+    w = Worker.objects.create(restaurant=restaurant, full_name="Marta Silva", user=staff_user)
+    w.set_kiosk_code("2468")
+    return w
 
 
 @pytest.fixture
@@ -44,16 +47,6 @@ def refeicao(restaurant):
 @pytest.fixture
 def pausa_curta(restaurant):
     return BreakType.objects.get(restaurant=restaurant, name="Pausa curta")
-
-
-def _entrar_por_pin(client, manager, worker, modo="partilhado", area=None):
-    client.force_login(manager)
-    dados = {"modo": modo}
-    if area is not None:
-        dados["area"] = area.pk
-    client.post(reverse("accounts:dispositivo"), dados)
-    client.post(reverse("accounts:logout"))
-    client.post(reverse("staff:pin_login"), {"worker": worker.pk, "pin": "2468"})
 
 
 class TestSementes:
@@ -108,27 +101,25 @@ class TestDiaDeTrabalho:
 
 
 class TestAreaEOrigem:
-    def test_marcacao_herda_area_do_dispositivo_partilhado(self, client, manager, worker, restaurant):
+    def test_marcacao_herda_area_do_tablet(self, client, manager, worker, restaurant):
         cozinha = WorkArea.objects.get(restaurant=restaurant, name="Cozinha")
-        _entrar_por_pin(client, manager, worker, area=cozinha)
-        client.post(reverse("staff:marcar"), {"acao": "entrada"})
+        ativar_tablet(client, manager, area=cozinha)
+        picar(client, worker, "entrada")
         entry = TimeEntry.objects.get(worker=worker)
         assert entry.work_area == cozinha
         assert entry.source == TimeEntry.Source.QUIOSQUE
 
-    def test_telemovel_pessoal_sem_area(self, client, manager, worker):
-        _entrar_por_pin(client, manager, worker, modo="pessoal")
-        client.post(reverse("staff:marcar"), {"acao": "entrada"})
-        entry = TimeEntry.objects.get(worker=worker)
-        assert entry.work_area is None
-        assert entry.source == TimeEntry.Source.TELEMOVEL
+    def test_tablet_sem_area(self, client, manager, worker):
+        ativar_tablet(client, manager)
+        picar(client, worker, "entrada")
+        assert TimeEntry.objects.get(worker=worker).work_area is None
 
     def test_area_arquivada_nao_e_herdada(self, client, manager, worker, restaurant):
         bar = WorkArea.objects.get(restaurant=restaurant, name="Bar")
-        _entrar_por_pin(client, manager, worker, area=bar)
+        ativar_tablet(client, manager, area=bar)
         bar.archived_at = timezone.now()
         bar.save()
-        client.post(reverse("staff:marcar"), {"acao": "entrada"})
+        picar(client, worker, "entrada")
         assert TimeEntry.objects.get(worker=worker).work_area is None
 
     def test_registo_manual_tem_origem_gerente(self, worker, manager):
@@ -186,49 +177,43 @@ class TestPausas:
         assert pausa.end == _local(2026, 10, 20, 14, 0)
         assert entry.worked() == datetime.timedelta(hours=4)
 
-    def test_tres_estados_no_ecra_de_ponto(self, client, manager, worker, refeicao):
-        _entrar_por_pin(client, manager, worker, modo="pessoal")
-        html = client.get(reverse("staff:home")).content.decode()
+    def test_tres_estados_no_quiosque(self, client, manager, worker, refeicao):
+        ativar_tablet(client, manager)
+        html = escrever_codigo(client, worker).content.decode()
         assert 'value="entrada"' in html and 'value="pausa"' not in html
 
-        html = client.post(reverse("staff:marcar"), {"acao": "entrada"}).content.decode()
+        picar(client, worker, "entrada")
+        html = escrever_codigo(client, worker).content.decode()
         assert 'value="saida"' in html and 'value="pausa"' in html
         assert "Pausa · Refeição" in html
 
-        resp = client.post(reverse("staff:marcar"), {"acao": "pausa", "tipo_pausa": refeicao.pk})
-        html = resp.content.decode()
-        assert "Pausa iniciada" in resp["HX-Trigger"]
+        html = picar(client, worker, "pausa", tipo_pausa=refeicao.pk).content.decode()
+        assert "Início de pausa · Refeição às" in html
+        html = escrever_codigo(client, worker).content.decode()
         assert 'value="fim_pausa"' in html and "Terminar pausa" in html
         assert 'value="saida"' not in html
 
-        resp = client.post(reverse("staff:marcar"), {"acao": "fim_pausa"})
-        assert "Pausa terminada" in resp["HX-Trigger"]
-        assert 'value="saida"' in resp.content.decode()
+        html = picar(client, worker, "fim_pausa").content.decode()
+        assert "Fim de pausa às" in html
+        assert 'value="saida"' in escrever_codigo(client, worker).content.decode()
         assert Break.objects.get().end is not None
 
-    def test_pausa_de_outro_restaurante_recusada(self, client, manager, worker):
-        from core.models import Restaurant
+    def test_um_so_tipo_de_pausa_diz_iniciar_pausa(self, client, manager, worker, pausa_curta):
+        pausa_curta.archived_at = timezone.now()
+        pausa_curta.save()
+        ativar_tablet(client, manager)
+        picar(client, worker, "entrada")
+        html = escrever_codigo(client, worker).content.decode()
+        assert "Iniciar pausa" in html and "Pausa · " not in html
 
-        outro = Restaurant.objects.create(name="Outra Casa", slug="outra-casa")
-        tipo_alheio = BreakType.objects.filter(restaurant=outro).first()
-        _entrar_por_pin(client, manager, worker, modo="pessoal")
-        client.post(reverse("staff:marcar"), {"acao": "entrada"})
-        resp = client.post(reverse("staff:marcar"), {"acao": "pausa", "tipo_pausa": tipo_alheio.pk})
-        assert "Escolha o tipo de pausa" in resp["HX-Trigger"]
+    def test_tipo_de_pausa_arquivado_recusado(self, client, manager, worker, pausa_curta):
+        ativar_tablet(client, manager)
+        picar(client, worker, "entrada")
+        pausa_curta.archived_at = timezone.now()
+        pausa_curta.save()
+        html = picar(client, worker, "pausa", tipo_pausa=pausa_curta.pk).content.decode()
+        assert "Escolha o tipo de pausa" in html
         assert not Break.objects.exists()
-
-    def test_pausa_da_fila_offline_com_hora_original(self, client, manager, worker, refeicao):
-        _entrar_por_pin(client, manager, worker, modo="pessoal")
-        open_shift(worker=worker, at=timezone.now() - datetime.timedelta(hours=3))
-        marcado = timezone.now() - datetime.timedelta(minutes=40)
-        resp = client.post(
-            reverse("staff:marcar"),
-            {"acao": "pausa", "tipo_pausa": refeicao.pk, "marcado_em": marcado.isoformat(),
-             "trabalhador": worker.pk},
-            headers={"X-Opero-Fila": "1"},
-        )
-        assert resp.status_code == 200 and resp.json()["ok"]
-        assert Break.objects.get().start == marcado
 
     def test_totais_staff_descontam_pausa_nao_paga(self, client, manager, worker, refeicao):
         inicio = timezone.now() - datetime.timedelta(hours=3)
@@ -236,7 +221,7 @@ class TestPausas:
         start_break(worker=worker, break_type=refeicao, at=inicio + datetime.timedelta(minutes=30))
         end_break(worker=worker, at=inicio + datetime.timedelta(minutes=90))
         close_shift(worker=worker, at=inicio + datetime.timedelta(hours=2))
-        _entrar_por_pin(client, manager, worker, modo="pessoal")
+        client.force_login(worker.user)
         html = client.get(reverse("staff:home")).content.decode()
         assert "1h00" in html
 

@@ -1,0 +1,2 @@
+{# Volta sozinho aos nomes ao fim de `espera` segundos. O isConnected evita que o temporizador de um ecrã já trocado pelo hx-boost mande embora o ecrã seguinte. #}
+<div x-data x-init="setTimeout(() => { if ($el.isConnected) window.location.replace('{% url 'kiosk:inicio' %}') }, {{ espera }}000)"></div>

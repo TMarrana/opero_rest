@@ -1,7 +1,7 @@
 {
   "name": "Opero",
   "short_name": "Opero",
-  "description": "Ponto, horas e ferias da equipa do restaurante",
+  "description": "Turnos, horas e ferias da equipa do restaurante",
   "start_url": "/equipa/",
   "scope": "/",
   "display": "standalone",

@@ -22,8 +22,9 @@ H = datetime.timedelta(hours=1)
 
 @pytest.fixture
 def worker(restaurant, staff_user):
-    staff_user.set_staff_pin("2468")
-    return Worker.objects.create(restaurant=restaurant, full_name="Marta Silva", user=staff_user)
+    w = Worker.objects.create(restaurant=restaurant, full_name="Marta Silva", user=staff_user)
+    w.set_kiosk_code("2468")
+    return w
 
 
 @pytest.fixture
@@ -36,11 +37,8 @@ def _turno(worker, inicio, horas=8):
     return close_shift(worker=worker, at=inicio + horas * H)
 
 
-def _entrar_por_pin(client, manager, worker):
-    client.force_login(manager)
-    client.post(reverse("accounts:dispositivo"), {"modo": "pessoal"})
-    client.post(reverse("accounts:logout"))
-    client.post(reverse("staff:pin_login"), {"worker": worker.pk, "pin": "2468"})
+def _entrar_na_app(client, manager, worker):
+    client.force_login(worker.user)
 
 
 class TestPorResolver:
@@ -75,11 +73,10 @@ class TestPorResolver:
         with pytest.raises(ValidationError, match="Peça uma correção"):
             close_shift(worker=worker)
 
-    def test_ecra_de_ponto_mostra_entrada_e_aviso(self, client, manager, worker):
+    def test_app_mostra_aviso_de_saida_por_indicar(self, client, manager, worker):
         antiga = open_shift(worker=worker, at=timezone.now() - 20 * H)
-        _entrar_por_pin(client, manager, worker)
+        _entrar_na_app(client, manager, worker)
         html = client.get(reverse("staff:home")).content.decode()
-        assert 'value="entrada"' in html
         assert "Saída por indicar" in html
         assert reverse("staff:correcao", args=[antiga.pk]) in html
 
@@ -179,7 +176,7 @@ class TestPedidosDeCorrecao:
     def test_fluxo_completo_pelas_vistas(self, client, manager, worker):
         inicio = timezone.now() - 30 * H
         entry = _turno(worker, inicio)
-        _entrar_por_pin(client, manager, worker)
+        _entrar_na_app(client, manager, worker)
         html = client.get(reverse("staff:historico")).content.decode()
         assert reverse("staff:correcao", args=[entry.pk]) in html
 
@@ -206,9 +203,9 @@ class TestPedidosDeCorrecao:
 
     def test_colaborador_nao_pede_sobre_registo_alheio_pela_vista(self, client, manager, worker, outro):
         entry = _turno(outro, timezone.now() - 30 * H)
-        _entrar_por_pin(client, manager, worker)
+        _entrar_na_app(client, manager, worker)
         assert client.get(reverse("staff:correcao", args=[entry.pk])).status_code == 404
 
     def test_colaborador_nao_abre_lista_de_pedidos(self, client, manager, worker):
-        _entrar_por_pin(client, manager, worker)
+        _entrar_na_app(client, manager, worker)
         assert client.get(reverse("attendance:pedidos")).status_code == 403

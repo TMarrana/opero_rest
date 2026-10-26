@@ -1,8 +1,6 @@
-"""Fase 0: login, redirecionamento por perfil e fronteira PIN/backoffice."""
+"""Fase 0: login e redirecionamento por perfil."""
 import pytest
 from django.urls import reverse
-
-from core.mixins import PIN_SESSION_KEY
 
 pytestmark = pytest.mark.django_db
 
@@ -43,16 +41,10 @@ def test_anonimo_e_reencaminhado_para_login(client):
     assert reverse("accounts:login") in resp.url
 
 
-def test_pin_does_not_open_backoffice(client, manager):
-    """Invariante da secção 7: sessão por PIN nunca abre o backoffice,
-    mesmo que o titular seja gerente."""
+def test_gerente_tambem_ve_a_app_do_colaborador(client, manager):
+    """A app serve qualquer conta: o gerente vê lá os próprios turnos. O
+    código de ponto nunca abre sessão (test_staff.py)."""
     client.force_login(manager)
-    session = client.session
-    session[PIN_SESSION_KEY] = True
-    session.save()
-    for url in [reverse("dashboard:home"), reverse("core:components")]:
-        assert client.get(url).status_code == 403
-    # A vista staff continua acessível.
     assert client.get(reverse("staff:home")).status_code == 200
 
 

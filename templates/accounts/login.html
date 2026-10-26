@@ -4,7 +4,7 @@
 {% block content %}
 <div class="flex flex-1 flex-col justify-center">
   <img src="{% static 'img/logo-opero.png' %}" alt="Opero" class="block h-10 w-auto">
-  <p class="mt-1 text-sm text-ardosia">Backoffice do restaurante</p>
+  <p class="mt-1 text-sm text-ardosia">Entre com o email e a palavra-passe da sua conta.</p>
 
   <form method="post" class="mt-10 space-y-5">
     {% csrf_token %}
@@ -24,6 +24,6 @@
       Entrar
     </button>
   </form>
-  <p class="mt-8 text-center text-xs text-ardosia"><a href="{% url 'staff:pin_login' %}" class="underline underline-offset-2">Marcar ponto com PIN</a></p>
+  <p class="mt-8 text-center text-xs text-ardosia">O ponto pica-se no tablet do restaurante. Esqueceu-se da palavra-passe? Peça ao gerente uma nova.</p>
 </div>
 {% endblock %}

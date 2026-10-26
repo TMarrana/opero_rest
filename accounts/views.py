@@ -1,29 +1,20 @@
-from django import forms
 from django.contrib import messages
-from django.contrib.auth import login as auth_login
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth import views as auth_views
+from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core import signing
 from django.shortcuts import redirect, render
 from django.views import View
 
-from core.mixins import KIOSK_SESSION_KEY, PIN_SESSION_KEY, ManagerRequiredMixin
+from core.mixins import ManagerRequiredMixin
 from core.models import WorkArea
 from core.utils import restaurant_scope
-from workers.models import Worker
 
-from . import pin as pin_throttle
 from .forms import LoginForm
 
 DEVICE_COOKIE = "opero_dispositivo"
 DEVICE_MAX_AGE = 60 * 60 * 24 * 180  # 180 dias
-PIN_SESSION_AGE = 60 * 60 * 12  # sessões por PIN expiram em 12 horas
-# No tablet partilhado a sessão termina a seguir a cada marcação; este
-# limite só apanha quem entra e não marca nem sai.
-KIOSK_SESSION_AGE = 60 * 5
-# Chave da confirmação mostrada no ecrã de PIN depois de uma marcação no
-# tablet partilhado (a sessão do colaborador já terminou).
-KIOSK_CONFIRMATION_KEY = "quiosque_confirmacao"
 
 
 class LoginView(auth_views.LoginView):
@@ -40,18 +31,48 @@ class PostLoginRedirectView(LoginRequiredMixin, View):
     """Cada perfil entra na sua superfície (secção 5 do plano)."""
 
     def get(self, request):
-        if request.session.get(PIN_SESSION_KEY):
-            return redirect("staff:home")
         if request.user.is_backoffice:
             return redirect("dashboard:home")
         return redirect("staff:home")
 
 
-def _device_info(request):
-    """Conteúdo do cookie de dispositivo, ou None se não houver ou for
-    inválido. Cookies anteriores ao modo quiosque não trazem `partilhado`
-    e contam como partilhados: é o caso mais seguro. Os anteriores à Fase 5
-    não trazem área, e as marcações feitas neles ficam sem área."""
+class SetPasswordView(LoginRequiredMixin, View):
+    """Mudar a password provisória que o gerente gerou (Fase 7). Enquanto
+    não a mudar, o titular não chega a mais nenhum ecrã
+    (`accounts.middleware.ForcePasswordChangeMiddleware`)."""
+
+    template_name = "accounts/definir_password.html"
+
+    def _form(self, request, data=None):
+        form = SetPasswordForm(request.user, data)
+        form.fields["new_password1"].label = "Nova palavra-passe"
+        form.fields["new_password2"].label = "Repita a palavra-passe"
+        for campo in form.fields.values():
+            campo.widget.attrs.update({"class": "campo-input", "autocomplete": "new-password"})
+        return form
+
+    def get(self, request):
+        return render(request, self.template_name, {"form": self._form(request)})
+
+    def post(self, request):
+        form = self._form(request, request.POST)
+        if not form.is_valid():
+            return render(request, self.template_name, {"form": form})
+        user = form.save(commit=False)
+        user.must_change_password = False
+        user.save()
+        update_session_auth_hash(request, user)
+        messages.success(request, "Palavra-passe guardada")
+        return redirect("accounts:pos_login")
+
+
+def device_info(request):
+    """Conteúdo do cookie de dispositivo, ou None se não houver, for
+    inválido ou for de um telemóvel pessoal. Desde a Fase 7 só se pica no
+    tablet partilhado: um cookie antigo do modo pessoal deixa de abrir o
+    quiosque. Os cookies anteriores ao modo quiosque não trazem
+    `partilhado` e contam como partilhados. Os anteriores à Fase 7 não
+    trazem o restaurante, que se tira de quem ativou."""
     valor = request.COOKIES.get(DEVICE_COOKIE)
     if not valor:
         return None
@@ -59,37 +80,38 @@ def _device_info(request):
         info = signing.loads(valor, salt=DEVICE_COOKIE, max_age=DEVICE_MAX_AGE)
     except signing.BadSignature:
         return None
-    return {"partilhado": bool(info.get("partilhado", True)), "area": info.get("area")}
+    if not info.get("partilhado", True):
+        return None
+    restaurante = info.get("restaurante")
+    if restaurante is None and info.get("por"):
+        from accounts.models import User
+
+        restaurante = User.objects.filter(pk=info["por"]).values_list("restaurant_id", flat=True).first()
+    return {"area": info.get("area"), "restaurante": restaurante}
 
 
 def device_work_area(request):
     """Área do dispositivo onde se está a marcar, se ainda estiver em uso."""
-    info = _device_info(request)
+    info = device_info(request)
     if not info or not info["area"]:
         return None
     return WorkArea.objects.filter(pk=info["area"], archived_at__isnull=True).first()
 
 
-def _device_ok(request):
-    return _device_info(request) is not None
-
-
 class DeviceActivateView(ManagerRequiredMixin, View):
-    """Ativa este navegador como dispositivo do restaurante: cookie
-    assinado de longa duração que dá acesso ao ecrã de login por PIN
-    (secção 7 do plano)."""
+    """Ativa este navegador como tablet do restaurante: cookie assinado de
+    longa duração que abre o quiosque em /quiosque/ (secção 7 do plano)."""
 
     def _areas(self, request):
         return restaurant_scope(request.user, WorkArea.objects.filter(archived_at__isnull=True))
 
     def get(self, request):
-        info = _device_info(request)
+        info = device_info(request)
         return render(
             request,
             "accounts/dispositivo.html",
             {
                 "ativo": info is not None,
-                "partilhado": info["partilhado"] if info else True,
                 "area_atual": info["area"] if info else None,
                 "areas": self._areas(request),
             },
@@ -97,10 +119,14 @@ class DeviceActivateView(ManagerRequiredMixin, View):
 
     def post(self, request):
         resp = redirect("accounts:dispositivo")
-        partilhado = request.POST.get("modo", "partilhado") != "pessoal"
         area = self._areas(request).filter(pk=request.POST.get("area") or None).first()
         valor = signing.dumps(
-            {"por": request.user.pk, "partilhado": partilhado, "area": area.pk if area else None},
+            {
+                "por": request.user.pk,
+                "partilhado": True,
+                "area": area.pk if area else None,
+                "restaurante": request.user.restaurant_id,
+            },
             salt=DEVICE_COOKIE,
         )
         resp.set_cookie(
@@ -113,101 +139,3 @@ class DeviceActivateView(ManagerRequiredMixin, View):
         )
         messages.success(request, "Dispositivo ativado")
         return resp
-
-
-class StaffLoginView(View):
-    """Seleção de trabalhador + PIN, só em dispositivos ativados.
-    A sessão criada fica marcada como PIN e nunca abre o backoffice."""
-
-    def _workers(self, request):
-        qs = Worker.objects.filter(is_active=True, user__isnull=False, user__staff_pin__isnull=False)
-        return qs.select_related("user").order_by("full_name")
-
-    def get(self, request):
-        if not _device_ok(request):
-            return render(request, "accounts/pin_dispositivo_em_falta.html", status=403)
-        return render(
-            request,
-            "accounts/pin_login.html",
-            {
-                "workers": self._workers(request),
-                "confirmacao": request.session.pop(KIOSK_CONFIRMATION_KEY, None),
-            },
-        )
-
-    def post(self, request):
-        device = _device_info(request)
-        if device is None:
-            return render(request, "accounts/pin_dispositivo_em_falta.html", status=403)
-        workers = self._workers(request)
-        worker = workers.filter(pk=request.POST.get("worker", "")).first()
-        raw_pin = request.POST.get("pin", "")
-        erro = None
-        if worker is None:
-            erro = "Escolha quem é que está a marcar."
-        else:
-            if not request.session.session_key:
-                request.session.save()
-            chave_sessao = request.session.session_key
-            if pin_throttle.esta_bloqueado(chave_sessao, worker.pk):
-                erro = "Demasiadas tentativas. Aguarde um minuto e tente de novo."
-            elif not worker.user.check_staff_pin(raw_pin):
-                pin_throttle.registar_falha(chave_sessao, worker.pk)
-                erro = "PIN errado. Tente de novo."
-        if erro:
-            return render(
-                request,
-                "accounts/pin_login.html",
-                {"workers": workers, "erro": erro, "worker_escolhido": request.POST.get("worker", "")},
-            )
-        pin_throttle.limpar_falhas(request.session.session_key, worker.pk)
-        auth_login(request, worker.user)
-        # Marcar a sessão como PIN DEPOIS do login (login faz flush da sessão).
-        request.session[PIN_SESSION_KEY] = True
-        if device["partilhado"]:
-            request.session[KIOSK_SESSION_KEY] = True
-            request.session.set_expiry(KIOSK_SESSION_AGE)
-        else:
-            request.session.set_expiry(PIN_SESSION_AGE)
-        return redirect("staff:home")
-
-
-class _PinForm(forms.Form):
-    pin = forms.RegexField(
-        regex=r"^\d{4,6}$",
-        label="PIN",
-        error_messages={"invalid": "O PIN são 4 a 6 algarismos."},
-        widget=forms.PasswordInput(
-            attrs={
-                "class": "campo-input font-dados",
-                "inputmode": "numeric",
-                "autocomplete": "off",
-                "placeholder": "••••",
-            }
-        ),
-    )
-
-
-class WorkerPinView(ManagerRequiredMixin, View):
-    """Definir ou repor o PIN de um trabalhador (feito pelo gerente)."""
-
-    def _get_worker(self, request, pk):
-        from django.shortcuts import get_object_or_404
-
-        return get_object_or_404(restaurant_scope(request.user, Worker.objects.select_related("user")), pk=pk)
-
-    def get(self, request, pk):
-        worker = self._get_worker(request, pk)
-        return render(request, "manage/workers/pin.html", {"worker": worker, "form": _PinForm()})
-
-    def post(self, request, pk):
-        worker = self._get_worker(request, pk)
-        if worker.user is None:
-            messages.error(request, "Este trabalhador não tem conta de acesso. Associe uma primeiro.")
-            return redirect("workers:editar", pk=worker.pk)
-        form = _PinForm(request.POST)
-        if not form.is_valid():
-            return render(request, "manage/workers/pin.html", {"worker": worker, "form": form})
-        worker.user.set_staff_pin(form.cleaned_data["pin"])
-        messages.success(request, "PIN definido")
-        return redirect("workers:lista")

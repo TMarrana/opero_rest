@@ -14,8 +14,6 @@
 </head>
 {# Shell escuro, coluna única, ação na zona do polegar (secção 5). #}
 <body class="min-h-screen bg-carvao text-aco"
-      data-trabalhador="{{ request.user.worker.pk|default:'' }}"
-      data-pin-url="{% url 'staff:pin_login' %}"
       hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
   <main class="mx-auto flex min-h-screen w-full max-w-md flex-col px-5 pb-8 pt-6">
     {% block content %}{% endblock %}

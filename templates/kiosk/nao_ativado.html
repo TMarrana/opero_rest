@@ -1,0 +1,9 @@
+{% extends "base_kiosk.html" %}
+{% block title %}Dispositivo não ativado{% endblock %}
+{% block content %}
+<div class="flex flex-1 flex-col items-center justify-center text-center">
+  <p class="font-display text-2xl font-bold">Este dispositivo não está ativado</p>
+  <p class="mt-3 max-w-sm text-base text-ardosia">O ponto só se pica no tablet do restaurante. Peça ao gerente para entrar aqui com a conta dele e ativar este dispositivo em Dispositivo.</p>
+  <a href="{% url 'accounts:login' %}" hx-boost="false" class="mt-6 text-sm text-aco/70 underline underline-offset-4">Entrar com email e palavra-passe</a>
+</div>
+{% endblock %}

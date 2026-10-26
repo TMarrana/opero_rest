@@ -1,0 +1,21 @@
+{% extends "base_kiosk.html" %}
+{% load static %}
+{% block content %}
+<header class="flex items-baseline justify-between gap-4">
+  <img src="{% static 'img/logo-opero.png' %}" alt="Opero" class="block h-9 w-auto">
+  <p class="font-dados text-lg text-ardosia" x-data="{ agora: new Date() }" x-init="setInterval(() => agora = new Date(), 15000)"
+     x-text="agora.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })">{% now "H:i" %}</p>
+</header>
+<h1 class="mt-8 font-display text-3xl font-extrabold">Quem está a picar?</h1>
+
+<div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+  {% for w in workers %}
+  <a href="{% url 'kiosk:codigo' w.pk %}"
+     class="flex min-h-[72px] items-center justify-center rounded-lg border border-ardosia/40 px-4 py-4 text-center text-lg font-semibold text-aco hover:border-servico hover:bg-servico/10">
+    {{ w.full_name }}
+  </a>
+  {% empty %}
+  <p class="col-span-full text-base text-ardosia">Ainda ninguém tem código de ponto. O gerente define os códigos em Trabalhadores.</p>
+  {% endfor %}
+</div>
+{% endblock %}

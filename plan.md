@@ -40,6 +40,7 @@ Ao concluir qualquer trabalho descrito na secção 8:
 | 4 — Dashboard, estabilização e piloto | 🟡 Em curso |
 | 5 — Ponto e ausências, segunda iteração | 🟡 Código completo; falta revisão visual, teste no telemóvel e aprovação do âmbito pela AT |
 | 6 — Planeador de turnos | 🟡 Código completo; falta revisão visual do planeador e aprovação do âmbito pela AT |
+| 7 — Quiosque e app do colaborador separados | 🟡 Código completo; falta testar num tablet e num telemóvel reais e a aprovação da AT |
 
 Legenda: ⬜ Por iniciar · 🟡 Em curso · ✅ Concluída
 
@@ -71,9 +72,9 @@ O docx trata a interface como mínima ("navegação simples", dashboard sem grá
 | Adição | Estado |
 |---|---|
 | Sistema de design próprio (secção 4) | Decidido |
-| Vista móvel dedicada ao colaborador, separada do backoffice | Decidido |
+| App do colaborador no telemóvel, separada do backoffice, só para consultar e pedir | Decidido |
 | PWA instalável | Decidido |
-| Login por PIN para marcar ponto | **A validar com AT** (secção 7) |
+| Ponto picado só no tablet partilhado, com nome e código (Fase 7) | Decidido pelo TM; **a validar com AT** (secção 7) |
 | Fases 5 e 6: pausas, fecho do mês, saldo de férias, planeador de turnos | **A validar com AT** (secção 12) |
 
 Tudo o resto neste documento deriva do docx, exceto as Fases 5 e 6. Essas vêm do estudo da Factorial (`re-factorial/clone/prd.md`) e incluem duas coisas que o docx deixou fora do MVP: o saldo anual de férias e o planeamento visual de equipa.
@@ -134,8 +135,9 @@ opero_rest/
     urls.py  wsgi.py  asgi.py
 
   core/                     # Restaurant, TimeStampedModel, mixins de permissão
-  accounts/                 # User, perfis, login email+password, login PIN
-  workers/                  # Worker
+  accounts/                 # User, perfis, login email+password, password provisória, dispositivo
+  workers/                  # Worker, código de ponto, conta da app
+  kiosk/                    # Fase 7: tablet partilhado — nome, código e marcação
   attendance/               # TimeEntry
   vacations/                # VacationRequest (Fase 5: AbsenceType, Allowance, Holiday, BlockedPeriod)
   shifts/                   # Fase 6: ShiftTemplate, Shift, RestDay
@@ -144,10 +146,11 @@ opero_rest/
   staff/                    # vista do colaborador (mobile)
 
   templates/
-    base_manage.html        base_staff.html
+    base_manage.html        base_staff.html        base_kiosk.html
     components/             botao, campo, badge, talao, tabela, modal, toast
     manage/                 um diretório por módulo
-    staff/                  ponto, historico, ferias
+    staff/                  inicio, historico, ferias, turnos, correcao
+    kiosk/                  nomes, codigo, acoes, confirmacao
     partials/               fragmentos de resposta HTMX
 
   static/
@@ -214,37 +217,70 @@ As funcionalidades inspiradas no estudo da Factorial reconstroem comportamentos 
 
 ---
 
-## 5. Duas superfícies
+## 5. Três superfícies
 
-São dois produtos sobre o mesmo backend, não um produto com menus condicionais.
+São três produtos sobre o mesmo backend, não um produto com menus condicionais. Desde a Fase 7, **o ponto só se pica no tablet partilhado**, e a app do colaborador serve para consultar e pedir.
 
-### `base_staff.html` — vista do colaborador
+| | Quiosque | App do colaborador | Backoffice |
+|---|---|---|---|
+| Quem | todos os que têm ficha e código, incluindo gerentes e responsáveis de stock | todos os que têm conta | Admin, Gerente, Resp. stock |
+| Onde | tablet do restaurante, ativado pelo gerente | telemóvel de cada um | computador ou tablet do gerente |
+| Como se entra | nome e código, sem login | email e password, sessão longa | email e password |
+| O que faz | entrada, pausa, saída | histórico, turnos, férias, saldo, correções | tudo o resto |
+| Sem rede | avisa que nada foi registado | — | — |
 
-Mobile-first, shell escuro (`carvao`), coluna única, ação na zona do polegar. Três coisas e nada mais.
+### `base_kiosk.html` — quiosque (tablet partilhado)
+
+Shell escuro (`carvao`), botões grandes, sem navegação. Três passos: **nome → código → ação**.
+
+```
+┌─────────────────────────────┐
+│  Quem está a picar?         │
+│  [Marta Silva] [Rui Gomes]  │   1. um botão por pessoa
+│  [João Duarte] [Beatriz N.] │
+└─────────────────────────────┘
+┌─────────────────────────────┐
+│  Marta Silva                │
+│  ● ● ● ○                    │   2. teclado numérico no ecrã
+│  [1][2][3] … [⌫][0][OK]     │
+└─────────────────────────────┘
+┌─────────────────────────────┐
+│  Olá, Marta                 │
+│  Em turno desde 11:58       │   3. só as ações possíveis no estado atual
+│  [        SAÍDA        ]    │      fora de turno: ENTRADA (`servico`)
+│  [Pausa · Refeição] [Curta] │      em turno: SAÍDA (`chama`) + pausas
+└─────────────────────────────┘      em pausa: TERMINAR PAUSA (contorno `aco`)
+```
+
+- **Sem sessão.** O quiosque nunca faz login. O código confirma quem está a picar e devolve um token assinado, válido por 60 segundos, que só serve para essa marcação. Ninguém herda o lugar de quem picou antes, e um código nunca abre a app nem o backoffice.
+- **Pausas sem passo extra.** Os tipos de pausa ativos aparecem como botões ao lado da Saída. Com um só tipo, o botão diz «Iniciar pausa».
+- **Confirmação da entrada.** Fica visível até alguém tocar «OK», ou no máximo 15 segundos. Mostra a hora da entrada, a saída prevista pelo turno publicado do dia (ou «Sem turno previsto hoje»), e os esquecimentos: a saída anterior que esta entrada acabou de pôr de lado e quantos registos estão por resolver. Todos levam à mesma indicação: «Peça a correção na app», ou «Fale com o gerente para corrigir» a quem não tem conta.
+- **Confirmação da saída e das pausas.** Informação mínima, o nome, a ação e a hora, durante 5 segundos ou até tocar «OK».
+- **Entrada aberta há pouco.** Quando há uma entrada aberta que ainda não passou do limite, o ecrã de ações diz desde quando («Em turno desde 24/10 às 19:02»). Se já passou meia hora do fim do turno previsto (ou 10 horas, sem turno), avisa que provavelmente ficou uma saída por picar: pique a saída, depois a entrada, e peça a correção da hora.
+- **Sem rede, nada fica registado,** e o ecrã diz isso claramente. Não há fila offline. O gerente acrescenta o registo depois, com motivo (registo manual da Fase 2).
+
+### `base_staff.html` — app do colaborador
+
+Mobile-first, shell escuro, coluna única. **Não tem botão de ponto.** O ecrã inicial mostra o estado do dia, só para leitura (em turno desde, em pausa, fora de turno, turno previsto de hoje), os totais do dia e da semana, os avisos de registos por resolver com ligação para o pedido de correção, e três entradas: Turnos, Histórico (onde se pedem as correções) e Férias.
 
 ```
 ┌───────────────────┐
 │  Olá, Marta       │
 │  09:14 · Terça    │
 │                   │
-│  ┌─────────────┐  │   fora de turno: `servico`, "ENTRADA"
-│  │             │  │   em turno:      `chama`, cronómetro + "SAÍDA"
-│  │   ENTRADA   │  │   Archivo, caps, ~40% do ecrã
-│  │             │  │
-│  └─────────────┘  │
+│  Em turno · 08:58 │   estado do dia, só leitura
+│  Turno 09–16 Sala │
 │                   │
-│  Hoje     —       │   mono, tabular
+│  Hoje     5h16    │   mono, tabular
 │  Semana   32h10   │
 │                   │
-│  Histórico  Férias│
+│  [Turnos]         │
+│  [Histórico]      │
+│  [Férias]         │
 └───────────────────┘
 ```
 
-**O botão é o ecrã.** O estado do turno determina cor, label e ação; um único `hx-post` devolve o fragmento do botão já no novo estado. Sem menu, sem navegação hierárquica, sem tabelas.
-
-Evolução prevista: a Fase 5 acrescenta um terceiro estado, «em pausa», com a ação secundária «Iniciar pausa» enquanto se está em turno. A Fase 6 acrescenta «Os meus turnos» ao lado do histórico e das férias. O botão continua a ser o centro do ecrã.
-
-**Dispositivo partilhado versus pessoal.** Num tablet do restaurante, usado por toda a equipa, a sessão PIN termina logo depois de cada marcação: o ecrã mostra o nome e a ação feita («Marta, entrada às 09:14») e volta à seleção de trabalhador. Num telemóvel pessoal ativado, a sessão mantém-se até 12 horas (`PIN_SESSION_AGE`). O gerente escolhe o modo quando ativa o dispositivo. No tablet partilhado, uma sessão sem marcação termina ao fim de 90 segundos no ecrã, ou de 5 minutos no servidor (`KIOSK_SESSION_AGE`).
+Entra-se com email e password. A sessão dura o defeito do Django (14 dias), por isso a password raramente se escreve. A conta é criada pelo admin ou pelo gerente com uma password provisória, que o colaborador muda no primeiro login (secção 7). Continua a ser uma PWA instalável (`start_url` `/equipa/`), e o service worker guarda só a casca e as últimas páginas vistas.
 
 ### `base_manage.html` — backoffice
 
@@ -265,11 +301,13 @@ Conteúdo denso, tabelas com pesquisa e filtros, figuras mono alinhadas à direi
 
 ### `accounts`
 
-**`User(AbstractUser)`** — `email` como `USERNAME_FIELD`, `restaurant` (FK), `role` (choices: `ADMIN`, `MANAGER`, `STOCK`, `STAFF`), `staff_pin` (hash, nullable), `pin_set_at`.
+**`User(AbstractUser)`** — `email` como `USERNAME_FIELD`, `restaurant` (FK), `role` (choices: `ADMIN`, `MANAGER`, `STOCK`, `STAFF`), `must_change_password` *(Fase 7)*. Até à Fase 7 guardava também o PIN (`staff_pin`, `pin_set_at`), que passou para o `Worker`.
 
 ### `workers`
 
-**`Worker`** — `restaurant` (FK), `full_name`, `contact`, `job_title`, `is_active`, `user` (OneToOne, nullable), `start_date` (nullable), `notes`.
+**`Worker`** — `restaurant` (FK), `full_name`, `contact`, `job_title`, `is_active`, `user` (OneToOne, nullable), `start_date` (nullable), `notes`, `kiosk_code` (hash, nullable) e `code_set_at` *(Fase 7)*.
+
+O código de ponto pertence à ficha e não à conta: quem não tem email pica no tablet na mesma, só não tem app. Ter conta é opcional; para picar, é preciso ter código.
 
 Sem documentos laborais, contratos, recibos ou cálculo salarial — excluídos pelo docx.
 
@@ -325,6 +363,8 @@ Estas regras são o núcleo do sistema. Cada uma tem um teste dedicado na secç�
 | Ação | Admin | Gerente | Resp. stock | Colaborador |
 |---|:--:|:--:|:--:|:--:|
 | Criar utilizadores, atribuir perfis | ✓ | | | |
+| Criar contas da app e repor a password, para Colaborador e Resp. stock *(Fase 7)* | ✓ | ✓ | | |
+| Definir e repor o código de ponto *(Fase 7)* | ✓ | ✓ | | |
 | Configurações do restaurante | ✓ | | | |
 | Gerir trabalhadores | ✓ | ✓ | | |
 | Consultar ponto da equipa | ✓ | ✓ | | |
@@ -333,7 +373,7 @@ Estas regras são o núcleo do sistema. Cada uma tem um teste dedicado na secç�
 | Criar e editar artigos | ✓ | ✓ ⚠ | ✓ | |
 | Registar movimentos de stock | ✓ | ✓ ⚠ | ✓ | |
 | Consultar stock, alertas e histórico | ✓ | ✓ | ✓ | |
-| Marcar o próprio ponto | ✓ | ✓ | ✓ | ✓ |
+| Marcar o próprio ponto (só no tablet, desde a Fase 7) | ✓ | ✓ | ✓ | ✓ |
 | Ver o próprio histórico | ✓ | ✓ | ✓ | ✓ |
 | Submeter pedido de férias | ✓ | ✓ | ✓ | ✓ |
 | *Fases 5 e 6* | | | | |
@@ -356,18 +396,23 @@ Regra do estudo da Factorial: os perfis continuam fixos. Não há grupos de perm
 
 ⚠ **Decisão a validar com AT** (sinalizada no próprio docx): se o gerente também pode criar artigos e registar movimentos, ou se isso é exclusivo do responsável de stock. **Pressuposto atual: pode.** É mais permissivo, e restringir depois é uma linha de código; alargar depois obriga a repensar fluxos.
 
-### Dois caminhos de autenticação
+### Autenticação e código de ponto (desde a Fase 7)
 
 | Caminho | Quem | Dá acesso a |
 |---|---|---|
-| Email + password | Admin, Gerente, Resp. stock | backoffice completo |
-| PIN | qualquer trabalhador | **apenas** a vista staff |
+| Email + password | Admin, Gerente, Resp. stock | backoffice, e a própria app |
+| Email + password | Colaborador | **apenas** a app do colaborador |
+| Nome + código no tablet | qualquer trabalhador com código | **apenas** uma marcação; não cria sessão |
 
-Fronteira de segurança explícita: **um PIN nunca abre o backoffice**, mesmo que o titular seja gerente. Quem gere entra por email e password.
+Fronteira de segurança explícita: **um código de ponto nunca abre uma sessão**, nem na app nem no backoffice, mesmo que o titular seja gerente. O quiosque não faz login: o código serve para uma marcação e mais nada.
 
-Implementação do PIN: hash com o hasher de passwords do Django, throttling por tentativas falhadas, dispositivo do restaurante identificado por token de sessão de longa duração, PIN reposto pelo gerente.
+**Código de ponto.** De 4 a 6 algarismos, guardado no `Worker` com o hasher de passwords do Django. É definido e reposto pelo gerente. Ao fim de 5 falhas seguidas, o código desse trabalhador fica bloqueado durante 60 segundos. O ecrã de nomes só abre num navegador ativado pelo gerente como dispositivo do restaurante (cookie assinado, 180 dias, com a área de trabalho). Já não há o modo «telemóvel pessoal»: um cookie antigo desse modo deixa de dar acesso ao quiosque.
 
-⚠ **Decisão a validar com AT.** O docx exclui geolocalização, QR code, biometria e relógio físico, mas não se pronuncia sobre PIN. Racional: obrigar pessoal de cozinha a escrever email e password em serviço torna o registo de ponto inutilizável, o que põe em risco o próprio módulo. Mitigante: o PIN dá a menor superfície de acesso possível — o próprio ponto, o próprio histórico e o próprio pedido de férias.
+**Contas da app.** São criadas pelo admin ou pelo gerente a partir da ficha do trabalhador. O sistema gera uma password provisória, que só se mostra uma vez, e o colaborador é obrigado a mudá-la no primeiro login (`must_change_password`). Esquecer a password resolve-se da mesma maneira: o gerente gera uma nova provisória. Não há recuperação por email, porque o envio de emails ainda não está configurado (secção 12).
+
+O gerente só cria e gere contas com os perfis Colaborador e Responsável de stock. Contas de Gerente e de Admin só o admin as gere, porque o número de administradores deve ser reduzido. Ninguém muda o próprio perfil nem repõe a própria password neste ecrã.
+
+⚠ **Decisão a validar com AT.** O docx exclui geolocalização, QR code, biometria e relógio físico, mas não se pronuncia sobre um código de marcação. Racional: obrigar pessoal de cozinha a escrever email e password em serviço torna o registo de ponto inutilizável. Picar só no tablet do restaurante dá credibilidade ao registo, porque ninguém marca a entrada a caminho do trabalho, e o código só dá acesso a uma marcação.
 
 ---
 
@@ -428,6 +473,8 @@ Alertas são visuais. Sem email, SMS ou notificações nesta fase.
 *Fora do docx — requisito do TM. Depende de: Fase 2.*
 **Estado:** 🟡 Em curso
 
+> **A Fase 7 substitui parte desta fase:** o login por PIN, o botão de ponto no telemóvel, a fila offline e o modo quiosque com sessão. Os itens ficam abaixo como histórico. Desta fase continuam em vigor o histórico próprio, o pedido de férias e a PWA.
+
 - [x] Login por PIN e ecrã de seleção de trabalhador no dispositivo do restaurante.
 - [x] Ecrã de ponto com o botão de estado descrito na secção 5.
 - [x] Histórico próprio em talões; totais do dia e da semana em mono.
@@ -471,7 +518,7 @@ O MVP regista entradas e saídas. Esta fase dá ao gerente o que precisa para fe
 
 **Ecrãs do ciclo principal**
 
-- [~] Ecrã de ponto do colaborador com pausa: em turno, o ecrã mostra «Iniciar pausa» e «Saída»; em pausa, mostra «Terminar pausa». Continua a ser um único botão de estado principal (secção 5), e cumpre a aceitação da Fase 3 (5 segundos, 2 toques). *Feito e testado no servidor, incluindo pausas da fila offline. Falta ver no telemóvel e decidir se o estado «em pausa» (contorno `aco`, sem cor) se lê bem.*
+- [~] Ecrã de ponto do colaborador com pausa: em turno, o ecrã mostra «Iniciar pausa» e «Saída»; em pausa, mostra «Terminar pausa». Continua a ser um único botão de estado principal (secção 5), e cumpre a aceitação da Fase 3 (5 segundos, 2 toques). *Feito e testado no servidor, incluindo pausas da fila offline. Falta ver no telemóvel e decidir se o estado «em pausa» (contorno `aco`, sem cor) se lê bem. Desde a Fase 7, este ecrã está no tablet partilhado e não no telemóvel.*
 - [x] Pedido de correção pelo colaborador (`attendance.CorrectionRequest`: `entry`, `kind` com criar, alterar ou apagar, valores antigos e novos, `status`, `decided_by`). O gerente aprova ou recusa, e a decisão fica registada no histórico de correções.
 - [x] Registos por resolver: uma entrada sem saída que passe de um limite fixo (valor a decidir, por exemplo 14 horas) fica pendente e não conta para os totais até ser resolvida (R-013). O colaborador vê o aviso no ecrã de ponto e pode propor a hora de saída com um pedido de correção. O gerente vê o número de registos por resolver no dashboard. Na Fase 6 este limite passa a vir das horas previstas no turno.
 
@@ -534,9 +581,47 @@ Módulo novo, numa app `shifts`. É o primeiro passo do ciclo semanal do gerente
 
 ---
 
+### Fase 7 — Quiosque e app do colaborador separados
+*Decisão do TM a 2026-10-25. Substitui o login por PIN, o botão de ponto no telemóvel, a fila offline e o modo quiosque da Fase 3. Depende de: Fases 3, 5 e 6.*
+**Estado:** 🟡 Código completo e testado, incluindo a aceitação passo a passo nos testes de `tests/test_staff.py` e `tests/test_contas.py`. O quiosque foi visto num browser de secretária. Falta um tablet real, a app num telemóvel real e a aprovação da AT.
+
+O ponto passa a ser picado só no tablet partilhado, com nome e código, e a vista do colaborador passa a ser uma app de consulta e pedidos, com email e password (secções 5 e 7).
+
+**Modelo e dados**
+
+- [x] `Worker.kiosk_code` e `Worker.code_set_at`. Uma data migration copia para a ficha os PINs que estavam no `User`, e depois `User.staff_pin` e `User.pin_set_at` são removidos.
+- [x] `User.must_change_password`.
+
+**Quiosque (app `kiosk`, em `/quiosque/`)**
+
+- [x] Ecrã de nomes: só num dispositivo ativado, só com trabalhadores ativos e com código, do restaurante do dispositivo.
+- [x] Ecrã do código com teclado numérico no ecrã. Bloqueio do código de um trabalhador durante 60 segundos ao fim de 5 falhas.
+- [x] Ecrã de ações com as ações possíveis no estado atual, e as pausas como botões ao lado da Saída. Mostra desde quando há uma entrada aberta.
+- [x] Marcação com um token assinado de 60 segundos, de uso único, sem login. A origem é «tablet partilhado» e a área vem do dispositivo.
+- [x] Confirmação da entrada: saída prevista ou «Sem turno previsto hoje», a saída esquecida que a entrada pôs de lado, os registos por resolver e «Pede a correção na app». Fica até «OK» ou 15 segundos. As outras confirmações são mínimas e duram 5 segundos.
+- [~] Sem rede, o ecrã diz que nada foi registado. *Visto no browser com uma resposta de erro do servidor (405). O caso sem rede usa o mesmo aviso (`htmx:send-error`), mas ainda não foi visto com o tablet desligado da rede.*
+- [x] Ativação do dispositivo sem modo pessoal. Um cookie antigo em modo pessoal deixa de abrir o quiosque.
+
+**App do colaborador**
+
+- [x] Entrada com email e password (`/conta/entrar/`); `/equipa/` sem sessão leva ao login.
+- [x] Ecrã inicial sem botão de ponto, com o estado do dia só para leitura, o turno previsto de hoje, os totais, os registos por resolver e a navegação.
+- [x] Remover o `MarkView`, o login por PIN, a fila offline do `app.js` e as sessões PIN (`PIN_SESSION_KEY`, `KIOSK_SESSION_KEY`). Cache do service worker para v5.
+
+**Contas e códigos no backoffice**
+
+- [x] Ficha do trabalhador → «Código de ponto»: definir ou repor, sem exigir conta.
+- [x] Ficha do trabalhador → «Conta da app»: criar a conta com email e perfil, gerar uma password provisória (mostrada uma vez), repor a password e mudar o perfil. O gerente só gere contas de Colaborador e Resp. stock; o admin gere todas.
+- [x] Mudança obrigatória da password provisória no primeiro login, em qualquer das superfícies.
+- [x] `manage.py demo` com códigos para a Marta, o Rui e o gerente, e o gerente com ficha. Uma conta que já tenha ficha fica com ela.
+
+*Aceitação:* o gerente cria a ficha da Marta, define o código e cria a conta da app. No tablet, a Marta escolhe o nome, escreve o código e pica a entrada, e vê a saída prevista. Depois inicia e termina uma pausa e pica a saída, sem que ninguém fique com sessão aberta no tablet. No telemóvel, entra com a password provisória, é obrigada a mudá-la e vê o turno do dia e os totais, sem botão de ponto. O gerente também pica no tablet com o seu código, e o código não lhe abre o backoffice.
+
+---
+
 ## 9. Estados e feedback
 
-Regra transversal, aplicada em todos os ecrãs das duas superfícies.
+Regra transversal, aplicada em todos os ecrãs das três superfícies.
 
 - **Toast de confirmação** em todas as ações de escrita, com o mesmo verbo do botão que a despoletou: "Registar entrada" → "Entrada registada".
 - **Indicador de loading** (`hx-indicator`) em todas as ações HTMX; botão desativado durante o pedido, para eliminar duplos submits.
@@ -544,8 +629,9 @@ Regra transversal, aplicada em todos os ecrãs das duas superfícies.
 - **Erros em português simples**, que dizem o que falhou e como resolver. Não pedem desculpa, não são vagos.
 - **Confirmação explícita** antes de ações irreversíveis: ajuste de stock, recusa de férias, correção de ponto.
 - Uma ação principal clara por ecrã. Formulários curtos. Listagens sempre com pesquisa.
-- **Quando uma ação é recusada por haver coisas por resolver, a mensagem diz quantas são e leva até elas.** Por exemplo, «Faltam 3 registos de 2 trabalhadores» com uma ligação para a lista. Aplica-se ao fecho do mês, à publicação de turnos com conflitos e à sincronização offline recusada.
-- **Estados de espera visíveis:** «por enviar» na fila offline, «pendente» nos pedidos, «rascunho» nos turnos. Uma coisa que ainda não teve efeito nunca parece feita.
+- **Quando uma ação é recusada por haver coisas por resolver, a mensagem diz quantas são e leva até elas.** Por exemplo, «Faltam 3 registos de 2 trabalhadores» com uma ligação para a lista. Aplica-se ao fecho do mês e à publicação de turnos com conflitos.
+- **Estados de espera visíveis:** «pendente» nos pedidos, «rascunho» nos turnos. Uma coisa que ainda não teve efeito nunca parece feita.
+- **Uma marcação que falhou nunca parece feita.** No quiosque, sem rede ou com erro do servidor, o ecrã diz «Nada foi registado» e o que fazer a seguir (Fase 7).
 
 ---
 
@@ -565,7 +651,7 @@ Integração com POS e atualização de stock por vendas. Fichas técnicas e rec
 - **Integrações de payroll** (Primavera, Sage) e terminais de ponto: só depois de a exportação mensal estar em uso, e se o contabilista do piloto o pedir. Cada uma obriga a um programa de parceiros com meses de espera (BR-005).
 
 ### Não fazer
-- **Biometria:** nem reconhecimento facial nem outros dados biométricos. A Lei 58/2019, art. 28, só permite tratá-los para assiduidade e controlo de acessos, e o PIN já resolve a marcação.
+- **Biometria:** nem reconhecimento facial nem outros dados biométricos. A Lei 58/2019, art. 28, só permite tratá-los para assiduidade e controlo de acessos, e o código de ponto já resolve a marcação.
 - **Contadores de férias:** nem vários países, nem proporcionalidade, nem escalões, nem saldos negativos transitados.
 - **Aprovação em vários níveis.**
 - **Grupos de permissões configuráveis:** os quatro perfis da secção 7 chegam.
@@ -595,15 +681,19 @@ Um teste por invariante, no mínimo:
 | `test_checkout_without_checkin_rejected` | saída sem entrada devolve erro |
 | `test_staff_cannot_see_others_data` | colaborador não acede a ponto nem férias de terceiros |
 | `test_staff_cannot_edit_items` | colaborador recebe 403 nas views de stock |
-| `test_pin_does_not_open_backoffice` | sessão criada por PIN é rejeitada em todas as views de gestão |
+| `test_kiosk_code_never_opens_a_session` | depois de picar com código, quem está no tablet continua anónimo: nem app nem backoffice *(Fase 7; substitui `test_pin_does_not_open_backoffice`)* |
 | `test_vacation_overlap_flagged` | sobreposição com pedido aprovado é assinalada |
 
-Testes novos da Fase 3 (do estudo):
+Testes da Fase 7, que substituem os da sessão PIN e da fila offline da Fase 3:
 
 | Teste | Verifica |
 |---|---|
-| `test_shared_device_ends_pin_session_after_mark` | num dispositivo partilhado a sessão PIN termina depois de marcar |
-| `test_rejected_offline_mark_reports_reason` | uma marcação offline recusada pelo servidor devolve um motivo legível, não um erro genérico |
+| `test_next_person_does_not_inherit_previous` | duas pessoas seguidas no tablet: a segunda não herda nada da primeira |
+| `test_action_token_expires` | um token de marcação com mais de 60 segundos, ou de outra pessoa, é recusado |
+| `test_entry_confirmation_shows_planned_exit_and_forgotten_exit` | a confirmação da entrada mostra a saída prevista e a saída esquecida |
+| `test_staff_app_has_no_mark_button` | a app do colaborador não tem botão de ponto e não aceita marcações |
+| `test_manager_cannot_manage_manager_accounts` | o gerente só cria e gere contas de Colaborador e Resp. stock |
+| `test_temporary_password_must_be_changed` | uma conta com password provisória só chega ao ecrã de mudar a password |
 
 Quando as Fases 5 e 6 arrancarem, juntam-se estes testes. A lista completa de testes do estudo, um por regra, está em `re-factorial/clone/parity.md`.
 
@@ -633,14 +723,15 @@ Seguir os critérios de aceitação de cada fase (secção 8), que são os do do
 
 ### Antes do piloto
 
-- Vista staff testada a 375px de largura **e num telemóvel real**, não só no emulador.
+- App do colaborador testada a 375px de largura **e num telemóvel real**, não só no emulador.
+- Quiosque testado num tablet real, ao alto e deitado: nome, código e ação em menos de 5 segundos.
 - Instalação da PWA verificada em Android e iOS.
 - Percurso completo dos quatro perfis com as fixtures de demonstração.
 - Build do Tailwind a correr em produção sem watch, com `--minify`.
 - `collectstatic`, HTTPS, backups e restauro de backup testado uma vez.
 - `pytest` a correr também contra PostgreSQL, para que os locks e as constraints sejam testados de verdade.
-- Marcação num tablet partilhado por dois colaboradores seguidos: o segundo não herda a sessão do primeiro.
-- Marcação recusada em modo offline (por exemplo, uma entrada com um turno já aberto): o colaborador vê o motivo.
+- Marcação num tablet partilhado por dois colaboradores seguidos: o segundo não herda nada do primeiro.
+- Tablet sem rede: o ecrã diz que nada foi registado, e o gerente acrescenta o registo depois.
 - Resposta da validação jurídica do registo de tempos (secção 12) arquivada e refletida nas regras.
 
 ---
@@ -657,14 +748,14 @@ Bloqueiam a Fase 4, não a Fase 0. O desenvolvimento começa sem elas.
 | RGPD e tratamento de dados de trabalhadores | AT | retenção, exportação, consentimento, política de privacidade; DPA com o restaurante e lista de subcontratantes (BR-006) |
 | Política de backups e recuperação | TM | frequência, retenção, teste de restauro |
 | Permissões do gerente sobre stock (⚠ secção 7) | AT | uma linha nos mixins |
-| PIN para o staff (⚠ secção 7) | AT | Fase 3 completa depende disto |
+| Código de ponto só no tablet partilhado (⚠ secção 7) | AT | Fase 7; o TM já decidiu e implementou |
 | Cliente piloto e disponibilidade semanal AT/TM | AT | calendário das sprints |
 | Âmbito das Fases 5 e 6 (saldo anual e planeamento, que o docx exclui do MVP) | AT | se as fases arrancam e em que ordem face ao piloto |
 | Validação jurídica do registo de tempos, férias e descansos (Código do Trabalho; Q-001 e Q-010 do estudo) | AT, com contabilista ou jurista | pode bloquear o piloto; define os valores por defeito da Fase 5 |
 | Formato da exportação mensal | AT, com o contabilista | formato do ficheiro na Fase 5 |
 | Contrato coletivo da restauração (Q-010) e dias de férias extra (Q-008) | AT, com contabilista | turnos, folgas, trabalho noturno e saldo por defeito |
 | Limite de horas para um registo ficar por resolver (antes do planeador) | AT + TM | um número em configuração; proposta: 14 horas |
-| Dispositivo partilhado ou pessoal: o telemóvel pessoal do colaborador pode ser ativado? | AT | modo quiosque da Fase 3 |
+| Envio de emails (recuperação de password, avisos) | TM | enquanto não houver, a password esquecida resolve-se com uma provisória gerada pelo gerente (Fase 7) |
 
 ---
 
@@ -682,6 +773,7 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 
 | Data | Fase | O que foi feito | Por fechar | Próximo passo |
 |---|---|---|---|---|
+| 2026-10-25 | 7 | **Fase 7 completa em código: o ponto pica-se só no tablet partilhado e a app do colaborador passa a ser de consulta e pedidos.** Decidido em conversa com o TM; secções 1, 3, 5, 6, 7, 9, 10, 11 e 12 atualizadas.<br>• **Dados:** o código de ponto passou do `User` para o `Worker` (`kiosk_code`, `code_set_at`); a data migration copiou o PIN que havia (o da Marta) e removeu os campos do utilizador. `User.must_change_password`.<br>• **Quiosque (app `kiosk`, `/quiosque/`):** nomes → código no teclado do ecrã → ações do estado atual, com as pausas ao lado da Saída. Sem sessão: o código devolve um token assinado de 60 s e de uso único. Confirmação da entrada com a saída prevista, a saída esquecida e os registos por resolver, até «OK» ou 15 s; as outras durante 5 s. Aviso no ecrã de ações quando já passou do fim previsto. `hx-boost` e um aviso «Nada foi registado» para falhas de rede ou do servidor. Bloqueio de 60 s ao fim de 5 falhas, por trabalhador.<br>• **App:** sem botão de ponto, com o estado do dia, o turno de hoje, os totais e as três entradas. Login por email; o login por PIN, o `MarkView`, a fila offline e as sessões PIN saíram. Service worker v5.<br>• **Backoffice:** «Código de ponto» e «Conta da app» na lista de trabalhadores. A conta é criada com uma password provisória mostrada uma vez; o gerente só gere Colaborador e Resp. stock. O middleware obriga a mudar a provisória. A ativação do dispositivo perdeu o modo pessoal.<br>• **Testes:** 216 (eram 195). Os da sessão PIN e da fila offline foram substituídos pelos do quiosque e das contas. Os testes passaram a usar um hasher rápido e a limpar a cache: a suite desceu de 8 minutos para menos de 15 segundos.<br>• **No browser:** quiosque visto de ponta a ponta (nomes, código, entrada, regresso aos 15 s, ações em turno, pausa e regresso aos 5 s), app, lista de trabalhadores e conta. Daí saíram duas correções: o formulário do código publicava para `/quiosque/` (com `hx-push-url="false"` o endereço não muda) e o teclado subia quando a dica desaparecia. Nos testes apareceu também o token repetido no mesmo segundo, corrigido com um valor aleatório.<br>`check` e `makemigrations --check` limpos; migrações e `demo` aplicados ao `db.sqlite3` (cópia de segurança fora do repositório). Nada commitado. | O aviso sem rede não foi visto com o tablet desligado. Tablet e telemóvel reais por testar. Cache local: o bloqueio do código e o uso único dos tokens só valem dentro de um processo (ver Notas de desvio). A Marta ficou com uma entrada e uma pausa abertas no `db.sqlite3` de desenvolvimento, do teste no browser. | Testar num tablet real: duas pessoas seguidas, o tablet em modo avião e a leitura do teclado com luz má. No telemóvel: criar a conta de alguém, entrar com a provisória e mudá-la. Levar à AT a decisão do código no tablet (secção 12). |
 | 2026-10-24 (5ª) | 5, 6 | **Fase 5 completa em código e Fase 6 inteira.** Commits `0764720`, `b7b9495`, `82b3aa9` e `f2d45cc`.<br>• **Por resolver e pedidos de correção:** uma entrada sem saída que passe do limite (14 h, `ATTENDANCE_UNRESOLVED_HOURS`) fica por resolver e conta zero. Já não impede a entrada seguinte: ao marcar nova entrada, a antiga fica com `missing_exit`. O colaborador pede correção no histórico ou a partir do aviso no ecrã de ponto; o gerente decide em Ponto → Pedidos, e a aprovação passa pelos serviços e fica no histórico.<br>• **Ausências:** `AbsenceType` com cinco tipos de origem, meio dia, aprovação automática, ausência do gerente já aprovada, cancelamento pelo colaborador. `Allowance` com transitados que caducam e ecrã de saldos. Feriados nacionais calculados, municipais por restaurante. `BlockedPeriod` recusa na submissão e aparece antes de pedir.<br>• **Configuração:** a entrada do rail deixou de ser um marcador. CRUD para o Admin (áreas, tipos de pausa e de ausência, feriados, períodos bloqueados) e turnos guardados para o gerente.<br>• **Fecho do mês:** `MonthClose`, aprovação por trabalhador ou de todos os prontos, recusa com contagem, bloqueio nos serviços (incluindo marcações offline atrasadas), reabertura com motivo, aviso no dashboard e CSV (`;`, BOM, só aprovados).<br>• **Planeador (app `shifts`):** turnos guardados, grelha semanal com painel por célula (HTMX), lote, cópia da semana anterior, folgas, conflitos (sobreposição, folga, ausência aprovada, menos de 11 h de descanso), publicação com resumo do que muda e despublicação. Ausência aprovada passa turnos a reserva; cancelada, volta a rascunho. «Os meus turnos» na vista staff. Na vista da equipa, o previsto ao lado do realizado, com atraso, saída fora de horas e falta de marcação. O limite dos registos por resolver passa a ser o fim do turno publicado mais 4 h. Folgas e dias sem turno em semanas planeadas não descontam férias.<br>195 testes; `check` e `makemigrations --check` limpos; migrações aplicadas ao `db.sqlite3`. | **Ninguém viu os ecrãs novos:** a extensão do Chrome não estava ligada, por isso o planeador, os pedidos, o fecho do mês, a configuração e os saldos só foram verificados pelos testes. R-012 (pergunta na saída tardia) não foi feito, como o plano deixava em aberto. Anexos nos tipos de ausência ficaram de fora (ver Notas de desvio). O `demo` não cria turnos. | Rever no browser, com `manage.py demo`, os ecrãs novos: Turnos (sobretudo a largura da grelha com o painel ao lado), Ponto → Pedidos e Fecho do mês, Férias → Saldos e Configuração. Depois levar à AT o âmbito das Fases 5 e 6 e os valores por confirmar (14 h, 22 dias, 11 h de descanso, formato do CSV). |
 | 2026-10-24 (4ª) | 5 | **Fase 5 arrancada: primeiro bloco (modelo e persistência) e ecrã de ponto com pausa.** Antes, commit `f34f92d` com o trabalho da Fase 3 que estava por commitar.<br>• **Áreas:** `core.WorkArea`, com Cozinha, Sala e Bar de origem (signal e data migration). O gerente escolhe a área ao ativar o dispositivo; o cookie guarda-a e a entrada herda-a. Uma área arquivada deixa de ser herdada.<br>• **`TimeEntry`:** `work_date` calculado no `save()` na hora local, `work_area` e `source` (tablet partilhado, telemóvel, gerente). Data migration preenche o `work_date`. A vista da equipa e os totais da vista staff agrupam por `work_date`; a vista da equipa ganhou a coluna «Trabalhado», a área e as pausas.<br>• **Pausas:** `BreakType` (Refeição não paga, Pausa curta paga, de origem) e `Break`, com constraint de uma pausa aberta por registo. Serviços `start_break` e `end_break`; `close_shift` fecha a pausa aberta. `TimeEntry.worked()` desconta as não pagas.<br>• **Ecrã de ponto:** em turno, «Saída» mais um botão por tipo de pausa; em pausa, «Terminar pausa». A fila offline (`app.js`) guarda `tipo_pausa`. Cache do service worker para v4.<br>• **Histórico de correções:** `EntryCorrection` com antes e depois. A página de correção mostra-o em talões. As correções antigas ficaram com «valor anterior não guardado».<br>• **Falha corrigida:** `correct_entry()` usava os valores da instância que recebia. Com uma instância antiga, uma correção só da entrada reabria um turno já fechado. Agora relê o registo com lock.<br>25 testes novos, 106 no total; `check` e `makemigrations --check` limpos; migração aplicada ao `db.sqlite3` de desenvolvimento (9 registos, 1 correção passada para o histórico). | Ecrã de pausa por ver num telemóvel. Áreas e tipos de pausa só se configuram no admin do Django (ver Notas de desvio). Do resto da Fase 5 falta tudo: pedidos de correção, registos por resolver, ausências, saldo, feriados, períodos bloqueados, fecho do mês e exportação. | Seguir a ordem da Fase 5: pedido de correção pelo colaborador (`CorrectionRequest`) e depois registos por resolver. Em paralelo, levar à AT a aprovação do âmbito, que continua por dar. |
 | 2026-10-24 (3ª) | 3 | **Modo quiosque e falhas de sincronização visíveis.**<br>• **Dispositivo:** o cookie passa a guardar o modo, partilhado ou pessoal, e o gerente escolhe-o na ativação.<br>• **Sessão no tablet partilhado:** expira em 5 minutos e termina a seguir a cada marcação. O HTMX recebe `HX-Redirect` para o PIN, onde aparece a confirmação com o nome e a hora. No ecrã, sai sozinha ao fim de 90 segundos sem marcação.<br>• **`MarkView`:** aceita `acao` e `trabalhador` e recusa a marcação quando a ação já não corresponde ao estado do turno ou quando é de outra pessoa. Os pedidos da fila (`X-Opero-Fila`) recebem JSON, 200 ou 409 com o motivo.<br>• **`app.js`:** a fila guarda a ação, quem marcou e o estado, e a lista «Marcações sem rede» aparece no ecrã de ponto.<br>• **Falha corrigida:** a fila marcava em nome de quem tivesse a sessão aberta no momento do envio.<br>12 testes novos, 81 no total; `check` e `makemigrations --check` limpos; `app.js` passa no `node --check`. | Os dois itens estão `[~]` porque o comportamento do `app.js` (lista da fila, dispensar, redirecionamento depois de sincronizar) não foi verificado num browser. Os dispositivos já ativados contam como partilhados: o telemóvel pessoal de um colaborador tem de ser reativado como pessoal. | Testar no telemóvel e num tablet: duas pessoas seguidas no tablet partilhado, marcação em modo avião, e uma recusa forçada (por exemplo, o gerente fecha o turno enquanto o telemóvel está offline). |
@@ -701,6 +793,14 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 
 Alterações ao plano decididas durante a execução. Se algo aqui contradiz uma secção acima, **corrigir também a secção** — este registo é o histórico, não a fonte de verdade.
 
+- **2026-10-25 · Código de ponto na ficha, não na conta.** Quem não tem email pica na mesma; ter conta da app é opcional. A migração copiou os PINs existentes sem os pedir de novo.
+- **2026-10-25 · Sem fila offline.** Desaparecem o `marcado_em` enviado pelo cliente e o cabeçalho `X-Opero-Fila`: a hora da marcação é sempre a do servidor. `TimeEntry.Source.TELEMOVEL` fica nas escolhas para os registos antigos, mas já nada o cria.
+- **2026-10-25 · Token de marcação com valor aleatório e de uso único.** O `signing` só tem resolução de segundos: sem o valor aleatório, duas marcações da mesma pessoa no mesmo segundo davam o mesmo token, e a segunda passava por repetida. O uso único fica na cache e trava também o duplo toque.
+- **2026-10-25 · Bloqueio do código por trabalhador, não por dispositivo.** O quiosque não tem sessão. Um colega pode bloquear o código de outro durante um minuto, o que se aceita.
+- **2026-10-25 · Cache local (LocMem) por agora.** O bloqueio do código e o uso único dos tokens vivem na cache de cada processo. Com vários processos em produção, passam a precisar de uma cache partilhada (a cache em base de dados do Django chega). Fica para o ambiente de demonstração da Fase 4.
+- **2026-10-25 · Sessões PIN antigas.** As que já estavam abertas antes desta mudança continuam válidas até expirar (no máximo 12 horas) e passam a ver a app nova. Não se invalidaram à força.
+- **2026-10-25 · «Conta de acesso» no formulário do trabalhador mantida.** Serve para ligar uma conta que já existe, por exemplo a do gerente. As contas novas criam-se em «Conta da app».
+- **2026-10-25 · Hasher rápido e cache limpa nos testes** (`tests/conftest.py`). O hasher de produção fazia a suite demorar 8 minutos.
 - **2026-09-04 · whitenoise acrescentado ao stack** (servir estáticos em produção sem depender do proxy; em dev `WHITENOISE_AUTOREFRESH=True`). Refletido na tabela da secção 2 a 2026-10-24.
 - **2026-09-04 · Tailwind fixado em v3.4.17** (a v4 abandonou o `tailwind.config.js`; o plano assume config JS). Tokens de cor definidos como triplos RGB em `input.css` para os modificadores de opacidade (`/25`) funcionarem.
 - **2026-09-04 · Fila offline em app.js, não no service worker** — o SW só faz cache do shell (GET); os POST falhados do ponto entram numa fila em localStorage gerida pela página, que reenvia com `marcado_em` ao voltar a rede. Mais simples de depurar que interceção de POST no SW, e cumpre o requisito do timestamp original. Limite: o servidor recusa `marcado_em` no futuro.

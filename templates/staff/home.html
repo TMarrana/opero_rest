@@ -1,38 +1,57 @@
 {% extends "base_staff.html" %}
-{% block title %}Ponto{% endblock %}
+{% block title %}Início{% endblock %}
 {% block content %}
+{% comment %}App do colaborador (secção 5, Fase 7): sem botão de ponto. O
+estado do dia é só para leitura; o ponto pica-se no tablet.{% endcomment %}
 <header>
   <p class="text-lg">Olá, <span class="font-semibold">{{ worker.full_name }}</span></p>
   <p class="font-dados text-sm text-ardosia">{% now "H:i · l" %}</p>
 </header>
 
-<div class="mt-10 flex flex-1 flex-col">
+<div class="mt-8 flex flex-1 flex-col">
   {% for r in por_resolver %}
   <a href="{% url 'staff:correcao' r.pk %}" class="mb-4 block rounded-md border border-chama px-4 py-3 text-sm text-aco">
     <span class="font-semibold text-chama">Saída por indicar.</span>
     Entrada de <span class="font-dados">{{ r.check_in|date:"d/m" }} às {{ r.check_in|date:"H:i" }}</span> sem saída: diga a que horas saiu.
   </a>
   {% endfor %}
-  {% include "partials/staff/ponto.html" %}
 
-  {# Marcações da fila offline deste colaborador; preenchido por app.js. #}
-  <section id="fila-ponto" class="mt-6 hidden" aria-live="polite">
-    <h2 class="text-xs font-semibold uppercase tracking-wide text-ardosia">Marcações sem rede</h2>
-    <ul class="mt-2 space-y-2"></ul>
+  <section class="rounded-lg border px-5 py-5 {% if pausa %}border-aco{% elif entry %}border-servico{% else %}border-ardosia/40{% endif %}" aria-label="Estado de hoje">
+    {% if pausa %}
+    <p class="text-sm font-semibold uppercase tracking-wide text-aco">Em pausa</p>
+    <p class="mt-1 font-dados text-xl">{{ pausa.break_type.name }} desde {{ pausa.start|date:"H:i" }}</p>
+    {% elif entry %}
+    <p class="text-sm font-semibold uppercase tracking-wide text-servico">Em turno</p>
+    <p class="mt-1 font-dados text-xl">desde {{ entry.check_in|date:"H:i" }}</p>
+    {% else %}
+    <p class="text-sm font-semibold uppercase tracking-wide text-ardosia">Fora de turno</p>
+    {% endif %}
+
+    <div class="mt-4 border-t border-ardosia/30 pt-3">
+      <p class="text-xs font-semibold uppercase tracking-wide text-ardosia">Turno de hoje</p>
+      {% for t in turnos_hoje %}
+      <p class="mt-1 font-dados text-base">{{ t.start_at|date:"H:i" }}&ndash;{{ t.end_at|date:"H:i" }} <span class="font-sans text-sm text-aco/70">{{ t.label }}{% if t.work_area %} · {{ t.work_area.name }}{% endif %}</span></p>
+      {% empty %}
+      <p class="mt-1 text-sm text-aco/70">Sem turno publicado para hoje.</p>
+      {% endfor %}
+    </div>
+    <p class="mt-4 text-xs text-ardosia">O ponto pica-se no tablet do restaurante.</p>
   </section>
 
-  <nav class="mt-auto flex justify-center gap-6 pt-10 text-sm font-medium">
-    <a href="{% url 'staff:turnos' %}" class="text-aco/70 underline underline-offset-4 hover:text-superficie">Turnos</a>
-    <a href="{% url 'staff:historico' %}" class="text-aco/70 underline underline-offset-4 hover:text-superficie">Histórico</a>
-    <a href="{% url 'staff:ferias' %}" class="text-aco/70 underline underline-offset-4 hover:text-superficie">Férias</a>
+  <dl class="mt-6 space-y-2 font-dados text-base">
+    <div class="flex justify-between"><dt class="text-ardosia">Hoje</dt><dd>{{ totais.hoje }}</dd></div>
+    <div class="flex justify-between"><dt class="text-ardosia">Semana</dt><dd>{{ totais.semana }}</dd></div>
+  </dl>
+
+  <nav class="mt-8 grid gap-3 text-base font-semibold" aria-label="Secções">
+    <a href="{% url 'staff:turnos' %}" class="flex min-h-toque items-center justify-between rounded-md border border-ardosia/40 px-4 py-3 hover:bg-aco/10">Os meus turnos <span aria-hidden="true">&rarr;</span></a>
+    <a href="{% url 'staff:historico' %}" class="flex min-h-toque items-center justify-between rounded-md border border-ardosia/40 px-4 py-3 hover:bg-aco/10">Histórico e correções <span aria-hidden="true">&rarr;</span></a>
+    <a href="{% url 'staff:ferias' %}" class="flex min-h-toque items-center justify-between rounded-md border border-ardosia/40 px-4 py-3 hover:bg-aco/10">Férias e ausências <span aria-hidden="true">&rarr;</span></a>
   </nav>
 </div>
 
-{# No tablet partilhado, quem entra e não marca não deixa a sessão aberta ao seguinte. #}
-<form method="post" action="{% url 'accounts:logout' %}" class="mt-6 text-center"
-      {% if quiosque %}x-data x-init="setTimeout(() => $el.submit(), 90000)"{% endif %}>
+<form method="post" action="{% url 'accounts:logout' %}" class="mt-8 text-center">
   {% csrf_token %}
-  <input type="hidden" name="next" value="{% url 'staff:pin_login' %}">
   <button type="submit" class="min-h-toque text-xs text-ardosia underline underline-offset-2">Sair</button>
 </form>
 {% endblock %}
