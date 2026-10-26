@@ -11,6 +11,8 @@
   <div class="flex gap-3">
     {% include "components/botao.html" with label="Histórico" variante="fantasma" href=url_historico|default:"/gestao/stock/historico/" %}
     {% include "components/botao.html" with label="Categorias" variante="fantasma" href="/gestao/stock/categorias/" %}
+    {% url 'inventory:consumos' as url_consumos %}
+    {% include "components/botao.html" with label="Consumos" variante="fantasma" href=url_consumos %}
     {% include "components/botao.html" with label="Novo artigo" href="/gestao/stock/novo/" %}
   </div>
 </div>

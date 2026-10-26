@@ -1,0 +1,35 @@
+{% extends "base_staff.html" %}
+{% load vendas %}
+{% block title %}Os meus consumos{% endblock %}
+{% block content %}
+{% comment %}Os meus consumos (Fase 12): refeições e outros consumos do
+próprio, com o valor ao custo. Só leitura: quem regista é o gerente.{% endcomment %}
+<header class="flex items-baseline justify-between">
+  <h1 class="font-display text-xl font-bold">Os meus consumos</h1>
+  <a href="{% url 'staff:home' %}" class="text-sm text-aco/70 underline underline-offset-4 hover:text-superficie">Voltar</a>
+</header>
+
+<div class="mt-4 flex items-center gap-2">
+  <a href="?mes={{ mes_anterior|date:'Y-m' }}" class="inline-flex min-h-toque min-w-[3rem] items-center justify-center rounded-md border border-ardosia/40 text-sm font-semibold" aria-label="Mês anterior">&larr;</a>
+  <span class="font-dados text-sm font-semibold">{{ mes|date:"m/Y" }}</span>
+  {% if mes_seguinte %}<a href="?mes={{ mes_seguinte|date:'Y-m' }}" class="inline-flex min-h-toque min-w-[3rem] items-center justify-center rounded-md border border-ardosia/40 text-sm font-semibold" aria-label="Mês seguinte">&rarr;</a>{% endif %}
+</div>
+
+{% if consumos %}
+<dl class="mt-4 grid grid-cols-2 gap-3">
+  <div class="rounded-md border border-ardosia/40 px-4 py-3"><dt class="text-xs text-ardosia">Refeições</dt><dd class="font-dados text-xl font-semibold">{{ refeicoes }}</dd></div>
+  <div class="rounded-md border border-ardosia/40 px-4 py-3"><dt class="text-xs text-ardosia">Valor ao custo</dt><dd class="font-dados text-xl font-semibold">{{ total|euros }}</dd></div>
+</dl>
+<div class="mt-4">
+  {% for c in consumos %}
+  <article class="talao-escuro">
+    <time class="block text-xs text-ardosia">{{ c.consumed_on|date:"D d/m" }} · {{ c.get_reason_display }}</time>
+    <p class="mt-0.5 text-sm">{% for l in c.lines.all %}{{ l.item.name }} {{ l.quantity|numero }} {{ l.item.unit }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
+    <p class="font-dados text-sm text-aco/70">{% if c.value is not None %}{{ c.value|euros }}{% else %}sem custo{% endif %}</p>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<p class="mt-6 text-sm text-ardosia">Não há consumos registados em seu nome neste mês. Os consumos são registados pelo gerente.</p>
+{% endif %}
+{% endblock %}

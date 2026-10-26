@@ -156,6 +156,7 @@ class Command(BaseCommand):
         ribeira = self._segunda_casa(restaurant, gerente)
         self._vendas(restaurant, ribeira, gerente)
         self._compras(restaurant, resp_stock)
+        self._consumos(restaurant, gerente, [marta, rui])
 
         self.stdout.write(self.style.SUCCESS("Dados de demonstração prontos."))
         self.stdout.write(
@@ -282,3 +283,38 @@ class Command(BaseCommand):
                 document_date=timezone.localdate() - datetime.timedelta(days=7),
                 lines=[(artigos["Tomate chucha"], Decimal(5), Decimal("1.15"), None)],
             )
+
+    def _consumos(self, esquina, gerente, trabalhadores):
+        """Fase 12: café e água com custo, uma refeição por turno, e os
+        consumos de ontem da Marta, do Rui e uma oferta da casa."""
+        from inventory.consumption import register_consumption
+        from inventory.models import ConsumptionSettings, InternalConsumption
+
+        regras = ConsumptionSettings.for_restaurant(esquina)
+        if regras.meals_per_shift is None:
+            regras.meals_per_shift = 1
+            regras.save()
+        bebidas = Category.objects.get(restaurant=esquina, name="Bebidas")
+        artigos = {}
+        for nome, custo, stock in [("Café (dose)", "0.18", "200"), ("Água 0,5 l", "0.25", "48")]:
+            item, novo = Item.objects.get_or_create(
+                restaurant=esquina, name=nome,
+                defaults={"category": bebidas, "unit": Item.Unit.UN, "minimum_stock": Decimal(24), "reference_cost": Decimal(custo)},
+            )
+            if novo:
+                register_movement(item=item, movement_type="ENTRADA", quantity=Decimal(stock), user=gerente,
+                                  reason="stock inicial de demonstração")
+            artigos[nome] = item
+        if InternalConsumption.objects.filter(restaurant=esquina).exists():
+            return
+        ontem = timezone.localdate() - datetime.timedelta(days=1)
+        for w in trabalhadores:
+            register_consumption(
+                restaurant=esquina, worker=w, reason=InternalConsumption.Reason.REFEICAO, day=ontem, user=gerente,
+                lines=[(artigos["Café (dose)"], Decimal(1)), (artigos["Água 0,5 l"], Decimal(1))],
+            )
+        vinho = Item.objects.get(restaurant=esquina, name="Vinho tinto da casa")
+        register_consumption(
+            restaurant=esquina, worker=None, reason=InternalConsumption.Reason.OFERTA, day=ontem, user=gerente,
+            lines=[(vinho, Decimal(1))], note="mesa 4, aniversário",
+        )

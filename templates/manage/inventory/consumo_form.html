@@ -1,0 +1,66 @@
+{% extends "base_manage.html" %}
+{% block title %}Registar consumo{% endblock %}
+{% block content %}
+<a href="{% url 'inventory:consumos' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Consumos internos</a>
+<h1 class="mt-2 font-display text-2xl font-bold">Registar consumo</h1>
+<p class="mt-1 text-sm text-ardosia">Cada artigo sai do stock agora, valorizado ao custo de referência de hoje.</p>
+
+<form method="post" class="mt-6 max-w-2xl space-y-5">
+  {% csrf_token %}
+  {% if erro %}<p class="rounded-md bg-chama/10 px-4 py-3 text-sm font-medium text-chama" role="alert">{{ erro }}</p>{% endif %}
+  <div class="cartao grid gap-5 p-6 sm:grid-cols-3">
+    <div class="space-y-1.5 sm:col-span-2">
+      <label for="pessoa" class="block text-sm font-medium">Quem consumiu <span class="text-ardosia" aria-hidden="true">*</span></label>
+      <select id="pessoa" name="pessoa" required class="campo-input">
+        <option value="">Escolher…</option>
+        <option value="casa"{% if dados.pessoa == "casa" %} selected{% endif %}>A casa (ofertas, provas, dono)</option>
+        {% for w in trabalhadores %}<option value="{{ w.pk }}"{% if dados.pessoa == w.pk|stringformat:"s" %} selected{% endif %}>{{ w.full_name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="space-y-1.5">
+      <label for="dia" class="block text-sm font-medium">Dia</label>
+      <input id="dia" type="date" name="dia" value="{{ dia }}" max="{{ hoje|date:'Y-m-d' }}" class="campo-input font-dados">
+    </div>
+    <fieldset class="sm:col-span-3">
+      <legend class="text-sm font-medium">Motivo</legend>
+      <div class="mt-2 flex flex-wrap gap-4 text-sm">
+        {% for valor, nome in motivos %}
+        <label class="inline-flex min-h-toque items-center gap-2"><input type="radio" name="motivo" value="{{ valor }}" {% if dados.motivo == valor %}checked{% endif %} class="h-4 w-4"> {{ nome }}</label>
+        {% endfor %}
+      </div>
+      {% if regras.meals_per_shift is not None %}<p class="mt-1 text-xs text-ardosia">Limite da casa: {{ regras.meals_per_shift }} refeição por turno. Passar o limite não impede o registo.</p>{% endif %}
+    </fieldset>
+  </div>
+
+  <div class="cartao">
+    <table class="tabela">
+      <thead><tr><th>Artigo</th><th class="th-dados">Quantidade</th></tr></thead>
+      <tbody>
+        {% for l in linhas %}
+        <tr>
+          <td>
+            <select name="item-{{ l.n }}" class="campo-input" aria-label="Artigo da linha {{ forloop.counter }}">
+              <option value="">—</option>
+              {% for a in artigos %}<option value="{{ a.pk }}"{% if l.item == a.pk|stringformat:"s" %} selected{% endif %}>{{ a.name }} ({{ a.unit }}){% if a.reference_cost is None %} · sem custo{% endif %}</option>{% endfor %}
+            </select>
+          </td>
+          <td class="td-dados"><input type="text" inputmode="decimal" name="qtd-{{ l.n }}" value="{{ l.qtd }}" aria-label="Quantidade da linha {{ forloop.counter }}" class="campo-input font-dados w-24 text-right"></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="border-t border-ardosia/10 px-4 py-2.5 text-xs text-ardosia">As linhas sem artigo ficam de fora. Um artigo sem custo de referência entra no stock, mas fica sem valor no mapa.</p>
+  </div>
+
+  <div class="cartao p-6">
+    <label for="nota" class="block text-sm font-medium">Observação</label>
+    <input id="nota" type="text" name="nota" maxlength="200" value="{{ dados.nota|default:'' }}" class="campo-input mt-1.5">
+  </div>
+
+  <div class="flex justify-end gap-3">
+    {% url 'inventory:consumos' as url_voltar %}
+    {% include "components/botao.html" with label="Cancelar" variante="fantasma" href=url_voltar %}
+    {% include "components/botao.html" with label="Registar consumo" %}
+  </div>
+</form>
+{% endblock %}

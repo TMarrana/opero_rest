@@ -1,0 +1,83 @@
+{% extends "base_manage.html" %}
+{% load vendas %}
+{% block title %}Consumos internos{% endblock %}
+{% block content %}
+{% comment %}Consumos internos (Fase 12): o mapa do mês por pessoa e os
+consumos registados. Um consumo não se apaga: anula-se, e o stock volta.{% endcomment %}
+<a href="{% url 'inventory:lista' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Stock</a>
+<div class="mt-2 flex flex-wrap items-end justify-between gap-4">
+  <h1 class="font-display text-2xl font-bold">Consumos internos</h1>
+  {% url 'inventory:consumo_novo' as url_novo %}
+  {% include "components/botao.html" with label="Registar consumo" href=url_novo %}
+</div>
+<p class="mt-1 text-sm text-ardosia">
+  Refeições do pessoal, ofertas, provas e o que o dono leva. Cada consumo tira do stock, valorizado ao custo de referência do dia.
+  {% if regras.meals_per_shift is not None %}Limite: <span class="font-dados">{{ regras.meals_per_shift }}</span> refeição por turno.{% endif %}
+  {% if request.role == "ADMIN" %}<a href="{% url 'inventory:consumo_regras' %}" class="underline underline-offset-2">Regras</a>{% endif %}
+</p>
+
+<div class="mt-6 flex flex-wrap items-center justify-between gap-4">
+  <div class="flex items-center gap-2">
+    <a href="?mes={{ mes_anterior|date:'Y-m' }}" class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-3 py-2 text-sm font-semibold hover:bg-carvao/5" aria-label="Mês anterior">&larr;</a>
+    <span class="font-dados text-sm font-semibold">{{ mes|date:"m/Y" }}</span>
+    {% if mes_seguinte %}<a href="?mes={{ mes_seguinte|date:'Y-m' }}" class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-3 py-2 text-sm font-semibold hover:bg-carvao/5" aria-label="Mês seguinte">&rarr;</a>{% endif %}
+  </div>
+  {% if mapa %}<a href="?mes={{ mes|date:'Y-m' }}&amp;exportar=1" class="text-sm font-semibold underline underline-offset-2">Exportar o mapa do mês (CSV)</a>{% endif %}
+</div>
+
+{% if mapa %}
+<section class="mt-4 cartao">
+  <h2 class="border-b border-ardosia/15 px-4 py-3 font-display text-base font-bold">Mapa do mês</h2>
+  <div class="overflow-x-auto">
+    <table class="tabela">
+      <thead><tr><th>Pessoa</th><th class="th-dados">Refeições</th><th class="th-dados">Outros consumos</th><th class="th-dados">Valor ao custo</th></tr></thead>
+      <tbody>
+        {% for p in mapa %}
+        <tr>
+          <td class="font-medium"><a href="?mes={{ mes|date:'Y-m' }}&amp;pessoa={% if p.worker %}{{ p.worker.pk }}{% else %}casa{% endif %}" class="hover:underline">{{ p.quem }}</a></td>
+          <td class="td-dados">{{ p.refeicoes }}{% if p.acima %} <span class="text-xs text-ardosia">({{ p.acima }} acima do limite)</span>{% endif %}</td>
+          <td class="td-dados">{{ p.outros }}</td>
+          <td class="td-dados">{% if p.valor or not p.sem_custo %}{{ p.valor|euros }}{% else %}<span class="text-ardosia">—</span>{% endif %}{% if p.sem_custo %}<span class="block text-xs text-ardosia">{{ p.sem_custo }} linha{{ p.sem_custo|pluralize }} sem custo</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<section class="mt-6 cartao">
+  <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-ardosia/15 px-4 py-3">
+    <h2 class="font-display text-base font-bold">Consumos registados</h2>
+    <form method="get" class="flex items-center gap-2 text-sm">
+      <input type="hidden" name="mes" value="{{ mes|date:'Y-m' }}">
+      <select name="pessoa" class="campo-input w-56" onchange="this.form.submit()" aria-label="Filtrar por pessoa">
+        <option value="">Todas as pessoas</option>
+        <option value="casa"{% if pessoa == "casa" %} selected{% endif %}>A casa</option>
+        {% for w in trabalhadores %}<option value="{{ w.pk }}"{% if pessoa == w.pk|stringformat:"s" %} selected{% endif %}>{{ w.full_name }}</option>{% endfor %}
+      </select>
+      <noscript><button type="submit" class="underline">Filtrar</button></noscript>
+    </form>
+  </div>
+  {% for c in consumos %}
+  <article class="talao {% if c.cancelled_at %}opacity-60{% endif %}">
+    <time class="block text-xs text-ardosia">{{ c.consumed_on|date:"d/m/Y" }} · {{ c.reference }} · registado por {{ c.created_by }}</time>
+    <p class="mt-0.5 text-sm font-semibold">{{ c.who }} · {{ c.get_reason_display }}{% if c.over_limit %} · acima do limite{% endif %}{% if c.cancelled_at %} · anulado{% endif %}</p>
+    <p class="text-sm">{% for l in c.lines.all %}{{ l.item.name }} {{ l.quantity|numero }} {{ l.item.unit }}{% if not forloop.last %} · {% endif %}{% endfor %} · {% if c.value is not None %}{{ c.value|euros }}{% else %}sem custo{% endif %}</p>
+    {% if c.note %}<p class="text-sm text-ardosia">{{ c.note }}</p>{% endif %}
+    {% if c.cancelled_at %}
+    <p class="text-xs text-ardosia">Anulado por {{ c.cancelled_by }} a {{ c.cancelled_at|date:"d/m H:i" }}: {{ c.cancel_reason }}</p>
+    {% else %}
+    <form method="post" action="{% url 'inventory:consumo_anular' c.pk %}" class="mt-1 flex flex-wrap items-center gap-2" x-data="{ aberto: false }">
+      {% csrf_token %}
+      <button type="button" x-show="!aberto" x-on:click="aberto = true" class="text-xs text-ardosia underline underline-offset-2 hover:text-carvao">Anular</button>
+      <input x-show="aberto" x-cloak type="text" name="motivo" required maxlength="200" placeholder="Motivo da anulação" class="campo-input w-64">
+      <button x-show="aberto" x-cloak type="submit" class="text-xs font-semibold text-chama underline underline-offset-2">Anular e repor o stock</button>
+    </form>
+    {% endif %}
+  </article>
+  {% empty %}
+  <p class="px-4 py-8 text-center text-sm text-ardosia">Não há consumos registados {% if pessoa %}desta pessoa {% endif %}neste mês. Registe o primeiro.</p>
+  {% endfor %}
+</section>
+{% endblock %}

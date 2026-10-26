@@ -262,3 +262,43 @@ class StaffShiftsView(StaffViewMixin, TemplateView):
             dia = hoje + datetime.timedelta(days=i)
             dias.append({"dia": dia, "turnos": [t for t in turnos if t.work_date == dia], "folga": dia in folgas})
         return render(request, self.template_name, {"worker": worker, "dias": dias, "hoje": hoje})
+
+
+class StaffConsumptionView(StaffViewMixin, TemplateView):
+    """Os meus consumos (Fase 12): os do mês, com o valor ao custo. Nunca os
+    dos outros (secção 7)."""
+
+    template_name = "staff/consumos.html"
+
+    def get(self, request, *args, **kwargs):
+        from attendance.month import month_range, next_month, previous_month
+        from inventory.models import InternalConsumption
+
+        worker = _worker_for(request.user)
+        if worker is None:
+            return render(request, "staff/sem_ficha.html")
+        hoje = timezone.localdate()
+        try:
+            mes = datetime.datetime.strptime(request.GET.get("mes", ""), "%Y-%m").date()
+        except ValueError:
+            mes = hoje.replace(day=1)
+        inicio, fim = month_range(mes)
+        consumos = list(
+            InternalConsumption.objects.filter(worker=worker, consumed_on__range=(inicio, fim), cancelled_at__isnull=True)
+            .prefetch_related("lines__item")
+            .order_by("-consumed_on", "-id")
+        )
+        valores = [c.value() for c in consumos]
+        return render(
+            request,
+            self.template_name,
+            {
+                "worker": worker,
+                "mes": mes,
+                "mes_anterior": previous_month(mes),
+                "mes_seguinte": next_month(mes) if next_month(mes) <= hoje else None,
+                "consumos": consumos,
+                "total": sum((v for v in valores if v is not None), 0),
+                "refeicoes": sum(1 for c in consumos if c.reason == InternalConsumption.Reason.REFEICAO),
+            },
+        )

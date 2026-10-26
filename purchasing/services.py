@@ -3,13 +3,14 @@ Regras das compras (Fase 11). As views só chamam estas funções; é aqui que
 se valida e que se mexe no stock, sempre pelo `register_movement()`.
 """
 from collections import defaultdict
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import F, Sum
 from django.utils import timezone
 
+from core.utils import parse_decimal  # noqa: F401  (as views usam-no daqui)
 from inventory.models import Item, StockMovement
 from inventory.services import register_movement
 
@@ -18,21 +19,6 @@ from .models import PurchaseOrder, PurchaseOrderLine, Receipt, ReceiptLine, Supp
 CENT = Decimal("0.01")
 # Unidades no texto da encomenda: «3 kg», e não «3 quilograma».
 UNIDADES_CURTAS = {"UN": "un.", "KG": "kg", "L": "l", "CX": "cx.", "EMB": "emb."}
-
-
-def parse_decimal(texto, campo="O valor"):
-    """Um número escrito à portuguesa (vírgula decimal) ou com ponto. Vazio
-    dá None."""
-    texto = (texto or "").strip().replace(" ", "").replace(",", ".")
-    if not texto:
-        return None
-    try:
-        valor = Decimal(texto)
-    except InvalidOperation:
-        raise ValidationError(f"{campo} «{texto}» não é um número.")
-    if valor < 0:
-        raise ValidationError(f"{campo} não pode ser negativo.")
-    return valor
 
 
 def pending_by_item(restaurant):

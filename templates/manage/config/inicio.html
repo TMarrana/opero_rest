@@ -18,6 +18,12 @@
   {% endfor %}
   {% if request.role == "ADMIN" %}
   <li>
+    <a href="{% url 'inventory:consumo_regras' %}" class="cartao block p-5 hover:bg-carvao/5">
+      <span class="font-display text-base font-bold">Consumos internos</span>
+      <span class="mt-1 block text-sm text-ardosia">Limite de refeições do pessoal por turno.</span>
+    </a>
+  </li>
+  <li>
     <a href="{% url 'sales:regras' %}" class="cartao block p-5 hover:bg-carvao/5">
       <span class="font-display text-base font-bold">Vendas</span>
       <span class="mt-1 block text-sm text-ardosia">Hora de corte do dia de serviço, séries do SAF-T e custo médio por hora.</span>

@@ -1,0 +1,19 @@
+{% extends "base_manage.html" %}
+{% block title %}Regras dos consumos{% endblock %}
+{% block content %}
+<a href="{% url 'inventory:consumos' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Consumos internos</a>
+<h1 class="mt-2 font-display text-2xl font-bold">Regras dos consumos internos</h1>
+<p class="mt-1 text-sm text-ardosia">Valem para {{ request.restaurant }}. Os turnos do dia são os registos de ponto ou, sem ponto, os turnos publicados.</p>
+
+<form method="post" class="mt-6 max-w-lg space-y-5">
+  {% csrf_token %}
+  <div class="cartao p-6">
+    {% include "components/campo.html" with field=form.meals_per_shift ajuda="Vazio: sem limite. Passar o limite não impede o registo: o consumo fica assinalado e aparece no mapa do mês." %}
+  </div>
+  <div class="flex justify-end gap-3">
+    {% url 'inventory:consumos' as url_voltar %}
+    {% include "components/botao.html" with label="Cancelar" variante="fantasma" href=url_voltar %}
+    {% include "components/botao.html" with label="Guardar" %}
+  </div>
+</form>
+{% endblock %}

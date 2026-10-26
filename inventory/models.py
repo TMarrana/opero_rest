@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.db import models
 
@@ -107,12 +109,13 @@ class StockMovement(TimeStampedModel):
 
     class Origin(models.TextChoices):
         """De onde vem o movimento (Fase 9), para os relatórios separarem uma
-        quebra de uma venda. A Fase 11 junta a compra; as seguintes, o
-        consumo interno e a venda."""
+        quebra de uma venda. A Fase 11 junta a compra, a 12 o consumo
+        interno e a 14 a venda."""
 
         MANUAL = "MANUAL", "Registo manual"
         TRANSFERENCIA = "TRANSFERENCIA", "Transferência entre casas"
         COMPRA = "COMPRA", "Compra"
+        CONSUMO = "CONSUMO", "Consumo interno"
 
     item = models.ForeignKey(Item, verbose_name="artigo", on_delete=models.PROTECT, related_name="movements")
     movement_type = models.CharField("tipo", max_length=10, choices=Type.choices)
@@ -149,3 +152,121 @@ class StockMovement(TimeStampedModel):
         if self.movement_type in (self.Type.SAIDA, self.Type.AJUSTE_NEG):
             return -self.quantity
         return self.quantity
+
+
+class ConsumptionSettings(TimeStampedModel):
+    """Regras dos consumos internos de uma casa (Fase 12)."""
+
+    restaurant = models.OneToOneField(
+        "core.Restaurant", verbose_name="restaurante", on_delete=models.CASCADE, related_name="consumption_settings"
+    )
+    meals_per_shift = models.PositiveSmallIntegerField(
+        "refeições do pessoal por turno",
+        null=True,
+        blank=True,
+        help_text="Opcional. Passar o limite não impede o registo: fica assinalado, com um aviso.",
+    )
+
+    class Meta:
+        verbose_name = "regras dos consumos internos"
+        verbose_name_plural = "regras dos consumos internos"
+
+    def __str__(self):
+        return f"Consumos · {self.restaurant}"
+
+    @classmethod
+    def for_restaurant(cls, restaurant):
+        return cls.objects.get_or_create(restaurant=restaurant)[0]
+
+
+class InternalConsumption(TimeStampedModel):
+    """Um consumo interno (Fase 12): o que um trabalhador ou a casa consumiu,
+    num dia e por um motivo. Cada linha é uma SAIDA de origem consumo
+    interno. Não se apaga: anula-se, com uma entrada que repõe o stock."""
+
+    class Reason(models.TextChoices):
+        REFEICAO = "REFEICAO", "Refeição do pessoal"
+        OFERTA = "OFERTA", "Oferta"
+        PROVA = "PROVA", "Prova"
+        DONO = "DONO", "Dono"
+
+    restaurant = models.ForeignKey(
+        "core.Restaurant", verbose_name="restaurante", on_delete=models.CASCADE, related_name="consumptions"
+    )
+    # Sem trabalhador, foi a casa: ofertas, provas, o dono.
+    worker = models.ForeignKey(
+        "workers.Worker",
+        verbose_name="trabalhador",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="consumptions",
+    )
+    reason = models.CharField("motivo", max_length=10, choices=Reason.choices)
+    consumed_on = models.DateField("dia")
+    note = models.CharField("observação", max_length=200, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name="registado por", on_delete=models.PROTECT, related_name="+"
+    )
+    over_limit = models.BooleanField("acima do limite", default=False)
+    cancelled_at = models.DateTimeField("anulado em", null=True, blank=True)
+    cancelled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name="anulado por", on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    cancel_reason = models.CharField("motivo da anulação", max_length=200, blank=True)
+
+    class Meta:
+        verbose_name = "consumo interno"
+        verbose_name_plural = "consumos internos"
+        ordering = ["-consumed_on", "-id"]
+
+    def __str__(self):
+        return self.reference
+
+    @property
+    def reference(self):
+        return f"CI-{self.pk}"
+
+    @property
+    def who(self):
+        return self.worker.full_name if self.worker_id else "A casa"
+
+    def value(self):
+        valores = [l.value for l in self.lines.all()]
+        if any(v is None for v in valores):
+            return None
+        return sum(valores, Decimal(0))
+
+
+class ConsumptionLine(models.Model):
+    consumption = models.ForeignKey(
+        InternalConsumption, verbose_name="consumo", on_delete=models.PROTECT, related_name="lines"
+    )
+    item = models.ForeignKey(Item, verbose_name="artigo", on_delete=models.PROTECT, related_name="consumption_lines")
+    quantity = models.DecimalField("quantidade", max_digits=12, decimal_places=3)
+    # O custo de referência no momento do registo. Não se recalcula quando o
+    # custo muda.
+    unit_cost = models.DecimalField("custo unitário", max_digits=10, decimal_places=2, null=True, blank=True)
+    value = models.DecimalField("valor", max_digits=12, decimal_places=2, null=True, blank=True)
+    movement = models.OneToOneField(
+        StockMovement, verbose_name="movimento", on_delete=models.PROTECT, related_name="consumption_line"
+    )
+    reversal = models.OneToOneField(
+        StockMovement,
+        verbose_name="movimento da anulação",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="consumption_reversal",
+    )
+
+    class Meta:
+        verbose_name = "linha de consumo"
+        verbose_name_plural = "linhas de consumo"
+        ordering = ["item__name"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(quantity__gt=0), name="consumo_quantidade_positiva"),
+        ]
+
+    def __str__(self):
+        return f"{self.consumption} · {self.item}"
