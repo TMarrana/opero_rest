@@ -9,8 +9,8 @@ from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 
 from accounts.views import DEVICE_COOKIE
-from attendance.models import TimeEntry
-from attendance.services import open_shift
+from attendance.models import CorrectionRequest, TimeEntry
+from attendance.services import decide_correction, open_shift
 from core.models import Restaurant, WorkArea
 from kiosk import views as kiosk_views
 from shifts.models import Shift
@@ -250,6 +250,69 @@ class TestQuiosqueConfirmacao:
         open_shift(worker=marta, at=timezone.now() - 2 * H)
         corpo = escrever_codigo(tablet, marta).content.decode()
         assert "Já passou da hora prevista" not in corpo
+
+
+
+class TestSaidaTardia:
+    """R-012, decidido a 2026-10-27: com turno publicado, o quiosque pergunta
+    se a pessoa saiu agora ou à hora prevista. A prevista vai ao gerente
+    como pedido de correção; a saída pica-se à hora em que acontece."""
+
+    def _atrasada(self, marta, horas_depois):
+        """Turno de 4 h que acabou há `horas_depois` horas, com a entrada
+        picada à hora e a saída por picar."""
+        inicio = timezone.now() - (4 + horas_depois) * H
+        turno = _turno_publicado(marta, inicio)
+        return open_shift(worker=marta, at=inicio), turno
+
+    def test_pergunta_com_turno(self, tablet, marta):
+        _, turno = self._atrasada(marta, 1)
+        corpo = escrever_codigo(tablet, marta).content.decode()
+        assert "Já passou da hora prevista de saída" in corpo
+        assert "Saí agora" in corpo
+        assert f"Saí às <span class=\"font-dados\">{timezone.localtime(turno.end_at):%H:%M}</span>" in corpo
+
+    def test_sem_turno_so_o_aviso(self, tablet, marta):
+        open_shift(worker=marta, at=timezone.now() - 11 * H)
+        corpo = escrever_codigo(tablet, marta).content.decode()
+        assert "Já passou da hora prevista de saída" in corpo and "Saí às" not in corpo
+        resp = picar(tablet, marta, "saida_prevista")
+        assert "Não há turno previsto" in resp.content.decode()
+        assert TimeEntry.objects.get().check_out is None
+
+    def test_hora_prevista_pica_agora_e_pede_ao_gerente(self, tablet, marta, manager):
+        entry, turno = self._atrasada(marta, 1)
+        resp = picar(tablet, marta, "saida_prevista")
+        corpo = resp.content.decode()
+        assert "Pedido enviado ao gerente" in corpo and "fica a hora a que picou agora" in corpo
+        entry.refresh_from_db()
+        assert entry.check_out is not None and entry.check_out > turno.end_at
+        pedido = CorrectionRequest.objects.get()
+        assert pedido.status == CorrectionRequest.Status.PENDENTE
+        assert (pedido.entry, pedido.new_check_in, pedido.new_check_out) == (entry, entry.check_in, turno.end_at)
+        assert pedido.note == kiosk_views.MOTIVO_SAIDA_PREVISTA
+        # O gerente aprova e o registo fica com a hora prevista.
+        decide_correction(request_obj=pedido, user=manager, approve=True)
+        entry.refresh_from_db()
+        assert entry.check_out == turno.end_at
+
+    def test_registo_por_resolver_nao_pergunta(self, tablet, marta):
+        # Passado o limite, o registo já não é o turno em curso: o ecrã
+        # oferece a entrada e a confirmação manda pedir a correção.
+        self._atrasada(marta, 6)
+        corpo = escrever_codigo(tablet, marta).content.decode()
+        assert "Saí às" not in corpo and 'value="entrada"' in corpo
+
+    def test_com_pedido_pendente_nao_pica_nada(self, tablet, marta):
+        self._atrasada(marta, 1)
+        picar(tablet, marta, "saida_prevista")
+        entry = TimeEntry.objects.get()
+        entry.check_out = None
+        entry.save(update_fields=["check_out"])
+        resp = picar(tablet, marta, "saida_prevista")
+        assert "Já há um pedido pendente" in resp.content.decode()
+        entry.refresh_from_db()
+        assert entry.check_out is None and CorrectionRequest.objects.count() == 1
 
 
 class TestAppColaborador:

@@ -12,13 +12,14 @@ import secrets
 from django.core import signing
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.views import View
 
 from accounts.views import device_info, device_work_area
 from attendance.models import BreakType, CorrectionRequest, TimeEntry
-from attendance.services import close_shift, end_break, open_shift, start_break
+from attendance.services import close_shift, end_break, open_shift, request_correction, start_break
 from core.models import Restaurant
 from workers.models import Worker
 
@@ -36,7 +37,14 @@ ESPERA_CURTA = 5
 FOLGA_SAIDA = datetime.timedelta(minutes=30)
 ENTRADA_LONGA = datetime.timedelta(hours=10)
 
-NOMES_ACAO = {"entrada": "Entrada", "saida": "Saída", "pausa": "Início de pausa", "fim_pausa": "Fim de pausa"}
+NOMES_ACAO = {
+    "entrada": "Entrada",
+    "saida": "Saída",
+    "saida_prevista": "Saída",
+    "pausa": "Início de pausa",
+    "fim_pausa": "Fim de pausa",
+}
+MOTIVO_SAIDA_PREVISTA = "Esqueceu-se de picar a saída. Pediu no tablet a hora prevista no turno."
 
 
 class KioskMixin:
@@ -64,6 +72,15 @@ def _saida_esquecida(entry, agora):
     return agora > fim + FOLGA_SAIDA
 
 
+def _hora_prevista(entry):
+    """A saída prevista de uma entrada aberta: o fim do turno publicado do
+    dia, se acabou depois da entrada. Sem turno não há pergunta (R-012)."""
+    turno = entry.planned_shift()
+    if turno is None or turno.end_at <= entry.check_in:
+        return None
+    return turno.end_at
+
+
 def _estado(worker, restaurant_id):
     """Uma entrada aberta noutra casa do grupo não se fecha neste tablet:
     o ecrã mostra-a e oferece a entrada aqui, que a deixa por resolver
@@ -73,11 +90,14 @@ def _estado(worker, restaurant_id):
     if entry is not None and entry.restaurant_id != restaurant_id:
         noutra_casa, entry = entry, None
     pausa = entry.open_break if entry else None
+    esquecida = entry is not None and pausa is None and _saida_esquecida(entry, timezone.now())
     return {
         "entry": entry,
         "noutra_casa": noutra_casa,
         "pausa": pausa,
-        "saida_esquecida": entry is not None and pausa is None and _saida_esquecida(entry, timezone.now()),
+        "saida_esquecida": esquecida,
+        # R-012: com turno, pergunta se saiu agora ou à hora prevista.
+        "saida_prevista": _hora_prevista(entry) if esquecida else None,
         "tipos_pausa": BreakType.objects.filter(restaurant_id=restaurant_id, archived_at__isnull=True)
         if entry and not pausa
         else [],
@@ -192,10 +212,25 @@ class MarkView(KioskMixin, View):
                     por_resolver=por_resolver.count(),
                     espera=ESPERA_ENTRADA,
                 )
-            elif acao in ("saida", "pausa", "fim_pausa") and _aberta_noutra_casa(worker, self.device["restaurante"]):
+            elif acao in ("saida", "saida_prevista", "pausa", "fim_pausa") and _aberta_noutra_casa(worker, self.device["restaurante"]):
                 raise ValidationError("A entrada aberta é de outra casa. Marque lá a saída.")
             elif acao == "saida":
                 close_shift(worker=worker, at=agora)
+            elif acao == "saida_prevista":
+                # A saída pica-se agora, como aconteceu; a hora prevista vai
+                # ao gerente como pedido de correção (decidido a 2026-10-27).
+                entry = worker.open_entry
+                prevista = _hora_prevista(entry) if entry is not None else None
+                if prevista is None:
+                    raise ValidationError("Não há turno previsto para este registo. Pique a saída.")
+                with transaction.atomic():
+                    close_shift(worker=worker, at=agora)
+                    entry.refresh_from_db()
+                    request_correction(
+                        worker=worker, entry=entry, check_in=entry.check_in, check_out=prevista,
+                        note=MOTIVO_SAIDA_PREVISTA,
+                    )
+                contexto.update(pedido=prevista, espera=ESPERA_ENTRADA)
             elif acao == "pausa":
                 tipo = BreakType.objects.filter(
                     restaurant_id=self.device["restaurante"], archived_at__isnull=True, pk=request.POST.get("tipo_pausa") or None

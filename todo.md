@@ -17,7 +17,7 @@ Bloqueiam fases ou o piloto. A proposta de cada uma está na secção 12 do plan
 - [x] **Hora de corte do dia de serviço nas vendas.** Confirmado a 2026-10-27: 5h, configurável por casa. Falta dar conhecimento à AT.
 - [x] **Serviço (almoço e jantar) nas vendas por hora trabalhada.** Decidido a 2026-10-27: por uma hora de mudança por casa, 17h por omissão. Já está construído. Falta dar conhecimento à AT.
 - [x] **Stock negativo causado pelas vendas** (Fase 14). Decidido a 2026-10-27: só os movimentos de origem venda o deixam negativo, e o artigo fica assinalado para contar. Já está construído. Falta dar conhecimento à AT.
-- [ ] **Pergunta na saída tardia (R-012):** se entra ou não.
+- [x] **Pergunta na saída tardia (R-012).** Decidido a 2026-10-27: entra, como pedido de correção ao gerente. Já está construído. Falta dar conhecimento à AT.
 - [ ] **Nome da marca e domínio.**
 - [ ] **Isolamento entre clientes:** domínio, subdomínio ou área partilhada.
 - [ ] **Cliente piloto e disponibilidade semanal AT/TM.**
@@ -50,6 +50,7 @@ Bloqueiam fases ou o piloto. A proposta de cada uma está na secção 12 do plan
 - [ ] **Quiosque num tablet real**, ao alto e deitado: nome, código e ação em menos de 5 segundos.
 - [ ] Dois colaboradores seguidos no mesmo tablet: o segundo não herda nada do primeiro.
 - [ ] Tablet desligado da rede: o ecrã diz que nada foi registado, e o gerente acrescenta o registo depois.
+- [ ] Saída tardia no tablet (R-012): com um turno publicado já acabado, ver «Saí agora» e «Saí às HH:MM», e o pedido a chegar a Ponto → Pedidos.
 - [ ] Ecrã de pausa no tablet: ver se o estado «em pausa» (contorno, sem cor) se percebe.
 - [ ] **App do colaborador num telemóvel real**, a 375px: «Os meus turnos», férias, «Os meus consumos».
 - [ ] Instalar a PWA em Android e em iOS, e ver as limitações de notificações push no iOS (BR-004). Isto decide se as trocas de turno podem depender de push.

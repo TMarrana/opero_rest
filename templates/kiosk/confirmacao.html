@@ -28,6 +28,13 @@ durante 5 segundos (secção 5).{% endcomment %}
     {% endif %}
   </div>
 
+  {% if pedido %}
+  <div class="mt-4 rounded-2xl bg-alerta-50 px-7 py-5 text-base">
+    <p><span class="font-semibold text-alerta-700">Pedido enviado ao gerente:</span> saída às <span class="font-dados font-semibold">{{ pedido|date:"H:i" }}</span>.</p>
+    <p class="mt-2">Até ele aprovar, fica a hora a que picou agora.</p>
+  </div>
+  {% endif %}
+
   {% if esquecida or por_resolver %}
   <div class="mt-4 rounded-2xl bg-alerta-50 px-7 py-5 text-base">
     {% if esquecida %}<p><span class="font-semibold text-alerta-700">A saída anterior ficou por picar.</span> Entrada de <span class="font-dados">{{ esquecida.check_in|date:"d/m" }} às {{ esquecida.check_in|date:"H:i" }}</span>, sem saída.</p>{% endif %}

@@ -24,7 +24,9 @@ minuto. As pausas aparecem ao lado da Saída, sem passo extra.{% endcomment %}
 {% if noutra_casa %}
 <p class="aviso aviso-alerta mt-4 flex items-start gap-3 text-base">{% icone "alerta" "mt-0.5 h-5 w-5 shrink-0" %}<span>Tem a entrada aberta em {{ noutra_casa.restaurant.name }} desde {% if noutra_casa.work_date != hoje %}{{ noutra_casa.check_in|date:"d/m" }} às {% endif %}{{ noutra_casa.check_in|date:"H:i" }}. Se picar a entrada aqui, esse registo fica sem saída e {% if worker.user_id %}tem de pedir na app{% else %}tem de pedir ao gerente{% endif %} a correção da hora a que saiu.</span></p>
 {% endif %}
-{% if saida_esquecida %}
+{% if saida_prevista %}
+<p class="aviso aviso-alerta mt-4 flex items-start gap-3 text-base">{% icone "alerta" "mt-0.5 h-5 w-5 shrink-0" %}<span>Já passou da hora prevista de saída, às <span class="font-dados font-semibold">{{ saida_prevista|date:"H:i" }}</span>. Saiu agora, ou às {{ saida_prevista|date:"H:i" }} e esqueceu-se de picar?</span></p>
+{% elif saida_esquecida %}
 <p class="aviso aviso-alerta mt-4 flex items-start gap-3 text-base">{% icone "alerta" "mt-0.5 h-5 w-5 shrink-0" %}<span>Já passou da hora prevista de saída. Se acabou de chegar para outro turno, pique primeiro a saída e depois a entrada, e {% if worker.user_id %}peça na app{% else %}peça ao gerente{% endif %} a correção da hora de saída.</span></p>
 {% endif %}
 
@@ -41,8 +43,20 @@ minuto. As pausas aparecem ao lado da Saída, sem passo extra.{% endcomment %}
     {% csrf_token %}
     <input type="hidden" name="token" value="{{ token }}">
     <input type="hidden" name="acao" value="saida">
-    <button type="submit" class="flex min-h-[30vh] w-full items-center justify-center gap-4 rounded-2xl bg-chama text-5xl font-bold tracking-tight text-superficie shadow-flutuante transition-colors duration-150 hover:bg-chama-600">{% icone "sair" "h-12 w-12" %}Saída</button>
+    <button type="submit" class="flex {% if saida_prevista %}min-h-[20vh]{% else %}min-h-[30vh]{% endif %} w-full items-center justify-center gap-4 rounded-2xl bg-chama text-5xl font-bold tracking-tight text-superficie shadow-flutuante transition-colors duration-150 hover:bg-chama-600">{% icone "sair" "h-12 w-12" %}{% if saida_prevista %}Saí agora{% else %}Saída{% endif %}</button>
   </form>
+  {% if saida_prevista %}
+  {# R-012: a saída fica com a hora de agora e a prevista vai ao gerente como pedido. #}
+  <form method="post" action="{% url 'kiosk:marcar' worker.pk %}" hx-disabled-elt="find button">
+    {% csrf_token %}
+    <input type="hidden" name="token" value="{{ token }}">
+    <input type="hidden" name="acao" value="saida_prevista">
+    <button type="submit" class="flex min-h-[20vh] w-full flex-col items-center justify-center gap-1 rounded-2xl border-2 border-chama bg-superficie px-4 text-chama transition-colors duration-150 hover:bg-creme">
+      <span class="flex items-center gap-4 text-4xl font-bold tracking-tight">{% icone "relogio" "h-10 w-10" %}Saí às <span class="font-dados">{{ saida_prevista|date:"H:i" }}</span></span>
+      <span class="text-base font-medium text-ardosia">O gerente confirma a hora</span>
+    </button>
+  </form>
+  {% endif %}
   {% if tipos_pausa %}
   <div class="grid gap-3 {% if tipos_pausa|length > 1 %}grid-cols-2{% endif %}">
     {% for tipo in tipos_pausa %}
