@@ -6,7 +6,7 @@
 
 <ul class="cartao mt-5 divide-y divide-linha">
   {% for d in dias %}
-  <li class="flex min-h-toque items-center justify-between gap-4 px-5 py-3 {% if d.dia == hoje %}bg-floresta/5{% endif %}">
+  <li class="flex min-h-toque items-center justify-between gap-4 px-6 py-3.5 {% if d.dia == hoje %}bg-floresta-50{% endif %}">
     <span class="font-dados text-sm {% if d.dia == hoje %}font-semibold text-floresta{% else %}text-ardosia{% endif %}">{{ d.dia|date:"D d/m" }}</span>
     <span class="text-right">
       {% for t in d.turnos %}

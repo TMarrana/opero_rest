@@ -1,8 +1,7 @@
 /* Fonte Tailwind do Opero Rest. Gera static/css/app.css via tools/tailwindcss.exe.
-   Direção de design: secção 4 do plan.md, a partir de 2026-10-26 a linguagem
-   do EMBER (Dribbble): fundo creme, cartões brancos arredondados, verde-floresta
-   nos preenchimentos, laranja na ação principal e nos contadores, títulos em
-   serifa. Todos os números em figuras tabulares. */
+   Direção de design: secção 4 do plan.md — a linguagem do EMBER (Dribbble),
+   afinada para produto: escalas de cor fixas (tailwind.config.js), três raios,
+   três níveis de sombra e uma escala de espaçamento. Números em figuras tabulares. */
 
 @tailwind base;
 @tailwind components;
@@ -25,10 +24,11 @@
     src: url("../fonts/playfair-display-v40-latin-variable.woff2") format("woff2");
   }
 
-  /* Triplos RGB para o Tailwind poder aplicar opacidade (/10 etc.).
-     Hex de referência: carvao #221E18 (tinta) · floresta #15302B · creme #FAF6EB
-     · areia #E6DCD0 · linha #ECE5D9 · superficie #FFFFFF · chama #C2461B
-     · servico #2E7D4F · ambar #E39B2D · ardosia #6E675B */
+  /* Cores base em triplos RGB (para a opacidade em sobreposições escuras).
+     carvao #221E18 (tinta) · floresta #15302B · creme #FAF6EB · areia #E6DCD0
+     · linha #ECE5D9 · superficie #FFFFFF · chama #C2461B (ação principal)
+     · perigo #B42318 · alerta #B54708 · servico #2E7D4F · ambar #E39B2D
+     · ardosia #6E675B. Os tons claros e escuros estão em tailwind.config.js. */
   :root {
     --cor-carvao: 34 30 24;
     --cor-floresta: 21 48 43;
@@ -37,6 +37,8 @@
     --cor-linha: 236 229 217;
     --cor-superficie: 255 255 255;
     --cor-chama: 194 70 27;
+    --cor-perigo: 180 35 24;
+    --cor-alerta: 181 71 8;
     --cor-servico: 46 125 79;
     --cor-ambar: 227 155 45;
     --cor-ardosia: 110 103 91;
@@ -76,29 +78,36 @@
 }
 
 @layer components {
-  /* --- Títulos --- */
+  /* Escala de espaçamento (secção 4): interior dos cartões 24px, linhas de
+     lista com 56px, 24px do título ao conteúdo, 32px entre secções.
+     Raios: 12px nos campos e pequenos blocos, 16px nos cartões, pílula nos botões. */
+
+  /* --- Títulos: serifa só no título da página --- */
   .titulo-pagina {
     @apply font-display text-[1.875rem] font-bold leading-tight tracking-[-0.01em] text-carvao;
   }
   .subtitulo-pagina {
     @apply mt-1 text-[0.9375rem] text-ardosia;
   }
+  .secao-titulo {
+    @apply text-lg font-semibold tracking-[-0.01em] text-carvao;
+  }
   .rotulo {
     @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-ardosia;
   }
 
-  /* --- Cartões: brancos, cantos de 16px, filete quente --- */
+  /* --- Cartões --- */
   .cartao {
     @apply overflow-hidden rounded-2xl border border-linha bg-superficie shadow-cartao;
   }
   .cartao-cabecalho {
-    @apply flex flex-wrap items-center justify-between gap-3 border-b border-linha px-5 py-4;
+    @apply flex flex-wrap items-center justify-between gap-3 border-b border-linha px-6 py-4;
   }
   .cartao-titulo {
-    @apply font-display text-lg font-bold leading-snug text-carvao;
+    @apply text-base font-semibold leading-snug tracking-[-0.01em] text-carvao;
   }
   .cartao-link {
-    @apply transition-colors duration-150 hover:border-areia hover:bg-creme/60;
+    @apply transition-shadow duration-200 hover:border-neutro-300 hover:shadow-elevado;
   }
   .vazio {
     @apply px-6 py-12 text-center text-sm text-ardosia;
@@ -128,34 +137,34 @@
     @apply min-h-[2.5rem] px-4 py-2;
   }
   .btn-primario {
-    @apply bg-floresta text-creme hover:bg-floresta/90;
+    @apply bg-floresta text-creme hover:bg-floresta-800;
   }
   .btn-acento {
-    @apply bg-chama text-superficie hover:bg-chama/90;
+    @apply bg-chama text-superficie shadow-cartao hover:bg-chama-600;
   }
   .btn-fantasma {
-    @apply border border-areia bg-superficie text-carvao hover:border-ardosia/40 hover:bg-creme;
+    @apply border border-neutro-300 bg-superficie text-carvao shadow-cartao hover:border-neutro-400 hover:bg-neutro-50;
   }
   .btn-perigo {
-    @apply bg-chama text-superficie hover:bg-chama/90;
+    @apply bg-perigo text-superficie hover:bg-perigo-700;
   }
   .btn-servico {
-    @apply bg-servico text-superficie hover:bg-servico/90;
+    @apply bg-servico text-superficie hover:bg-servico-700;
   }
   .btn-icone {
-    @apply inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-linha bg-creme text-carvao transition-colors duration-150 hover:bg-areia/60;
+    @apply inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-neutro-200 bg-superficie text-carvao shadow-cartao transition-colors duration-150 hover:bg-neutro-100;
   }
 
   /* --- Ligações --- */
   /* Ação de uma linha: a pílula «Details» do EMBER. */
   .link-acao {
-    @apply inline-flex min-h-[2.25rem] cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-areia/50 px-3.5 text-sm font-medium text-carvao transition-colors duration-150 hover:bg-areia;
+    @apply inline-flex min-h-[2.25rem] cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-neutro-100 px-3.5 text-sm font-medium text-carvao transition-colors duration-150 hover:bg-neutro-200;
   }
   .link-acao-perigo {
-    @apply inline-flex min-h-[2.25rem] cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-chama/30 px-3.5 text-sm font-medium text-[#A83C15] transition-colors duration-150 hover:bg-chama/5;
+    @apply inline-flex min-h-[2.25rem] cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-perigo-200 px-3.5 text-sm font-medium text-perigo transition-colors duration-150 hover:bg-perigo-50;
   }
   .link-acao-servico {
-    @apply inline-flex min-h-[2.25rem] cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-servico/10 px-3.5 text-sm font-semibold text-[#256B42] transition-colors duration-150 hover:bg-servico/15;
+    @apply inline-flex min-h-[2.25rem] cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-servico-50 px-3.5 text-sm font-semibold text-servico-700 transition-colors duration-150 hover:bg-servico-100;
   }
   /* Volta à página de cima, por cima do título. */
   .link-voltar {
@@ -167,7 +176,7 @@
   }
   /* Ligação dentro de uma frase. */
   .link-texto {
-    @apply font-semibold text-floresta underline decoration-floresta/30 underline-offset-[3px] transition-colors duration-150 hover:decoration-floresta;
+    @apply font-semibold text-floresta underline decoration-floresta-200 underline-offset-[3px] transition-colors duration-150 hover:decoration-floresta;
   }
 
   /* --- Separadores em pílula (os filtros «All · Active · Completed» do EMBER) --- */
@@ -175,27 +184,30 @@
     @apply flex flex-wrap gap-2;
   }
   .separador {
-    @apply inline-flex min-h-[2.5rem] items-center gap-2 whitespace-nowrap rounded-full border border-areia bg-superficie px-4 text-sm font-medium text-carvao transition-colors duration-150 hover:bg-creme;
+    @apply inline-flex min-h-[2.5rem] items-center gap-2 whitespace-nowrap rounded-full border border-neutro-300 bg-superficie px-4 text-sm font-medium text-carvao transition-colors duration-150 hover:bg-neutro-50;
   }
   .separador-ativo {
     @apply border-floresta bg-floresta text-creme hover:bg-floresta;
   }
 
-  /* --- Estados em pílula tingida. Texto escurecido para AA sobre a tinta. --- */
+  /* --- Estados em pílula: tom 50 de fundo, tom 700 no texto (AA) --- */
   .estado {
     @apply inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold leading-none;
   }
   .estado-neutro {
-    @apply bg-areia/60 text-carvao/80;
+    @apply bg-neutro-100 text-neutro-700;
   }
   .estado-servico {
-    @apply bg-servico/10 text-[#256B42];
+    @apply bg-servico-50 text-servico-700;
   }
-  .estado-chama {
-    @apply bg-chama/10 text-[#A83C15];
+  .estado-alerta {
+    @apply bg-alerta-50 text-alerta-700;
+  }
+  .estado-perigo {
+    @apply bg-perigo-50 text-perigo-700;
   }
   .estado-ambar {
-    @apply bg-ambar/15 text-[#8A5A10];
+    @apply bg-ambar-50 text-ambar-700;
   }
 
   /* Contador laranja da navegação (o «12» de My Orders). */
@@ -207,17 +219,20 @@
   .mosaico {
     @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl;
   }
-  .mosaico-chama {
-    @apply bg-chama/10 text-chama;
+  .mosaico-alerta {
+    @apply bg-alerta-50 text-alerta;
+  }
+  .mosaico-perigo {
+    @apply bg-perigo-50 text-perigo;
   }
   .mosaico-servico {
-    @apply bg-servico/10 text-servico;
+    @apply bg-servico-50 text-servico;
   }
   .mosaico-ambar {
-    @apply bg-ambar/15 text-[#B5761A];
+    @apply bg-ambar-50 text-ambar-700;
   }
   .mosaico-floresta {
-    @apply bg-floresta/10 text-floresta;
+    @apply bg-floresta-50 text-floresta;
   }
 
   /* Avatar: iniciais num círculo creme, como o do cartão de perfil. */
@@ -229,8 +244,11 @@
   .aviso {
     @apply rounded-xl px-4 py-3 text-sm;
   }
-  .aviso-chama {
-    @apply bg-chama/10 font-medium text-[#A83C15];
+  .aviso-alerta {
+    @apply border border-alerta-100 bg-alerta-50 font-medium text-alerta-700;
+  }
+  .aviso-perigo {
+    @apply border border-perigo-100 bg-perigo-50 font-medium text-perigo-700;
   }
   .aviso-neutro {
     @apply border border-linha bg-superficie text-carvao;
@@ -238,21 +256,29 @@
 
   /* --- Navegação do backoffice (o cartão de navegação do EMBER) --- */
   .nav-item {
-    @apply flex min-h-[2.75rem] items-center gap-3 rounded-xl px-3 text-[0.9375rem] text-carvao transition-colors duration-150 hover:bg-creme;
+    @apply flex min-h-[2.75rem] items-center gap-3 rounded-xl px-3 text-[0.9375rem] text-carvao transition-colors duration-150 hover:bg-neutro-100;
   }
   .nav-item-ativo {
     @apply bg-floresta text-creme hover:bg-floresta;
   }
 
-  /* --- Tabela do backoffice (padrão em components/tabela.html) --- */
+  /* --- Tabela do backoffice (padrão em components/tabela.html): linhas de 56px --- */
   .tabela {
     @apply w-full text-sm;
   }
   .tabela thead th {
-    @apply whitespace-nowrap border-b border-linha bg-creme/60 px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-ardosia;
+    @apply whitespace-nowrap border-b border-linha bg-neutro-50 px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-ardosia;
   }
   .tabela tbody td {
-    @apply border-b border-linha px-5 py-3.5;
+    @apply border-b border-linha px-5 py-4;
+  }
+  .tabela thead th:first-child,
+  .tabela tbody td:first-child {
+    @apply pl-6;
+  }
+  .tabela thead th:last-child,
+  .tabela tbody td:last-child {
+    @apply pr-6;
   }
   .tabela tbody tr:last-child td {
     @apply border-b-0;
@@ -261,10 +287,10 @@
     @apply transition-colors duration-150;
   }
   .tabela tbody tr:hover {
-    @apply bg-creme/50;
+    @apply bg-neutro-50;
   }
   .tabela tfoot td {
-    @apply border-t border-linha bg-creme/60 px-5 py-3 font-semibold;
+    @apply border-t border-linha bg-neutro-50 px-6 py-3.5 font-semibold;
   }
   /* Grelhas de dias (planeador): células com pouco espaço à volta. */
   .tabela.tabela-compacta thead th {
@@ -280,17 +306,13 @@
     text-align: right !important;
   }
   .td-dados {
-    @apply font-dados text-right;
+    @apply font-dados whitespace-nowrap text-right;
   }
 
   /* --- Campos de formulário (os widgets Django recebem esta classe nos forms).
-     Borda #9C9387: 3:1 sobre branco, para o campo se ver (WCAG 1.4.11). --- */
+     Borda clara com sombra interior; a cor forte só ao passar e no foco. --- */
   .campo-input {
-    @apply block w-full min-h-toque rounded-xl border bg-superficie px-4 py-2.5 text-sm text-carvao transition-colors duration-150 placeholder:text-ardosia/80 hover:border-ardosia focus:border-floresta focus:outline-none focus:ring-4 focus:ring-floresta/10;
-    border-color: #9c9387;
-  }
-  .campo-input:focus {
-    border-color: rgb(var(--cor-floresta));
+    @apply block w-full min-h-toque rounded-xl border border-neutro-300 bg-superficie px-4 py-2.5 text-sm text-carvao shadow-campo transition-colors duration-150 placeholder:text-neutro-500 hover:border-neutro-500 focus:border-floresta focus:outline-none focus:ring-4 focus:ring-floresta-100;
   }
   input[type="checkbox"],
   input[type="radio"] {
@@ -303,7 +325,7 @@
     @apply overflow-hidden rounded-2xl border border-linha bg-superficie shadow-cartao;
   }
   .talao {
-    @apply font-dados bg-superficie px-5 py-4 text-sm text-carvao;
+    @apply font-dados bg-superficie px-6 py-4 text-sm text-carvao;
   }
   .talao + .talao {
     @apply border-t border-linha;

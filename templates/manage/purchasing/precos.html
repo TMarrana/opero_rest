@@ -5,7 +5,7 @@
 {% block content %}
 <a href="{% url 'inventory:lista' %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Stock</a>
 <h1 class="mt-2 titulo-pagina">Preços de {{ item.name }}</h1>
-<p class="mt-1 text-sm text-ardosia">
+<p class="subtitulo-pagina">
   Custo de referência: <span class="font-dados font-semibold text-carvao">{{ item.reference_cost|preco }}</span> por {{ item.get_unit_display }}.
   É o preço da última receção.
 </p>

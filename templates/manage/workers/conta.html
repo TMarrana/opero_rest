@@ -2,7 +2,7 @@
 {% block title %}Conta da app{% endblock %}
 {% block content %}
 <h1 class="titulo-pagina">Conta da app</h1>
-<p class="mt-1 text-sm text-ardosia">{{ worker.full_name }}. Com a conta, vê no telemóvel os seus turnos, o histórico e as férias, e faz pedidos. O ponto continua a picar-se no tablet, com o código.</p>
+<p class="subtitulo-pagina">{{ worker.full_name }}. Com a conta, vê no telemóvel os seus turnos, o histórico e as férias, e faz pedidos. O ponto continua a picar-se no tablet, com o código.</p>
 
 {% if conta %}
 <div class="mt-6 max-w-xl cartao p-6">
@@ -40,7 +40,7 @@
   {% csrf_token %}
   <input type="hidden" name="acao" value="criar">
   <div class="cartao space-y-5 p-6">
-    {% for erro in form.non_field_errors %}<p class="text-sm font-medium text-chama">{{ erro }}</p>{% endfor %}
+    {% for erro in form.non_field_errors %}<p class="text-sm font-medium text-perigo">{{ erro }}</p>{% endfor %}
     {% include "components/campo.html" with field=form.email ajuda="É com este email que entra na app." %}
     {% include "components/campo.html" with field=form.role %}
     <p class="text-xs text-ardosia">O sistema gera uma palavra-passe provisória, que aparece uma só vez no ecrã seguinte. Entregue-a ao titular, que no primeiro login escolhe uma sua.</p>

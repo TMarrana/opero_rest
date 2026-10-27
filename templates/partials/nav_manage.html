@@ -38,7 +38,7 @@ contadores dizem o que está por tratar (core/context_processors.py).{% endcomme
       <li>
         <form method="post" action="{% url 'accounts:logout' %}">
           {% csrf_token %}
-          <button type="submit" class="nav-item w-full text-chama hover:bg-chama/5">{% icone "sair" "h-5 w-5 shrink-0" %}<span>Sair</span></button>
+          <button type="submit" class="nav-item w-full text-ardosia hover:bg-perigo-50 hover:text-perigo">{% icone "sair" "h-5 w-5 shrink-0" %}<span>Sair</span></button>
         </form>
       </li>
     </ul>

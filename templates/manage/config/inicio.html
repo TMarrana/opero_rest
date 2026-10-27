@@ -8,12 +8,12 @@
 <ul class="mt-6 grid gap-4 sm:grid-cols-2">
   {% for secao, total in secoes %}
   <li>
-    <a href="{% url 'config:lista' secao.slug %}" class="cartao cartao-link flex h-full items-start gap-4 p-5">
+    <a href="{% url 'config:lista' secao.slug %}" class="cartao cartao-link flex h-full items-start gap-4 p-6">
       {% if secao.slug == "areas" %}<span class="mosaico mosaico-floresta">{% icone "loja" %}</span>
       {% elif secao.slug == "pausas" %}<span class="mosaico mosaico-ambar">{% icone "cafe" %}</span>
       {% elif secao.slug == "ausencias" %}<span class="mosaico mosaico-servico">{% icone "calendario" %}</span>
-      {% elif secao.slug == "feriados" %}<span class="mosaico mosaico-chama">{% icone "calendario" %}</span>
-      {% elif secao.slug == "bloqueios" %}<span class="mosaico mosaico-chama">{% icone "cadeado" %}</span>
+      {% elif secao.slug == "feriados" %}<span class="mosaico mosaico-alerta">{% icone "calendario" %}</span>
+      {% elif secao.slug == "bloqueios" %}<span class="mosaico mosaico-alerta">{% icone "cadeado" %}</span>
       {% elif secao.slug == "turnos" %}<span class="mosaico mosaico-floresta">{% icone "turnos" %}</span>
       {% else %}<span class="mosaico mosaico-floresta">{% icone "definicoes" %}</span>{% endif %}
       <span class="min-w-0 flex-1">
@@ -28,7 +28,7 @@
   {% endfor %}
   {% if request.role == "ADMIN" %}
   <li>
-    <a href="{% url 'inventory:consumo_regras' %}" class="cartao cartao-link flex h-full items-start gap-4 p-5">
+    <a href="{% url 'inventory:consumo_regras' %}" class="cartao cartao-link flex h-full items-start gap-4 p-6">
       <span class="mosaico mosaico-ambar">{% icone "talheres" %}</span>
       <span class="min-w-0 flex-1">
         <span class="cartao-titulo">Consumos internos</span>
@@ -37,7 +37,7 @@
     </a>
   </li>
   <li>
-    <a href="{% url 'sales:regras' %}" class="cartao cartao-link flex h-full items-start gap-4 p-5">
+    <a href="{% url 'sales:regras' %}" class="cartao cartao-link flex h-full items-start gap-4 p-6">
       <span class="mosaico mosaico-floresta">{% icone "talao" %}</span>
       <span class="min-w-0 flex-1">
         <span class="cartao-titulo">Vendas</span>
@@ -47,7 +47,7 @@
   </li>
   {% endif %}
   <li>
-    <a href="{% url 'accounts:dispositivo' %}" class="cartao cartao-link flex h-full items-start gap-4 p-5">
+    <a href="{% url 'accounts:dispositivo' %}" class="cartao cartao-link flex h-full items-start gap-4 p-6">
       <span class="mosaico mosaico-floresta">{% icone "tablet" %}</span>
       <span class="min-w-0 flex-1">
         <span class="cartao-titulo">Dispositivo</span>

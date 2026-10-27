@@ -2,12 +2,12 @@
 {% block title %}Corrigir registo{% endblock %}
 {% block content %}
 <h1 class="titulo-pagina">Corrigir registo de ponto</h1>
-<p class="mt-1 text-sm text-ardosia">{{ entry.worker.full_name }} · registo de {{ entry.work_date|date:"d M Y" }}. A correção fica auditada: o seu nome, o motivo, a hora e o valor anterior ficam no histórico.</p>
+<p class="subtitulo-pagina">{{ entry.worker.full_name }} · registo de {{ entry.work_date|date:"d M Y" }}. A correção fica auditada: o seu nome, o motivo, a hora e o valor anterior ficam no histórico.</p>
 
 <form method="post" class="mt-6 max-w-md space-y-5">
   {% csrf_token %}
   {% for erro in form.non_field_errors %}
-  <p class="aviso aviso-chama">{{ erro }}</p>
+  <p class="aviso aviso-perigo">{{ erro }}</p>
   {% endfor %}
   <div class="cartao space-y-5 p-6">
     <div class="grid grid-cols-2 gap-4">
@@ -23,8 +23,8 @@
 </form>
 
 {% if correcoes %}
-<section class="mt-10 max-w-md">
-  <h2 class="font-display text-lg font-bold">Histórico de correções</h2>
+<section class="mt-8 max-w-md">
+  <h2 class="secao-titulo">Histórico de correções</h2>
   <div class="mt-4 rail-taloes">
     {% for c in correcoes %}
     <article class="talao">

@@ -8,7 +8,7 @@ estavam, para o consumo de um dia passado usar a desse dia.{% endcomment %}
 {% if ficha %}
 <a href="{% url 'recipes:ficha' ficha.pk %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}{{ ficha.name }}</a>
 <h1 class="mt-2 titulo-pagina">Editar ficha</h1>
-<p class="mt-1 text-sm text-ardosia">Mudar a receita cria uma versão nova. O nome, o tipo e o preço mudam sem versão.</p>
+<p class="subtitulo-pagina">Mudar a receita cria uma versão nova. O nome, o tipo e o preço mudam sem versão.</p>
 {% else %}
 <a href="{% url 'recipes:lista' %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Fichas técnicas</a>
 <h1 class="mt-2 titulo-pagina">Nova ficha</h1>
@@ -19,7 +19,7 @@ estavam, para o consumo de um dia passado usar a desse dia.{% endcomment %}
   {% csrf_token %}
   <input type="hidden" name="produto" value="{{ dados.produto|default:'' }}">
   <input type="hidden" name="n_linhas" value="{{ n_linhas }}">
-  {% if erro %}<p class="aviso aviso-chama" role="alert">{{ erro }}</p>{% endif %}
+  {% if erro %}<p class="aviso aviso-perigo" role="alert">{{ erro }}</p>{% endif %}
 
   <div class="cartao grid gap-5 p-6 sm:grid-cols-[minmax(0,1fr)_12rem_12rem]">
     <div class="space-y-1.5">
@@ -77,7 +77,7 @@ estavam, para o consumo de um dia passado usar a desse dia.{% endcomment %}
         </tbody>
       </table>
     </div>
-    <p class="border-t border-linha px-4 py-2.5 text-xs text-ardosia">
+    <p class="border-t border-linha px-6 py-3.5 text-xs text-ardosia">
       A quantidade é a limpa, na unidade do artigo. A quebra é o que se perde a descascar e a limpar: com 20 %, 200 g limpos gastam 250 g do stock.
       Uma linha sem artigo ou com a quantidade vazia fica de fora. Precisa de mais linhas? Guarde e volte a editar.
     </p>

@@ -27,7 +27,7 @@ dashboard de cada uma. Para agir, abre-se a casa, que passa a ser a ativa.{% end
         {% for l in linhas %}
         <tr>
           <td class="font-medium">{{ l.casa.name }}{% if l.casa == request.restaurant %} <span class="text-xs font-normal text-ardosia">· casa ativa</span>{% endif %}</td>
-          <td class="td-dados text-right {% if l.stock_baixo %}font-semibold text-chama{% endif %}">{{ l.stock_baixo }}</td>
+          <td class="td-dados text-right {% if l.stock_baixo %}font-semibold text-alerta{% endif %}">{{ l.stock_baixo }}</td>
           <td class="td-dados text-right">{{ l.em_turno }}</td>
           <td class="td-dados text-right {% if l.por_resolver %}font-semibold{% endif %}">{{ l.por_resolver }}</td>
           <td class="td-dados text-right {% if l.ferias_pendentes %}font-semibold{% endif %}">{{ l.ferias_pendentes }}</td>

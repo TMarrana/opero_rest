@@ -43,8 +43,8 @@ def _totais(worker):
     total_hoje = soma(hoje)
     total_semana = soma(inicio_semana)
     return {
-        "hoje": _formatar(total_hoje) if total_hoje else "—",
-        "semana": _formatar(total_semana) if total_semana else "—",
+        "hoje": _formatar(total_hoje),
+        "semana": _formatar(total_semana),
     }
 
 

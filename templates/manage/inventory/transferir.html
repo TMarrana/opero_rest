@@ -6,7 +6,7 @@
 escolhe-se primeiro (GET), porque os artigos possíveis são os dessa casa.{% endcomment %}
 <a href="{% url 'inventory:lista' %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Stock</a>
 <h1 class="mt-2 titulo-pagina">Transferir {{ item.name }}</h1>
-<p class="mt-1 text-sm text-ardosia">
+<p class="subtitulo-pagina">
   Stock em {{ request.restaurant }}: <span class="font-dados font-semibold text-carvao">{{ item.current_stock }} {{ item.unit }}</span>.
   Sai daqui e entra na outra casa, no mesmo momento, e fica no histórico das duas.
 </p>
@@ -28,7 +28,7 @@ escolhe-se primeiro (GET), porque os artigos possíveis são os dessa casa.{% en
     {% csrf_token %}
     <input type="hidden" name="destino" value="{{ destino.pk }}">
     {% for erro in form.non_field_errors %}
-    <p class="aviso aviso-chama">{{ erro }}</p>
+    <p class="aviso aviso-perigo">{{ erro }}</p>
     {% endfor %}
     <div class="cartao space-y-5 p-6">
       {% if casas|length == 1 %}<p class="text-sm">Para <span class="font-semibold">{{ destino }}</span></p>{% endif %}

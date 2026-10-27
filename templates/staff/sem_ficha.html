@@ -4,13 +4,13 @@
 {% block content %}
 <div class="flex flex-1 flex-col items-center justify-center">
   <div class="cartao w-full px-6 py-8 text-center">
-    <span class="mosaico mx-auto h-14 w-14 rounded-full bg-ambar/15 text-[#B5761A]">{% icone "pessoa" "h-7 w-7" %}</span>
+    <span class="mosaico mx-auto h-14 w-14 rounded-full bg-ambar-50 text-ambar-700">{% icone "pessoa" "h-7 w-7" %}</span>
     <p class="mt-4 font-display text-xl font-bold">Falta a ficha de trabalhador</p>
     <p class="mt-3 text-sm text-ardosia">A sua conta ainda não está ligada a uma ficha de trabalhador. Peça ao gerente para a associar em Trabalhadores.</p>
   </div>
 </div>
 <form method="post" action="{% url 'accounts:logout' %}" class="mt-6">
   {% csrf_token %}
-  <button type="submit" class="flex min-h-toque w-full items-center justify-center gap-2 rounded-full text-sm font-semibold text-chama transition-colors hover:bg-chama/5">{% icone "sair" "h-5 w-5" %}Sair</button>
+  <button type="submit" class="flex min-h-toque w-full items-center justify-center gap-2 rounded-full text-sm font-semibold text-ardosia transition-colors hover:bg-perigo-50 hover:text-perigo">{% icone "sair" "h-5 w-5" %}Sair</button>
 </form>
 {% endblock %}

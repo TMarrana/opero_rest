@@ -4,5 +4,5 @@ contorno tracejado. As cores são as três neutras dos tipos (secção 4).{% end
 <span class="flex h-full w-full items-center justify-center rounded font-dados text-[11px] font-semibold leading-none
   {% if pendente %}border border-dashed border-ardosia text-ardosia
   {% elif tipo.color == 'carvao' %}bg-floresta text-superficie
-  {% elif tipo.color == 'aco' %}border border-areia bg-creme text-carvao
+  {% elif tipo.color == 'aco' %}border border-neutro-300 bg-creme text-carvao
   {% else %}bg-ardosia text-superficie{% endif %}">{{ texto }}</span>

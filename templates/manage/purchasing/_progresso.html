@@ -9,11 +9,11 @@ rascunho → enviada → recebida. «Recebida em parte» fica no último passo, 
   </li>
   <li aria-hidden="true" class="h-0.5 flex-1 rounded {% if s != 'RASCUNHO' %}bg-floresta{% else %}bg-linha{% endif %}"></li>
   <li class="flex items-center gap-2 {% if s != 'RASCUNHO' %}font-semibold{% else %}text-ardosia{% endif %}">
-    <span class="inline-flex h-8 w-8 items-center justify-center rounded-full {% if s != 'RASCUNHO' %}bg-floresta text-creme{% else %}border border-areia bg-superficie{% endif %}">{% icone "camiao" "h-4 w-4" %}</span>Enviada
+    <span class="inline-flex h-8 w-8 items-center justify-center rounded-full {% if s != 'RASCUNHO' %}bg-floresta text-creme{% else %}border border-neutro-300 bg-superficie{% endif %}">{% icone "camiao" "h-4 w-4" %}</span>Enviada
   </li>
   <li aria-hidden="true" class="h-0.5 flex-1 rounded {% if s == 'RECEBIDA' %}bg-floresta{% elif s == 'PARCIAL' %}bg-ambar{% else %}bg-linha{% endif %}"></li>
   <li class="flex items-center gap-2 {% if s == 'RECEBIDA' or s == 'PARCIAL' %}font-semibold{% else %}text-ardosia{% endif %}">
-    <span class="inline-flex h-8 w-8 items-center justify-center rounded-full {% if s == 'RECEBIDA' %}bg-floresta text-creme{% elif s == 'PARCIAL' %}bg-ambar/20 text-[#8A5A10]{% else %}border border-areia bg-superficie{% endif %}">{% icone "pacote" "h-4 w-4" %}</span>{% if s == 'PARCIAL' %}Recebida em parte{% else %}Recebida{% endif %}
+    <span class="inline-flex h-8 w-8 items-center justify-center rounded-full {% if s == 'RECEBIDA' %}bg-floresta text-creme{% elif s == 'PARCIAL' %}bg-ambar-100 text-ambar-700{% else %}border border-neutro-300 bg-superficie{% endif %}">{% icone "pacote" "h-4 w-4" %}</span>{% if s == 'PARCIAL' %}Recebida em parte{% else %}Recebida{% endif %}
   </li>
 </ol>
 {% endwith %}

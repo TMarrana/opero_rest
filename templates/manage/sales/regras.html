@@ -4,7 +4,7 @@
 {% block content %}
 <a href="{% url 'sales:importar' %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Importar vendas</a>
 <h1 class="mt-2 titulo-pagina">Regras de vendas</h1>
-<p class="mt-1 text-sm text-ardosia">Valem para {{ request.restaurant }}. Mudar a hora de corte só se aplica às importações seguintes.</p>
+<p class="subtitulo-pagina">Valem para {{ request.restaurant }}. Mudar a hora de corte só se aplica às importações seguintes.</p>
 
 <form method="post" class="mt-6 max-w-lg space-y-5">
   {% csrf_token %}

@@ -27,7 +27,7 @@ linha dá entrada no stock e não se apaga; um erro corrige-se com um ajuste.{% 
   {% csrf_token %}
   {% if not encomenda %}<input type="hidden" name="fornecedor" value="{{ fornecedor.pk }}">{% endif %}
   {% for erro in form.non_field_errors %}
-  <p class="aviso aviso-chama" role="alert">{{ erro }}</p>
+  <p class="aviso aviso-perigo" role="alert">{{ erro }}</p>
   {% endfor %}
   <div class="cartao grid gap-5 p-6 sm:grid-cols-3">
     {% include "components/campo.html" with field=form.document_number %}
@@ -68,7 +68,7 @@ linha dá entrada no stock e não se apaga; um erro corrige-se com um ajuste.{% 
         </tbody>
       </table>
     </div>
-    <p class="border-t border-linha px-4 py-2.5 text-xs text-ardosia">
+    <p class="border-t border-linha px-6 py-3.5 text-xs text-ardosia">
       Preços sem IVA, na unidade do artigo. {% if encomenda %}Uma linha que não chegou fica a zero ou vazia, e a encomenda fica recebida em parte.{% else %}As linhas sem artigo ficam de fora.{% endif %}
     </p>
   </div>

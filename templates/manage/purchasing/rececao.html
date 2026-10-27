@@ -5,7 +5,7 @@
 {% block content %}
 <a href="{% url 'purchasing:rececoes' %}?mes={{ rececao.document_date|date:'Y-m' }}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Receções</a>
 <h1 class="mt-2 titulo-pagina"><span class="font-dados">{{ rececao.reference }}</span> · {{ rececao.supplier.name }}</h1>
-<p class="mt-1 text-sm text-ardosia">
+<p class="subtitulo-pagina">
   {{ rececao.document_number }} de <span class="font-dados">{{ rececao.document_date|date:"d/m/Y" }}</span>
   · recebida por {{ rececao.received_by }} a <span class="font-dados">{{ rececao.received_at|date:"d/m/Y H:i" }}</span>
   {% if rececao.order %}· <a href="{% url 'purchasing:encomenda' rececao.order.pk %}" class="link-texto">{{ rececao.order.reference }}</a>{% else %}· sem encomenda{% endif %}

@@ -22,7 +22,7 @@ minuto. As pausas aparecem ao lado da Saída, sem passo extra.{% endcomment %}
   <a href="{% url 'kiosk:inicio' %}" class="btn shrink-0 border border-creme/25 text-base text-creme hover:bg-creme/10">Cancelar</a>
 </header>
 {% if saida_esquecida %}
-<p class="aviso aviso-chama mt-4 flex items-start gap-3 text-base">{% icone "alerta" "mt-0.5 h-5 w-5 shrink-0" %}<span>Já passou da hora prevista de saída. Se acabou de chegar para outro turno, pique primeiro a saída e depois a entrada, e {% if worker.user_id %}peça na app{% else %}peça ao gerente{% endif %} a correção da hora de saída.</span></p>
+<p class="aviso aviso-alerta mt-4 flex items-start gap-3 text-base">{% icone "alerta" "mt-0.5 h-5 w-5 shrink-0" %}<span>Já passou da hora prevista de saída. Se acabou de chegar para outro turno, pique primeiro a saída e depois a entrada, e {% if worker.user_id %}peça na app{% else %}peça ao gerente{% endif %} a correção da hora de saída.</span></p>
 {% endif %}
 
 <div class="mt-6 space-y-3">
@@ -31,14 +31,14 @@ minuto. As pausas aparecem ao lado da Saída, sem passo extra.{% endcomment %}
     {% csrf_token %}
     <input type="hidden" name="token" value="{{ token }}">
     <input type="hidden" name="acao" value="fim_pausa">
-    <button type="submit" class="flex min-h-[30vh] w-full items-center justify-center gap-4 rounded-3xl border-2 border-floresta bg-superficie text-5xl font-bold tracking-tight text-floresta transition-colors duration-150 hover:bg-floresta/5">{% icone "entrar" "h-12 w-12" %}Terminar pausa</button>
+    <button type="submit" class="flex min-h-[30vh] w-full items-center justify-center gap-4 rounded-2xl border-2 border-floresta bg-superficie text-5xl font-bold tracking-tight text-floresta transition-colors duration-150 hover:bg-floresta-50">{% icone "entrar" "h-12 w-12" %}Terminar pausa</button>
   </form>
   {% elif entry %}
   <form method="post" action="{% url 'kiosk:marcar' worker.pk %}" hx-disabled-elt="find button">
     {% csrf_token %}
     <input type="hidden" name="token" value="{{ token }}">
     <input type="hidden" name="acao" value="saida">
-    <button type="submit" class="flex min-h-[30vh] w-full items-center justify-center gap-4 rounded-3xl bg-chama text-5xl font-bold tracking-tight text-superficie shadow-flutuante transition-colors duration-150 hover:bg-chama/90">{% icone "sair" "h-12 w-12" %}Saída</button>
+    <button type="submit" class="flex min-h-[30vh] w-full items-center justify-center gap-4 rounded-2xl bg-chama text-5xl font-bold tracking-tight text-superficie shadow-flutuante transition-colors duration-150 hover:bg-chama-600">{% icone "sair" "h-12 w-12" %}Saída</button>
   </form>
   {% if tipos_pausa %}
   <div class="grid gap-3 {% if tipos_pausa|length > 1 %}grid-cols-2{% endif %}">
@@ -60,7 +60,7 @@ minuto. As pausas aparecem ao lado da Saída, sem passo extra.{% endcomment %}
     {% csrf_token %}
     <input type="hidden" name="token" value="{{ token }}">
     <input type="hidden" name="acao" value="entrada">
-    <button type="submit" class="flex min-h-[30vh] w-full items-center justify-center gap-4 rounded-3xl bg-floresta text-5xl font-bold tracking-tight text-creme shadow-flutuante transition-colors duration-150 hover:bg-floresta/90">{% icone "entrar" "h-12 w-12" %}Entrada</button>
+    <button type="submit" class="flex min-h-[30vh] w-full items-center justify-center gap-4 rounded-2xl bg-floresta text-5xl font-bold tracking-tight text-creme shadow-flutuante transition-colors duration-150 hover:bg-floresta-800">{% icone "entrar" "h-12 w-12" %}Entrada</button>
   </form>
   {% endif %}
 </div>

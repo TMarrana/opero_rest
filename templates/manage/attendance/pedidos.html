@@ -7,7 +7,7 @@
 {% include "manage/attendance/_nav.html" %}
 
 <section class="mt-6">
-  <h2 class="font-display text-lg font-bold">Por decidir
+  <h2 class="secao-titulo">Por decidir
     {% if pendentes %}<span class="font-dados text-base text-ardosia">{{ pendentes|length }}</span>{% endif %}
   </h2>
   <div class="mt-3 cartao">
@@ -22,7 +22,7 @@
           <tr>
             <td class="font-medium">{{ p.worker.full_name }}</td>
             <td class="text-sm">{{ p.get_kind_display }}</td>
-            <td class="td-dados">{% if p.old_check_in %}{{ p.old_check_in|date:"d/m H:i" }} &rarr; {% if p.old_check_out %}{{ p.old_check_out|date:"H:i" }}{% else %}<span class="text-chama">sem saída</span>{% endif %}{% else %}—{% endif %}</td>
+            <td class="td-dados">{% if p.old_check_in %}{{ p.old_check_in|date:"d/m H:i" }} &rarr; {% if p.old_check_out %}{{ p.old_check_out|date:"H:i" }}{% else %}<span class="text-alerta">sem saída</span>{% endif %}{% else %}—{% endif %}</td>
             <td class="td-dados font-semibold">{{ p.new_check_in|date:"d/m H:i" }} &rarr; {{ p.new_check_out|date:"H:i" }}</td>
             <td class="text-sm text-ardosia">{{ p.note }}</td>
             <td class="whitespace-nowrap text-right">
@@ -43,13 +43,13 @@
 </section>
 
 {% if por_resolver %}
-<section class="mt-10">
-  <h2 class="font-display text-lg font-bold">Registos por resolver <span class="font-dados text-base text-chama">{{ por_resolver|length }}</span></h2>
+<section class="mt-8">
+  <h2 class="secao-titulo">Registos por resolver <span class="font-dados text-base text-alerta">{{ por_resolver|length }}</span></h2>
   <p class="mt-1 text-sm text-ardosia">Entradas sem saída que passaram do limite e ainda não têm pedido do colaborador. Não contam para os totais até terem saída.</p>
   <div class="mt-3 cartao">
     <ul class="divide-y divide-linha">
       {% for r in por_resolver %}
-      <li class="flex items-baseline justify-between px-4 py-2.5 text-sm">
+      <li class="flex items-baseline justify-between px-6 py-3.5 text-sm">
         <span><span class="font-medium">{{ r.worker.full_name }}</span> · <span class="font-dados">entrada {{ r.check_in|date:"d/m H:i" }}</span></span>
         <a href="{% url 'attendance:corrigir' r.pk %}" class="link-texto">Indicar saída</a>
       </li>
@@ -59,8 +59,8 @@
 </section>
 {% endif %}
 
-<section class="mt-10">
-  <h2 class="font-display text-lg font-bold">Decididos</h2>
+<section class="mt-8">
+  <h2 class="secao-titulo">Decididos</h2>
   <div class="mt-3 cartao">
     {% if decididos %}
     <div class="overflow-x-auto">
@@ -71,7 +71,7 @@
           <tr>
             <td class="font-medium">{{ p.worker.full_name }}</td>
             <td class="td-dados">{{ p.new_check_in|date:"d/m H:i" }} &rarr; {{ p.new_check_out|date:"H:i" }}</td>
-            <td>{% if p.status == "APROVADO" %}{% include "components/badge.html" with label="Aprovado" variante="servico" %}{% else %}{% include "components/badge.html" with label="Recusado" variante="chama" %}{% endif %}</td>
+            <td>{% if p.status == "APROVADO" %}{% include "components/badge.html" with label="Aprovado" variante="servico" %}{% else %}{% include "components/badge.html" with label="Recusado" variante="perigo" %}{% endif %}</td>
             <td class="text-xs text-ardosia">{{ p.decided_by }} · {{ p.decided_at|date:"d M Y" }}{% if p.decision_note %} · «{{ p.decision_note }}»{% endif %}</td>
           </tr>
           {% endfor %}

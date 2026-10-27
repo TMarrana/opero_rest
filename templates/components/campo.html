@@ -12,6 +12,6 @@ Erros em português simples, junto ao campo, sem pedir desculpa (secção 9).
   {% firstof ajuda field.help_text as texto_ajuda %}
   {% if texto_ajuda %}<p class="text-xs text-ardosia">{{ texto_ajuda }}</p>{% endif %}
   {% for erro in field.errors %}
-    <p class="text-sm font-medium text-chama">{{ erro }}</p>
+    <p class="text-sm font-medium text-perigo">{{ erro }}</p>
   {% endfor %}
 </div>

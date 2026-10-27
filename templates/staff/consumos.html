@@ -14,11 +14,11 @@ próprio, com o valor ao custo. Só leitura: quem regista é o gerente.{% endcom
 
 {% if consumos %}
 <div class="mt-4 grid grid-cols-2 gap-3">
-  <div class="cartao flex items-center gap-3 p-4">
+  <div class="cartao flex items-center gap-3 p-6">
     <span class="mosaico mosaico-ambar">{% icone "talheres" %}</span>
     <dl><dt class="text-xs text-ardosia">Refeições</dt><dd class="font-dados text-xl font-bold">{{ refeicoes }}</dd></dl>
   </div>
-  <div class="cartao flex items-center gap-3 p-4">
+  <div class="cartao flex items-center gap-3 p-6">
     <span class="mosaico mosaico-floresta">{% icone "euro" %}</span>
     <dl><dt class="text-xs text-ardosia">Valor ao custo</dt><dd class="font-dados text-xl font-bold">{{ total|euros }}</dd></dl>
   </div>

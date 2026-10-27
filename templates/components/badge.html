@@ -1,11 +1,14 @@
 {% comment %}
 Estado em pílula tingida (o «Delivered» do EMBER). Parâmetros:
   label    — texto (obrigatório)
-  variante — chama (alerta: stock baixo, recusado) | servico (em serviço, aprovado)
+  variante — alerta (stock baixo, por resolver; aceita também "chama")
+             | perigo (recusado, anulado) | servico (em serviço, aprovado)
              | ambar (à espera) | neutro (default)
 {% endcomment %}
-{% if variante == "chama" %}
-<span class="estado estado-chama">{{ label }}</span>
+{% if variante == "alerta" or variante == "chama" %}
+<span class="estado estado-alerta">{{ label }}</span>
+{% elif variante == "perigo" %}
+<span class="estado estado-perigo">{{ label }}</span>
 {% elif variante == "servico" %}
 <span class="estado estado-servico">{{ label }}</span>
 {% elif variante == "ambar" %}

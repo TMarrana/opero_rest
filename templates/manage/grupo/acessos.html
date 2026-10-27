@@ -4,7 +4,7 @@
 {% block content %}
 <a href="{% url 'grupo:casas' %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Casas e acessos</a>
 <h1 class="mt-2 titulo-pagina">Acessos a {{ casa.name }}</h1>
-<p class="mt-1 text-sm text-ardosia">Quem entra nesta casa e com que perfil. O perfil vale só aqui: a mesma pessoa pode ser gerente nesta casa e colaboradora noutra. Como Admin do grupo, tem acesso a todas.</p>
+<p class="subtitulo-pagina">Quem entra nesta casa e com que perfil. O perfil vale só aqui: a mesma pessoa pode ser gerente nesta casa e colaboradora noutra. Como Admin do grupo, tem acesso a todas.</p>
 
 <div class="mt-6 cartao">
   {% if acessos %}
@@ -46,7 +46,7 @@
 </div>
 
 <section class="mt-8 max-w-lg">
-  <h2 class="font-display text-lg font-bold">Dar acesso</h2>
+  <h2 class="secao-titulo">Dar acesso</h2>
   {% if form.fields.user.queryset.exists %}
   <form method="post" class="mt-3 cartao space-y-4 p-6">
     {% csrf_token %}

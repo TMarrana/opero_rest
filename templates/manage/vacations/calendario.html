@@ -27,7 +27,7 @@ como no planeador de turnos.{% endcomment %}
   <li class="flex items-center gap-1.5"><span class="inline-block h-5 w-6">{% include "partials/vacations/marca.html" with tipo=t texto=t.name|slice:":2" %}</span>{{ t.name }}</li>
   {% endfor %}
   <li class="flex items-center gap-1.5"><span class="inline-block h-5 w-6">{% include "partials/vacations/marca.html" with pendente=True texto="Fé" %}</span>pendente</li>
-  <li class="flex items-center gap-1.5"><span class="inline-block h-5 w-6 rounded bg-floresta/5"></span>fim de semana ou feriado</li>
+  <li class="flex items-center gap-1.5"><span class="inline-block h-5 w-6 rounded bg-floresta-50"></span>fim de semana ou feriado</li>
   <li class="flex items-center gap-1.5"><span class="inline-block h-5 w-6 border-t-2 border-floresta"></span>período bloqueado</li>
 </ul>
 
@@ -41,7 +41,7 @@ como no planeador de turnos.{% endcomment %}
             <th class="sticky left-0 z-10 bg-superficie px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-ardosia">Trabalhador</th>
             {% for c in colunas %}
             <th scope="col" class="min-w-[1.75rem] px-0 py-1 text-center font-dados text-[11px] font-normal
-                {% if c.fim_de_semana or c.feriado %}bg-floresta/5{% endif %}
+                {% if c.fim_de_semana or c.feriado %}bg-floresta-50{% endif %}
                 {% if c.bloqueado %}border-t-2 border-floresta{% endif %}"
                 title="{{ c.dia|date:'l, d/m' }}{% if c.feriado %} · feriado: {{ c.feriado }}{% endif %}{% if c.bloqueado %} · bloqueado: {{ c.bloqueado }}{% endif %}">
               <span class="block text-ardosia">{{ c.dia|date:"D"|slice:":1" }}</span>
@@ -56,10 +56,10 @@ como no planeador de turnos.{% endcomment %}
           <tr class="border-b border-linha">
             <td class="sticky left-0 z-10 whitespace-nowrap bg-superficie px-3 py-1.5 font-medium">{{ linha.worker.full_name }}<span class="block text-xs font-normal text-ardosia">{{ linha.worker.job_title }}</span></td>
             {% for c in linha.celulas %}
-            <td class="p-0.5 {% if c.fim_de_semana or c.feriado %}bg-floresta/5{% endif %}">
+            <td class="p-0.5 {% if c.fim_de_semana or c.feriado %}bg-floresta-50{% endif %}">
               <button type="button"
                       hx-get="{% url 'vacations:celula' linha.worker.pk c.dia|date:'Y-m-d' %}" hx-target="#painel" hx-swap="innerHTML"
-                      class="block h-9 w-full rounded border border-transparent hover:border-areia"
+                      class="block h-9 w-full rounded border border-transparent hover:border-neutro-300"
                       aria-label="{{ linha.worker.full_name }}, {{ c.dia|date:'l d/m' }}{% if c.ausencia %}: {{ c.ausencia.absence_type.name }}{% if c.ausencia.status == 'PENDENTE' %}, pendente{% endif %}{% endif %}"
                       {% if c.ausencia %}title="{{ c.ausencia.absence_type.name }}{% if c.ausencia.status == 'PENDENTE' %} (pendente){% endif %}{% if c.ausencia.half_day %} · meio dia{% endif %}{% if c.mais %} · e outro pedido{% endif %}"{% endif %}>
                 {% if c.ausencia %}{% include "partials/vacations/marca.html" with tipo=c.ausencia.absence_type pendente=c.pendente texto=c.texto %}{% endif %}
@@ -74,7 +74,7 @@ como no planeador de turnos.{% endcomment %}
           <tr>
             <td class="sticky left-0 z-10 bg-superficie px-3 py-2 text-xs text-ardosia">Fora</td>
             {% for n in fora %}
-            <td class="py-2 text-center font-dados text-[11px] {% if n %}font-semibold{% else %}text-ardosia/50{% endif %}">{{ n|default:"·" }}</td>
+            <td class="py-2 text-center font-dados text-[11px] {% if n %}font-semibold{% else %}text-neutro-400{% endif %}">{{ n|default:"·" }}</td>
             {% endfor %}
             <td></td>
           </tr>

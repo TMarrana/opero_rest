@@ -19,7 +19,7 @@
 {% include "manage/attendance/_nav.html" %}
 
 {% if pedidos_pendentes or total_por_resolver %}
-<a href="{% url 'attendance:pedidos' %}" class="mt-4 flex items-center justify-between rounded-xl border border-chama/40 bg-superficie px-4 py-3 text-sm hover:bg-chama/5">
+<a href="{% url 'attendance:pedidos' %}" class="mt-4 flex items-center justify-between rounded-xl border border-alerta-200 bg-superficie px-4 py-3 text-sm hover:bg-alerta-50">
   <span>
     {% if pedidos_pendentes %}<span class="font-dados font-semibold">{{ pedidos_pendentes }}</span> pedido{{ pedidos_pendentes|pluralize }} de correção por decidir{% endif %}{% if pedidos_pendentes and total_por_resolver %} · {% endif %}{% if total_por_resolver %}<span class="font-dados font-semibold">{{ total_por_resolver }}</span> registo{{ total_por_resolver|pluralize }} por resolver{% endif %}
   </span>
@@ -40,7 +40,7 @@
           <td class="font-medium">{{ linha.worker.full_name }}<span class="block text-xs text-ardosia">{{ linha.worker.job_title }}</span></td>
           <td class="font-dados text-sm">
             {% for t in linha.previstos %}<span class="block">{{ t.start_at|date:"H:i" }}&ndash;{{ t.end_at|date:"H:i" }}</span>{% empty %}<span class="text-ardosia">—</span>{% endfor %}
-            {% for d in linha.desvios %}<span class="block font-sans text-xs font-semibold text-chama">{{ d }}</span>{% endfor %}
+            {% for d in linha.desvios %}<span class="block font-sans text-xs font-semibold text-alerta">{{ d }}</span>{% endfor %}
           </td>
           <td>
             {% if linha.registos %}
@@ -48,7 +48,7 @@
               {% for r in linha.registos %}
               <li class="font-dados text-sm">
                 {% if r.work_date != dia %}<span class="text-xs text-ardosia">{{ r.work_date|date:"d/m" }}</span> {% endif %}{{ r.check_in|date:"H:i" }} &rarr;
-                {% if r.check_out %}{{ r.check_out|date:"H:i" }}{% if r.check_out|date:"Y-m-d" != r.work_date|date:"Y-m-d" %}<span class="text-xs text-ardosia"> (+1)</span>{% endif %}{% elif r.is_unresolved %}<span class="font-semibold text-chama">por resolver</span>{% else %}<span class="text-ardosia">em turno</span>{% endif %}
+                {% if r.check_out %}{{ r.check_out|date:"H:i" }}{% if r.check_out|date:"Y-m-d" != r.work_date|date:"Y-m-d" %}<span class="text-xs text-ardosia"> (+1)</span>{% endif %}{% elif r.is_unresolved %}<span class="font-semibold text-alerta">por resolver</span>{% else %}<span class="text-ardosia">em turno</span>{% endif %}
                 {% if r.work_area %}<span class="ml-1 font-sans text-xs text-ardosia">{{ r.work_area.name }}</span>{% endif %}
                 {% if r.corrected_by %}<span class="ml-1 font-sans text-xs text-ardosia" title="{{ r.correction_reason }}">(corrigido)</span>{% endif %}
                 <a href="{% url 'attendance:corrigir' r.pk %}" class="ml-2 font-sans text-xs text-ardosia underline underline-offset-2 hover:text-carvao">{% if r.corrected_by %}Corrigir · histórico{% else %}Corrigir{% endif %}</a>
@@ -65,7 +65,7 @@
           <td class="text-right font-dados text-sm">{% if linha.total %}{{ linha.total|horas }}{% else %}—{% endif %}</td>
           <td>
             {% if linha.por_resolver %}
-            {% include "components/badge.html" with label="Por resolver" variante="chama" %}
+            {% include "components/badge.html" with label="Por resolver" variante="alerta" %}
             {% elif linha.em_turno %}
             {% include "components/badge.html" with label="Em serviço" variante="servico" %}
             {% else %}

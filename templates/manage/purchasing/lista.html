@@ -53,7 +53,7 @@ encomenda, que ainda se pode mudar antes de enviar.{% endcomment %}
         {% for l in linhas %}
         <tr>
           <td class="font-medium">{{ l.item.name }}{% if l.ref %} <span class="font-dados text-xs text-ardosia">{{ l.ref }}</span>{% endif %}</td>
-          <td class="td-dados {% if l.item.current_stock < l.item.minimum_stock %}font-semibold text-chama{% endif %}">{{ l.item.current_stock|numero }} {{ l.item.unit }}</td>
+          <td class="td-dados {% if l.item.current_stock < l.item.minimum_stock %}font-semibold text-alerta{% endif %}">{{ l.item.current_stock|numero }} {{ l.item.unit }}</td>
           <td class="td-dados text-ardosia">{{ l.item.minimum_stock|numero }}</td>
           <td class="td-dados text-ardosia">{% if l.encomendado %}{{ l.encomendado|numero }}{% endif %}</td>
           <td class="td-dados text-ardosia">{% if l.preco is not None %}{{ l.preco|preco }}{% endif %}</td>
@@ -75,7 +75,7 @@ encomenda, que ainda se pode mudar antes de enviar.{% endcomment %}
 </form>
 {% empty %}
 <div class="mt-6 cartao px-6 py-12 text-center">
-  <p class="font-display text-lg font-bold">Não há artigos por encomendar.</p>
+  <p class="secao-titulo">Não há artigos por encomendar.</p>
   <p class="mt-1 text-sm text-ardosia">Os artigos aparecem aqui quando o stock chega ao mínimo. Para encomendar na mesma, crie uma encomenda em Encomendas.</p>
 </div>
 {% endfor %}

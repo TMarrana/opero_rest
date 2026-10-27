@@ -29,7 +29,7 @@
         {% for l in linhas %}
         <tr>
           <td class="font-medium"><a href="{% url 'recipes:ficha' l.recipe.pk %}" class="link-texto">{{ l.recipe.name }}</a>
-            {% if l.cost.problems %}<span class="block text-xs font-normal text-chama">{{ l.cost.problems|length }} linha{{ l.cost.problems|length|pluralize:"s" }} sem custo nesta casa</span>{% elif not l.version or not l.cost.lines %}<span class="block text-xs font-normal text-ardosia">sem receita</span>{% endif %}</td>
+            {% if l.cost.problems %}<span class="block text-xs font-normal text-alerta">{{ l.cost.problems|length }} linha{{ l.cost.problems|length|pluralize:"s" }} sem custo nesta casa</span>{% elif not l.version or not l.cost.lines %}<span class="block text-xs font-normal text-ardosia">sem receita</span>{% endif %}</td>
           <td class="text-sm text-ardosia">{{ l.recipe.get_kind_display }}</td>
           <td class="td-dados">{% if l.version %}{{ l.version.portions|numero }}{% endif %}</td>
           <td class="td-dados">{% if l.cost.per_dose is not None %}{% if not l.cost.complete %}<span class="text-ardosia" title="Incompleto: há linhas sem custo">≥ </span>{% endif %}{{ l.cost.per_dose|euros }}{% else %}<span class="text-ardosia">—</span>{% endif %}</td>

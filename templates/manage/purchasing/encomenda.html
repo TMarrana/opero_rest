@@ -52,7 +52,7 @@ ou WhatsApp, até haver envio de emails (secção 12).{% endcomment %}
             {% empty %}
             <tr><td colspan="4" class="py-6 text-center text-sm text-ardosia">Ainda não há linhas. Acrescente o primeiro artigo em baixo.</td></tr>
             {% endfor %}
-            <tr class="bg-creme/40">
+            <tr class="bg-neutro-50">
               <td>
                 <select name="novo_item" class="campo-input" aria-label="Acrescentar artigo">
                   <option value="">Acrescentar artigo…</option>
@@ -119,7 +119,7 @@ ou WhatsApp, até haver envio de emails (secção 12).{% endcomment %}
   </div>
 
   <aside class="space-y-4 self-start">
-    <section class="cartao p-4" x-data="{ copiado: false }">
+    <section class="cartao p-6" x-data="{ copiado: false }">
       <div class="flex items-baseline justify-between">
         <h2 class="cartao-titulo">Texto para enviar</h2>
         <button type="button" class="link-acao"
@@ -134,7 +134,7 @@ ou WhatsApp, até haver envio de emails (secção 12).{% endcomment %}
       </p>
     </section>
     {% if pode_cancelar %}
-    <form method="post" class="cartao p-4" x-data="{ confirmar: false }">
+    <form method="post" class="cartao p-6" x-data="{ confirmar: false }">
       {% csrf_token %}
       <input type="hidden" name="acao" value="cancelar">
       <button type="button" x-show="!confirmar" x-on:click="confirmar = true" class="link-acao">Cancelar a encomenda</button>

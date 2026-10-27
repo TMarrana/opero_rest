@@ -2,7 +2,7 @@
 {% block title %}Código de ponto{% endblock %}
 {% block content %}
 <h1 class="titulo-pagina">Código de ponto</h1>
-<p class="mt-1 text-sm text-ardosia">{{ worker.full_name }}. O código serve só para picar o ponto no tablet do restaurante. Nunca abre a app nem o backoffice.</p>
+<p class="subtitulo-pagina">{{ worker.full_name }}. O código serve só para picar o ponto no tablet do restaurante. Nunca abre a app nem o backoffice.</p>
 
 <form method="post" class="mt-6 max-w-sm space-y-5">
   {% csrf_token %}

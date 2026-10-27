@@ -207,22 +207,31 @@ Fixada aqui para que a implementação não tome decisões visuais avulsas ecrã
 
 ### Paleta
 
-Definida como CSS custom properties em `static/src/input.css` e exposta ao Tailwind em `theme.extend.colors`.
+As cores base estão em `static/src/input.css`. Os tons claros e escuros são **escalas fixas** em `tailwind.config.js` (`neutro-50…900`, `floresta-50…900`, e 50/100/200/700 de `chama`, `perigo`, `alerta`, `servico` e `ambar`). Sobre fundos claros não se usa transparência (`bg-x/10`), porque dá tons diferentes conforme o fundo; usa-se o tom da escala. A transparência fica para as sobreposições do cartão verde e dos fundos de modal.
 
 | Token | Hex | Uso |
 |---|---|---|
-| `carvao` | `#221E18` | tinta: texto principal |
+| `carvao` = `neutro-900` | `#221E18` | tinta: texto principal |
 | `floresta` | `#15302B` | preenchimentos: botão primário, item ativo, cartão de perfil |
 | `creme` | `#FAF6EB` | fundo das três superfícies; texto sobre `floresta` |
-| `areia` | `#E6DCD0` | moldura do backoffice, pílulas de ação, bordas de botões |
+| `neutro-50…800` | `#FDFBF7` … `#36322B` | fundos de cabeçalhos de tabela, pílulas, bordas |
 | `linha` | `#ECE5D9` | filetes e divisórias |
 | `superficie` | `#FFFFFF` | cartões, tabelas, formulários |
-| `chama` | `#C2461B` | ação principal da página, contadores, alertas, ações irreversíveis |
+| `chama` | `#C2461B` | **só** a ação principal da página e os contadores |
+| `perigo` | `#B42318` | ações irreversíveis, erros, recusado |
+| `alerta` | `#B54708` | avisos: stock baixo, registos por resolver, conflitos, linhas sem custo |
 | `servico` | `#2E7D4F` | estado «em serviço», aprovado |
-| `ambar` | `#E39B2D` | à espera, perfil no cartão verde, ícones |
-| `ardosia` | `#6E675B` | texto secundário (5,2:1 sobre creme) |
+| `ambar` | `#E39B2D` | à espera, perfil no cartão verde |
+| `ardosia` = `neutro-600` | `#6E675B` | texto secundário (5,2:1 sobre creme) |
 
-Hierarquia de botões: **laranja** (`btn-acento`) só na ação principal da página, no cabeçalho, uma por ecrã; **verde** (`btn-primario`) para gravar e para a ação de cada cartão ou linha; **branco** (`btn-fantasma`) para o resto. Estados em pílula tingida (`.estado-*`), com o texto escurecido para AA. A borda dos campos (`#9C9387`) tem 3:1 sobre branco.
+Hierarquia de botões: **laranja** (`btn-acento`) só na ação principal da página, no cabeçalho, uma por ecrã; **verde** (`btn-primario`) para gravar e para a ação de cada cartão ou linha; **branco** (`btn-fantasma`) para o resto; **vermelho** (`btn-perigo`) para o que não se desfaz. Estados em pílula: tom 50 de fundo e tom 700 no texto (AA).
+
+### Espaço, forma e elevação
+
+- **Espaçamento:** interior dos cartões 24px (`p-6`), cabeçalho de cartão `px-6 py-4`, linhas de lista e de tabela com 56px, 24px do título ao conteúdo, 32px entre secções. Nas tabelas, 24px na primeira e na última coluna e 20px nas outras.
+- **Raios:** três. 12px (`rounded-xl`) nos campos e blocos pequenos, 16px (`rounded-2xl`) nos cartões, modais e moldura, pílula (`rounded-full`) nos botões e estados.
+- **Sombras:** três níveis em `tailwind.config.js`: `shadow-cartao` (repouso), `shadow-elevado` (cartão clicável ao passar o rato), `shadow-flutuante` (modais, painéis e menus).
+- **Largura:** o conteúdo do backoffice vai até `max-w-7xl`; o calendário e o planeador usam a largura toda.
 
 ### Tipografia
 
@@ -230,11 +239,11 @@ Ficheiros variáveis servidos localmente a partir de `static/fonts/`, sem chamad
 
 | Papel | Face | Onde |
 |---|---|---|
-| Display | **Playfair Display** (600–800) | títulos de página e de cartão, nomes no cartão de perfil |
-| Corpo | **Inter** (400–700) | tudo o resto, incluindo botões |
-| Dados | **Inter** com figuras tabulares (`font-dados`) | quantidades, horas, datas, valores |
+| Display | **Playfair Display** (600–800) | **só** o título da página (`titulo-pagina`), os nomes no cartão verde, os títulos dos modais e do quiosque |
+| Corpo | **Inter** (400–700) | tudo o resto: `secao-titulo` (18px semibold), `cartao-titulo` (16px semibold), botões |
+| Dados | **Inter** com figuras tabulares (`font-dados`) | quantidades, horas, datas, valores; nunca partem de linha nas tabelas |
 
-**Regra transversal: todos os números usam figuras tabulares**, para as colunas alinharem.
+**Regra transversal: todos os números usam figuras tabulares**, para as colunas alinharem. Um total vazio mostra-se como `0h00`, não como «—».
 
 ### Componentes
 
@@ -246,7 +255,7 @@ O antigo «talão» continua a ser a forma do histórico: uma linha por moviment
 
 ### Ergonomia
 
-Alvos de toque ≥48px na app e no quiosque. Contraste AA (verificado token a token). `prefers-reduced-motion` respeitado. Foco de teclado visível (anel verde). Abaixo de `lg`, a coluna do backoffice abre numa gaveta.
+Alvos de toque ≥48px na app e no quiosque. Contraste AA no texto (verificado token a token). A borda dos campos (`neutro-300`) é clara e fica abaixo dos 3:1 do WCAG 1.4.11; o campo distingue-se pelo rótulo, pela sombra interior e pela borda escura ao passar e no foco. É uma troca assumida pelo TM a 2026-10-27. `prefers-reduced-motion` respeitado. Foco de teclado visível (anel verde). Abaixo de `lg`, a coluna do backoffice abre numa gaveta.
 
 ### Sala limpa
 As funcionalidades inspiradas no estudo da Factorial reconstroem comportamentos e não copiam materiais: nem textos, nem nomes de ecrãs, nem ícones, nem cores. Os termos da Factorial proíbem a engenharia reversa (BR-003). Todo o microcopy é escrito de raiz em português, segundo a secção 9.
@@ -1130,6 +1139,7 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 
 | Data | Fase | O que foi feito | Por fechar | Próximo passo |
 |---|---|---|---|---|
+| 2026-10-27 (2ª) | — | **Afinação «SaaS premium» do frontend**, a pedido do TM depois de uma análise do CSS. Escalas fixas de cor no `tailwind.config.js` em vez de transparências; tokens novos `perigo` (vermelho) e `alerta`, e o laranja só na ação principal e nos contadores (erros, recusas e «Sair» deixam de ser laranja). Três raios, três sombras, escala de espaçamento (cartões a 24px, linhas a 56px, secções a 32px), conteúdo até `max-w-7xl`. Serifa só nos títulos de página; títulos de cartão e de secção em Inter semibold. Borda dos campos clara com sombra interior. Totais vazios da app como `0h00`. 266 trocas por script nos templates e acertos à mão (dashboard, estados, toasts).<br>347 testes a passar; `check` limpo. Visto com Chrome headless (a extensão continua desligada): dashboard, stock, vendas, encomenda, componentes, férias, novo artigo, e a app e o quiosque a 500px e 1024px. Daí saíram dois acertos: números de tabela sem quebra de linha e células interiores a 20px, porque as ações do stock passavam da margem. | A largura de 375px não foi vista (o Chrome headless não abre janelas com menos de 500px). A borda dos campos fica abaixo de 3:1 (secção 4). Nada commitado. | Ver no telemóvel a 375px. Commitar. |
 | 2026-10-27 | — | **Frontend refeito com a linguagem do EMBER** (shot do Dribbble indicado pelo TM). Secção 4 reescrita.<br>• **Base:** tokens novos (`floresta`, `creme`, `areia`, `linha`, `ambar`; `aco` saiu), Inter e Playfair Display variáveis em `static/fonts/` (as fontes antigas saíram), componentes novos em `input.css`, ícones em `core/templatetags/interface.py`, logo escuro.<br>• **Backoffice:** moldura areia, cabeçalho com a casa e a conta, cartão de perfil verde e navegação com ícones e contadores (`core/context_processors.py`: `nav_secao` e `contadores`, calculados só se usados). Dashboard com saudação, quatro números com ícone, «Por tratar» e listas em linhas (a view ganhou `vendas_mes`, `ferias_pendentes_total`, `movimentos_hoje`). Separadores em pílula no Ponto, Férias, Compras, Fichas e Grupo. Ação principal de cada página a laranja. Seguimento por passos na encomenda. Planeador com a largura toda e painel por cima da grelha, como no calendário.<br>• **Quiosque e app:** passam de escuros a claros, com o cartão verde no topo; ações e textos iguais.<br>• **Resto:** 59 templates convertidos por um script de tokens e revistos no browser. Service worker para v12 e manifest creme.<br>347 testes a passar (um teste deixou de contar a classe `talao-escuro` e conta `data-consumo`); `check` limpo. Visto no browser como `admin@tasca.pt`: dashboard, trabalhadores, stock e modal do movimento, ponto, férias, calendário, turnos, compras, encomenda, fichas, vendas, configuração, dispositivo e componentes. | **Por ver no browser** (a extensão do Chrome caiu a meio): quiosque, app do colaborador, login, área do grupo, formulários e os passos da encomenda; só os testes os renderizaram. Os ícones da PWA continuam escuros. Nada commitado. | Ver no browser o quiosque (este browser está ativado), a app com uma conta de colaborador, o login e o Grupo com `dono@tasca.pt`. Depois commitar. |
 | 2026-10-26 (6ª) | 12, 13 | **Fase 12 commitada e enviada** (`b4ee837`). **Fase 13: fichas técnicas**, app nova `recipes`.<br>• **Modelos:** `Recipe` (do grupo), `RecipeVersion` (data de início, doses, preparação), `RecipeLine` (artigo pelo nome e unidade, ou preparação, quantidade e quebra), `RecipeProduct` (um produto do POS, uma ficha). Migração `recipes/0001`.<br>• **Serviços (`recipes/services.py`):** criar e mudar fichas, com uma versão nova só quando a receita muda; custo por dose em cada casa, com as linhas sem artigo, com outra unidade ou sem custo assinaladas; preparações a um nível; preço do POS ou de referência e food cost; ligar produtos; produtos sem ficha pelo peso nas vendas de 90 dias. `recipes/signals.py` acompanha a mudança de nome de um artigo.<br>• **Ecrãs:** Fichas no rail, com a lista (custo, preço e food cost da casa ativa), a ficha (receita com custo, produtos do POS, versões, onde entra), o formulário (dados e receita juntos), a ficha para a cozinha para N doses e os produtos do POS sem ficha.<br>• **Demo:** o Bitoque com duas versões e o molho como preparação, e o café, ligados ao P001 e ao C001 nas duas casas. Na Esquina, o Bitoque custa 3,10 € (34,7 % de food cost).<br>28 testes novos, 347 no total; `check` e `makemigrations --check` limpos; migração e `demo` aplicados ao `db.sqlite3` (cópia de segurança fora do repositório). CSS reconstruído e service worker para v11.<br>No browser, como `dono@tasca.pt` na Esquina: a lista, a ficha do Bitoque, os produtos sem ficha e a edição, que criou a versão 3 (dois ovos). As capturas de ecrã falharam (o separador do Chrome não respondia), por isso as páginas foram lidas só pelo texto. Daí saiu um acerto: o custo de cada linha passou a ter duas casas («0,2504 €»). Antes, o Bitoque da Ribeira, sem nenhum artigo com custo, aparecia a 0,00 € e passou a «—». | A revisão visual dos ecrãs novos. O consumo de pratos nos consumos internos (Fase 12). A decisão do catálogo de artigos (secção 12), que mudaria a ligação das linhas. A versão 3 do Bitoque ficou no `db.sqlite3`. Fase 13 por commitar. | Ver os ecrãs das fichas com o browser a funcionar. Depois, o consumo de pratos nos consumos internos (com `version_on` do dia do consumo) e a Fase 14. |
 | 2026-10-26 (5ª) | 11, 12 | **Fase 11 commitada e enviada** (`7406bea`). **Fase 12: consumos internos**, em `inventory`.<br>• **Modelos:** `InternalConsumption` (pessoa ou casa, motivo, dia, acima do limite, anulação), `ConsumptionLine` (custo e valor do momento, movimento e movimento da anulação), `ConsumptionSettings` (refeições por turno). `StockMovement.Origin.CONSUMO`. Migração `inventory/0004`.<br>• **Serviços (`inventory/consumption.py`):** registar numa transação, com uma `SAIDA` por linha pelo `register_movement()`; limite de refeições pelos turnos do dia (ponto, ou turnos publicados); anular com uma `ENTRADA` por linha; mapa do mês e CSV.<br>• **Ecrãs:** Stock → Consumos (mapa do mês por pessoa, consumos em talões, filtro por pessoa, anular com motivo, CSV), Registar consumo (até seis artigos), regras em Configuração (só o Admin), e «Os meus consumos» na app do colaborador.<br>• **Demo:** café e água com custo, uma refeição por turno, as refeições de ontem da Marta e do Rui e uma oferta da casa.<br>13 testes novos, 319 no total; `check` e `makemigrations --check` limpos; migração e `demo` aplicados ao `db.sqlite3` (cópia de segurança fora do repositório). CSS reconstruído e service worker para v10.<br>No browser, como `dono@tasca.pt` na Esquina: o mapa, a lista e o registo de uma refeição do Rui, que ficou acima do limite. Daí saíram dois acertos: o aviso passou a dizer porque passou o limite («não tinha turno nesse dia»), e um valor desconhecido deixou de aparecer como 0,00 €. | O consumo de pratos espera pela Fase 13. A app do colaborador só foi vista pelos testes, não num telemóvel. O contabilista tem de dizer como quer as refeições em espécie (secção 12). O consumo `CI-4` do teste ficou no `db.sqlite3`. Fase 12 por commitar. | Commitar a Fase 12. Depois, Fase 13 (fichas técnicas), que liga os pratos aos produtos do POS da Fase 10 e permite o consumo de pratos nesta fase. |
@@ -1158,6 +1168,7 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 
 Alterações ao plano decididas durante a execução. Se algo aqui contradiz uma secção acima, **corrigir também a secção** — este registo é o histórico, não a fonte de verdade.
 
+- **2026-10-27 · Laranja só na ação principal.** Com o tom `perigo` e o `alerta`, o laranja (`chama`) deixou de servir para erros, recusas, avisos e «Sair». A variante `chama` do componente de estado continua a funcionar e dá o estilo de alerta.
 - **2026-10-27 · Linguagem visual do EMBER.** O TM pediu o frontend do shot «Restaurant Dashboard» (EMBER). A direção «back of house» da secção 4 deixa de valer: entram o creme, a serifa e a terracota que ela recusava. A regra «uma só coisa laranja por ecrã» passa a «uma só ação principal laranja por ecrã»; os contadores e alertas também são laranja. Os números deixam a mono e ficam em Inter com figuras tabulares. O painel do planeador passa a flutuar por cima da grelha, como o do calendário (Fase 8), porque a coluna nova é mais larga. Service worker para v12.
 - **2026-10-26 · Linha da ficha pelo nome do artigo.** As fichas são do grupo e o catálogo de artigos continua por casa (decisão da secção 12 por tomar). Uma linha guarda o nome e a unidade, e em cada casa liga-se ao artigo com o mesmo nome e unidade. Assim a mesma ficha serve as duas casas, cada uma com o seu custo. Se o catálogo passar a ser do grupo, as linhas passam a apontar para o artigo do grupo, que se encontra pelo nome.
 - **2026-10-26 · Mudar o nome de um artigo acompanha as fichas.** Quando nenhuma outra casa do grupo tem um artigo com o nome antigo, as linhas de todas as versões passam ao nome novo. Não é uma mudança da receita, por isso não cria versão. Se outra casa ainda tem o nome antigo, a ficha fica assinalada «não há este artigo nesta casa» onde o nome mudou.

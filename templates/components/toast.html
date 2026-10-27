@@ -12,7 +12,7 @@ O verbo do toast é o do botão que o despoletou.
   {% for message in messages %}
   <div x-data="{ visivel: true }" x-show="visivel" x-init="setTimeout(() => visivel = false, 4000)" x-transition.opacity
        class="pointer-events-auto flex max-w-lg items-center gap-3 rounded-2xl py-2.5 pl-3 pr-4 text-sm font-semibold shadow-flutuante
-              {% if message.tags == 'error' %}bg-chama text-superficie{% elif message.tags == 'success' %}bg-floresta text-creme{% else %}bg-carvao text-creme{% endif %}">
+              {% if message.tags == 'error' %}bg-perigo text-superficie{% elif message.tags == 'success' %}bg-floresta text-creme{% else %}bg-carvao text-creme{% endif %}">
     <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-superficie/15">
       {% if message.tags == 'error' %}{% icone "alerta" "h-4 w-4" %}{% elif message.tags == 'success' %}{% icone "visto" "h-4 w-4" %}{% else %}{% icone "info" "h-4 w-4" %}{% endif %}
     </span>
@@ -21,8 +21,8 @@ O verbo do toast é o do botão que o despoletou.
   </div>
   {% endfor %}
   <template x-for="(t, i) in lista" :key="i">
-    <div class="pointer-events-auto flex max-w-lg items-center gap-3 rounded-2xl px-5 py-3 text-sm font-semibold shadow-flutuante"
-         :class="t.tom === 'erro' ? 'bg-chama text-superficie' : (t.tom === 'sucesso' ? 'bg-floresta text-creme' : 'bg-carvao text-creme')">
+    <div class="pointer-events-auto flex max-w-lg items-center gap-3 rounded-2xl px-6 py-3.5 text-sm font-semibold shadow-flutuante"
+         :class="t.tom === 'erro' ? 'bg-perigo text-superficie' : (t.tom === 'sucesso' ? 'bg-floresta text-creme' : 'bg-carvao text-creme')">
       <span x-text="t.texto"></span>
     </div>
   </template>

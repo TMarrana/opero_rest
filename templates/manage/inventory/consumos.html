@@ -73,7 +73,7 @@ consumos registados. Um consumo não se apaga: anula-se, e o stock volta.{% endc
       {% csrf_token %}
       <button type="button" x-show="!aberto" x-on:click="aberto = true" class="text-xs text-ardosia underline underline-offset-2 hover:text-carvao">Anular</button>
       <input x-show="aberto" x-cloak type="text" name="motivo" required maxlength="200" placeholder="Motivo da anulação" class="campo-input w-64">
-      <button x-show="aberto" x-cloak type="submit" class="text-xs font-semibold text-chama underline underline-offset-2">Anular e repor o stock</button>
+      <button x-show="aberto" x-cloak type="submit" class="text-xs font-semibold text-perigo underline underline-offset-2">Anular e repor o stock</button>
     </form>
     {% endif %}
   </article>

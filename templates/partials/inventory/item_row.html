@@ -5,7 +5,7 @@
   <td class="td-dados text-ardosia">{{ item.minimum_stock }} {{ item.unit }}</td>
   <td>
     {% if item.is_low %}
-    {% include "components/badge.html" with label="Stock baixo" variante="chama" %}
+    {% include "components/badge.html" with label="Stock baixo" variante="alerta" %}
     {% else %}
     {% include "components/badge.html" with label="OK" variante="neutro" %}
     {% endif %}
@@ -13,7 +13,7 @@
   <td class="whitespace-nowrap text-right text-sm">
     <button type="button"
             hx-get="{% url 'inventory:movimento' item.pk %}" hx-target="#modal-slot" hx-swap="innerHTML"
-            class="link-acao bg-floresta text-creme hover:bg-floresta/90">Movimento</button>
+            class="link-acao bg-floresta text-creme hover:bg-floresta-800">Movimento</button>
     {% if pode_transferir and item.is_active %}<a href="{% url 'inventory:transferir' item.pk %}" class="ml-1.5 link-acao">Transferir</a>{% endif %}
     <a href="{% url 'purchasing:precos' item.pk %}" class="ml-1.5 link-acao">Preços</a>
     <a href="{% url 'inventory:editar' item.pk %}" class="ml-1.5 link-acao">Editar</a>

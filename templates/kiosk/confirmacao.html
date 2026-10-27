@@ -8,15 +8,15 @@ durante 5 segundos (secção 5).{% endcomment %}
 {% include "kiosk/_voltar.html" %}
 <div class="flex flex-1 flex-col justify-center" role="status">
   {% if erro %}
-  <div class="rounded-3xl border border-chama/30 bg-superficie px-7 py-9 shadow-cartao">
-    <span class="mosaico h-14 w-14 rounded-full bg-chama/10 text-chama">{% icone "alerta" "h-7 w-7" %}</span>
-    <p class="mt-5 font-display text-4xl font-bold text-chama">Não registado</p>
+  <div class="rounded-2xl border border-perigo-200 bg-superficie px-7 py-9 shadow-cartao">
+    <span class="mosaico h-14 w-14 rounded-full bg-perigo-50 text-perigo">{% icone "alerta" "h-7 w-7" %}</span>
+    <p class="mt-5 font-display text-4xl font-bold text-perigo">Não registado</p>
     <p class="mt-2 text-lg font-semibold">{{ worker.full_name }}</p>
     <p class="mt-3 text-base">{{ erro }}</p>
   </div>
   {% else %}
-  <div class="{% if entrada %}cartao-perfil{% else %}rounded-3xl border border-linha bg-superficie shadow-cartao{% endif %} px-7 py-9">
-    <span class="mosaico h-14 w-14 rounded-full {% if entrada %}bg-creme/15 text-creme{% else %}bg-servico/10 text-servico{% endif %}">{% icone "visto" "h-7 w-7" %}</span>
+  <div class="{% if entrada %}cartao-perfil{% else %}rounded-2xl border border-linha bg-superficie shadow-cartao{% endif %} px-7 py-9">
+    <span class="mosaico h-14 w-14 rounded-full {% if entrada %}bg-creme/15 text-creme{% else %}bg-servico-50 text-servico{% endif %}">{% icone "visto" "h-7 w-7" %}</span>
     <p class="mt-5 font-display text-4xl font-bold">{{ worker.full_name }}</p>
     <p class="mt-2 font-dados text-2xl">{{ acao }}{% if detalhe %} · {{ detalhe }}{% endif %} às {{ hora|date:"H:i" }}</p>
     {% if entrada %}
@@ -29,8 +29,8 @@ durante 5 segundos (secção 5).{% endcomment %}
   </div>
 
   {% if esquecida or por_resolver %}
-  <div class="mt-4 rounded-3xl bg-chama/10 px-7 py-5 text-base">
-    {% if esquecida %}<p><span class="font-semibold text-[#A83C15]">A saída anterior ficou por picar.</span> Entrada de <span class="font-dados">{{ esquecida.check_in|date:"d/m" }} às {{ esquecida.check_in|date:"H:i" }}</span>, sem saída.</p>{% endif %}
+  <div class="mt-4 rounded-2xl bg-alerta-50 px-7 py-5 text-base">
+    {% if esquecida %}<p><span class="font-semibold text-alerta-700">A saída anterior ficou por picar.</span> Entrada de <span class="font-dados">{{ esquecida.check_in|date:"d/m" }} às {{ esquecida.check_in|date:"H:i" }}</span>, sem saída.</p>{% endif %}
     {% if por_resolver %}<p {% if esquecida %}class="mt-2"{% endif %}>{% if esquecida %}Além desta, tem{% else %}Tem{% endif %} <span class="font-dados font-semibold">{{ por_resolver }}</span> registo{{ por_resolver|pluralize }} por resolver.</p>{% endif %}
     <p class="mt-2 font-semibold">{% if worker.user_id %}Peça a correção na app.{% else %}Fale com o gerente para corrigir.{% endif %}</p>
   </div>

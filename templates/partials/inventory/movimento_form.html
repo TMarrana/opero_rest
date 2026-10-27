@@ -1,7 +1,7 @@
 {% comment %}Fragmento carregado para #modal-slot via HTMX.{% endcomment %}
 <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="mov-titulo">
   <div class="absolute inset-0 bg-floresta/40 backdrop-blur-[2px]" onclick="document.getElementById('modal-slot').innerHTML = ''"></div>
-  <div class="relative w-full max-w-md rounded-3xl bg-superficie p-7 shadow-flutuante">
+  <div class="relative w-full max-w-md rounded-2xl bg-superficie p-6 shadow-flutuante">
     <h2 id="mov-titulo" class="font-display text-xl font-bold text-carvao">Registar movimento</h2>
     <p class="mt-0.5 text-sm text-ardosia">{{ item.name }} · stock atual <span class="font-dados">{{ item.current_stock }} {{ item.unit }}</span></p>
 
@@ -9,7 +9,7 @@
           hx-post="{% url 'inventory:movimento' item.pk %}"
           hx-target="#item-{{ item.pk }}" hx-swap="outerHTML">
       {% for erro in form.non_field_errors %}
-      <p class="aviso aviso-chama">{{ erro }}</p>
+      <p class="aviso aviso-perigo">{{ erro }}</p>
       {% endfor %}
       {% include "components/campo.html" with field=form.movement_type %}
       <div class="grid grid-cols-2 gap-4">

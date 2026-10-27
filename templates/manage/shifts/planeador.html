@@ -38,7 +38,7 @@
 </div>
 
 {% if total_conflitos %}
-<p class="mt-4 rounded-xl border border-chama/40 bg-superficie px-4 py-3 text-sm"><span class="font-dados font-semibold text-chama">{{ total_conflitos }}</span> turno{{ total_conflitos|pluralize }} com conflito. A semana só se publica depois de os resolver.</p>
+<p class="mt-4 rounded-xl border border-alerta-200 bg-superficie px-4 py-3 text-sm"><span class="font-dados font-semibold text-alerta">{{ total_conflitos }}</span> turno{{ total_conflitos|pluralize }} com conflito. A semana só se publica depois de os resolver.</p>
 {% endif %}
 
 {% if not tem_templates %}
@@ -48,10 +48,10 @@
 <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-ardosia">
   <span class="text-sm">Clique numa célula para acrescentar um turno ou marcar uma folga.</span>
   <ul class="flex flex-wrap items-center gap-x-4 gap-y-1.5" aria-label="Legenda">
-    <li class="flex items-center gap-1.5"><span class="inline-block h-3.5 w-5 rounded border border-dashed border-floresta/60"></span> rascunho</li>
+    <li class="flex items-center gap-1.5"><span class="inline-block h-3.5 w-5 rounded border border-dashed border-floresta-300"></span> rascunho</li>
     <li class="flex items-center gap-1.5"><span class="inline-block h-3.5 w-5 rounded bg-floresta"></span> publicado</li>
     <li class="flex items-center gap-1.5"><span class="inline-block h-3.5 w-5 rounded border border-linha bg-superficie"></span> reserva (ausência aprovada)</li>
-    <li class="flex items-center gap-1.5"><span class="inline-block h-3.5 w-5 rounded border-2 border-chama"></span> conflito</li>
+    <li class="flex items-center gap-1.5"><span class="inline-block h-3.5 w-5 rounded border-2 border-alerta"></span> conflito</li>
   </ul>
 </div>
 
@@ -75,19 +75,19 @@
             <td class="align-top p-1">
               <button type="button"
                       hx-get="{% url 'shifts:celula' linha.worker.pk c.dia|date:'Y-m-d' %}" hx-target="#painel" hx-swap="innerHTML"
-                      class="block min-h-[3.5rem] w-full min-w-[6.5rem] rounded-lg border border-transparent p-1 text-left hover:border-areia"
+                      class="block min-h-[3.5rem] w-full min-w-[6.5rem] rounded-xl border border-transparent p-1 text-left hover:border-neutro-300"
                       aria-label="{{ linha.worker.full_name }}, {{ c.dia|date:'l d/m' }}">
                 {% for a in c.ausencias %}
-                <span class="mb-1 block rounded-lg bg-floresta/5 px-1.5 py-0.5 text-xs {% if a.status == 'PENDENTE' %}text-ardosia line-through{% else %}font-semibold{% endif %}"
+                <span class="mb-1 block rounded-xl bg-floresta-50 px-1.5 py-0.5 text-xs {% if a.status == 'PENDENTE' %}text-ardosia line-through{% else %}font-semibold{% endif %}"
                       title="{{ a.absence_type.name }}{% if a.status == 'PENDENTE' %} (pendente){% endif %}">{{ a.absence_type.name }}</span>
                 {% endfor %}
-                {% if c.folga %}<span class="mb-1 block rounded-lg border {% if c.folga.state == 'RASCUNHO' %}border-dashed{% endif %} border-areia px-1.5 py-0.5 text-xs">Folga</span>{% endif %}
+                {% if c.folga %}<span class="mb-1 block rounded-xl border {% if c.folga.state == 'RASCUNHO' %}border-dashed{% endif %} border-neutro-300 px-1.5 py-0.5 text-xs">Folga</span>{% endif %}
                 {% for s in c.turnos %}
-                <span class="mb-1 block rounded-lg px-1.5 py-0.5 font-dados text-xs
-                  {% if s.conflitos %}border-2 border-chama
-                  {% elif s.pending_removal %}border border-dashed border-areia text-ardosia line-through
+                <span class="mb-1 block rounded-xl px-1.5 py-0.5 font-dados text-xs
+                  {% if s.conflitos %}border-2 border-alerta
+                  {% elif s.pending_removal %}border border-dashed border-neutro-300 text-ardosia line-through
                   {% elif s.state == 'RESERVA' %}border border-linha text-ardosia italic
-                  {% elif s.state == 'RASCUNHO' %}border border-dashed border-floresta/60
+                  {% elif s.state == 'RASCUNHO' %}border border-dashed border-floresta-300
                   {% else %}bg-floresta text-superficie{% endif %}"
                   title="{{ s.conflitos|join:'; ' }}">
                   {{ s.start_at|date:"H:i" }}&ndash;{{ s.end_at|date:"H:i" }}

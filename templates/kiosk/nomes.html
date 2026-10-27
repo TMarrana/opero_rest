@@ -9,13 +9,13 @@
           x-text="agora.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })">{% now "H:i" %}</span>
   </p>
 </header>
-<h1 class="mt-10 font-display text-4xl font-bold">Quem está a picar?</h1>
+<h1 class="mt-8 font-display text-4xl font-bold">Quem está a picar?</h1>
 <p class="mt-2 text-base text-ardosia">Toque no seu nome.</p>
 
 <div class="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
   {% for w in workers %}
   <a href="{% url 'kiosk:codigo' w.pk %}"
-     class="flex min-h-[88px] items-center gap-4 rounded-2xl border border-linha bg-superficie px-4 py-4 text-left text-lg font-semibold shadow-cartao transition-colors duration-150 hover:border-floresta/40 hover:bg-creme active:bg-areia/40">
+     class="flex min-h-[88px] items-center gap-4 rounded-2xl border border-linha bg-superficie px-4 py-4 text-left text-lg font-semibold shadow-cartao transition-colors duration-150 hover:border-floresta-200 hover:bg-creme active:bg-neutro-100">
     <span class="avatar h-12 w-12 text-base">{{ w.full_name|iniciais }}</span>
     <span class="min-w-0 leading-snug">{{ w.full_name }}</span>
   </a>

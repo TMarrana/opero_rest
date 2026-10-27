@@ -5,7 +5,7 @@ com {id, acao}. Parâmetro: url_base, a que se junta id/acao/.{% endcomment %}
      x-show="aberto" x-cloak
      class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
   <div class="absolute inset-0 bg-floresta/40 backdrop-blur-[2px]" x-on:click="aberto = false"></div>
-  <div class="relative w-full max-w-md rounded-3xl bg-superficie p-7 shadow-flutuante" x-on:keydown.escape.window="aberto = false">
+  <div class="relative w-full max-w-md rounded-2xl bg-superficie p-6 shadow-flutuante" x-on:keydown.escape.window="aberto = false">
     <h2 class="font-display text-xl font-bold text-carvao" x-text="acao === 'aprovar' ? 'Aprovar este pedido?' : 'Recusar este pedido?'"></h2>
     <p class="mt-2 text-sm text-ardosia">A decisão fica no histórico com o seu nome e não se apaga.</p>
     <form method="post" x-bind:action="'{{ url_base }}' + id + '/' + acao + '/'" class="mt-4 space-y-4">
@@ -15,7 +15,7 @@ com {id, acao}. Parâmetro: url_base, a que se junta id/acao/.{% endcomment %}
         <button type="button" x-on:click="aberto = false"
                 class="btn btn-fantasma">Cancelar</button>
         <button type="submit"
-                x-bind:class="acao === 'aprovar' ? 'bg-servico text-superficie hover:bg-servico/90' : 'bg-chama text-superficie hover:bg-chama/90'"
+                x-bind:class="acao === 'aprovar' ? 'bg-servico text-superficie hover:bg-servico-700' : 'bg-perigo text-superficie hover:bg-perigo-700'"
                 class="btn"
                 x-text="acao === 'aprovar' ? 'Aprovar pedido' : 'Recusar pedido'"></button>
       </div>

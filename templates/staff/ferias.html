@@ -24,11 +24,11 @@
 </section>
 {% endif %}
 
-<form method="post" class="cartao mt-4 space-y-4 p-5">
+<form method="post" class="cartao mt-4 space-y-4 p-6">
   {% csrf_token %}
   <h2 class="cartao-titulo">Pedir férias ou ausência</h2>
   {% for erro in form.non_field_errors %}
-  <p class="aviso aviso-chama">{{ erro }}</p>
+  <p class="aviso aviso-perigo">{{ erro }}</p>
   {% endfor %}
   <div class="space-y-1.5">
     <label for="{{ form.absence_type.id_for_label }}" class="block text-sm font-medium">Tipo</label>
@@ -38,12 +38,12 @@
     <div class="space-y-1.5">
       <label for="{{ form.start_date.id_for_label }}" class="block text-sm font-medium">Início</label>
       {{ form.start_date }}
-      {% for erro in form.start_date.errors %}<p class="text-sm font-medium text-chama">{{ erro }}</p>{% endfor %}
+      {% for erro in form.start_date.errors %}<p class="text-sm font-medium text-perigo">{{ erro }}</p>{% endfor %}
     </div>
     <div class="space-y-1.5">
       <label for="{{ form.end_date.id_for_label }}" class="block text-sm font-medium">Fim</label>
       {{ form.end_date }}
-      {% for erro in form.end_date.errors %}<p class="text-sm font-medium text-chama">{{ erro }}</p>{% endfor %}
+      {% for erro in form.end_date.errors %}<p class="text-sm font-medium text-perigo">{{ erro }}</p>{% endfor %}
     </div>
   </div>
   {% if form.half_day %}
@@ -65,7 +65,7 @@
       <div class="flex items-start justify-between gap-3">
         <time class="block text-xs text-ardosia">{{ p.absence_type.name }} · pedido em {{ p.created_at|date:"d M Y" }}</time>
         {% if p.status == 'APROVADO' %}{% include "components/badge.html" with label=p.get_status_display variante="servico" %}
-        {% elif p.status == 'RECUSADO' %}{% include "components/badge.html" with label=p.get_status_display variante="chama" %}
+        {% elif p.status == 'RECUSADO' %}{% include "components/badge.html" with label=p.get_status_display variante="perigo" %}
         {% else %}{% include "components/badge.html" with label=p.get_status_display variante="ambar" %}{% endif %}
       </div>
       <p class="mt-1 text-base font-semibold">{{ p.start_date|date:"d M" }}{% if p.end_date != p.start_date %} &rarr; {{ p.end_date|date:"d M Y" }}{% else %} {{ p.start_date|date:"Y" }}{% endif %}{% if p.half_day %} · meio dia{% endif %}</p>

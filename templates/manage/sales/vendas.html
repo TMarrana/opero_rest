@@ -15,7 +15,7 @@ anulados, com as notas de crédito a abater. Os valores são sem IVA.{% endcomme
 
 {% if not tem_importacoes %}
 <div class="mt-6 cartao px-6 py-12 text-center">
-  <p class="font-display text-lg font-bold">Ainda não há vendas.</p>
+  <p class="secao-titulo">Ainda não há vendas.</p>
   <p class="mt-1 text-sm text-ardosia">Comece por importar o ficheiro SAF-T de faturação que o POS exporta, por exemplo o do último mês.</p>
 </div>
 {% else %}
@@ -43,22 +43,22 @@ anulados, com as notas de crédito a abater. Os valores são sem IVA.{% endcomme
 
 {# ---- Resumo do período, comparado com o anterior ---- #}
 <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-  <div class="cartao p-4">
+  <div class="cartao p-6">
     <p class="rotulo">Vendas sem IVA</p>
     <p class="mt-1 font-dados text-2xl font-semibold">{{ atual.total|euros }}</p>
     <p class="font-dados text-xs text-ardosia">{{ var_total|variacao }}</p>
   </div>
-  <div class="cartao p-4">
+  <div class="cartao p-6">
     <p class="rotulo">Documentos de venda</p>
     <p class="mt-1 font-dados text-2xl font-semibold">{{ atual.vendas|numero }}</p>
     <p class="font-dados text-xs text-ardosia">{{ var_vendas|variacao }}{% if atual.notas %}{% if var_vendas is not None %} · {% endif %}{{ atual.notas }} nota{{ atual.notas|pluralize }} de crédito{% endif %}</p>
   </div>
-  <div class="cartao p-4">
+  <div class="cartao p-6">
     <p class="rotulo">Ticket médio</p>
     <p class="mt-1 font-dados text-2xl font-semibold">{{ atual.ticket|euros }}</p>
     <p class="font-dados text-xs text-ardosia">{{ var_ticket|variacao }}</p>
   </div>
-  <div class="cartao p-4">
+  <div class="cartao p-6">
     <p class="rotulo">Vendas por hora trabalhada</p>
     <p class="mt-1 font-dados text-2xl font-semibold">{{ totais.por_hora|euros }}</p>
     <p class="font-dados text-xs text-ardosia">
@@ -120,7 +120,7 @@ anulados, com as notas de crédito a abater. Os valores são sem IVA.{% endcomme
       </tfoot>
     </table>
   </div>
-  <p class="border-t border-linha px-4 py-2.5 text-xs text-ardosia">
+  <p class="border-t border-linha px-6 py-3.5 text-xs text-ardosia">
     As horas são as do ponto, sem pausas não pagas. Num dia sem ponto, usam-se as dos turnos publicados («prev.»).
     O dia de serviço vai até às <span class="font-dados">{{ regras.day_cutoff_hour|stringformat:"02d" }}:00</span> do dia seguinte.
   </p>
@@ -192,7 +192,7 @@ anulados, com as notas de crédito a abater. Os valores são sem IVA.{% endcomme
     {% if familias %}
     <ul class="divide-y divide-linha">
       {% for f in familias %}
-      <li class="px-4 py-2.5 text-sm">
+      <li class="px-6 py-3.5 text-sm">
         <div class="flex items-baseline justify-between gap-3">
           <span class="font-medium">{{ f.product__group|default:"Sem família" }}</span>
           <span class="font-dados">{{ f.total|euros }}</span>

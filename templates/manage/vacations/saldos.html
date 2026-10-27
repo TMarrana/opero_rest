@@ -27,7 +27,7 @@
           <td class="td-dados">{{ l.form.carried_over }}</td>
           <td>{{ l.form.carry_over_expires_on }}</td>
           <td class="td-dados">{{ l.saldo.usados }}</td>
-          <td class="td-dados font-semibold {% if l.saldo.disponiveis < 0 %}text-chama{% endif %}">{{ l.saldo.disponiveis }}{% if l.saldo.caducados %}<span class="block text-xs font-normal text-ardosia">{{ l.saldo.caducados }} caducados</span>{% endif %}</td>
+          <td class="td-dados font-semibold {% if l.saldo.disponiveis < 0 %}text-alerta{% endif %}">{{ l.saldo.disponiveis }}{% if l.saldo.caducados %}<span class="block text-xs font-normal text-ardosia">{{ l.saldo.caducados }} caducados</span>{% endif %}</td>
           <td class="text-right">
             <input type="hidden" name="worker" value="{{ l.worker.pk }}" form="saldo-{{ l.worker.pk }}">
             <input type="hidden" name="ano" value="{{ ano }}" form="saldo-{{ l.worker.pk }}">

@@ -15,7 +15,7 @@ no ecrã, junto ao formulário, porque diz o que fazer a seguir.{% endcomment %}
   <form method="post" enctype="multipart/form-data" class="space-y-5" x-data="{ a_enviar: false }" x-on:submit="a_enviar = true">
     {% csrf_token %}
     {% if erro %}
-    <p class="aviso aviso-chama" role="alert">{{ erro }}</p>
+    <p class="aviso aviso-perigo" role="alert">{{ erro }}</p>
     {% endif %}
     <div class="cartao space-y-5 p-6">
       {% include "components/campo.html" with field=form.ficheiro %}
@@ -54,7 +54,7 @@ no ecrã, junto ao formulário, porque diz o que fazer a seguir.{% endcomment %}
         <p class="text-sm text-ardosia">{{ i.documents_other_series }} de outras séries ({{ i.other_series }}), que não são desta casa</p>
         {% endif %}
         {% if i.control_mismatch %}
-        <p class="text-sm font-medium text-chama">Os totais de controlo do ficheiro não batem com os documentos lidos. Confira o total com o relatório do POS.</p>
+        <p class="text-sm font-medium text-perigo">Os totais de controlo do ficheiro não batem com os documentos lidos. Confira o total com o relatório do POS.</p>
         {% endif %}
         <p class="text-xs text-ardosia">{{ i.file_name }} · {{ i.product_id|default:"programa desconhecido" }}{% if i.certificate_number %} · certificado {{ i.certificate_number }}{% endif %}</p>
       </article>

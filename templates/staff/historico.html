@@ -5,11 +5,11 @@
 {% url 'staff:home' as url_voltar %}{% include "staff/_cabecalho.html" with titulo="Histórico" voltar=url_voltar %}
 
 <div class="mt-5 grid grid-cols-2 gap-3">
-  <div class="cartao flex items-center gap-3 p-4">
+  <div class="cartao flex items-center gap-3 p-6">
     <span class="mosaico mosaico-servico">{% icone "relogio" %}</span>
     <dl><dt class="text-xs text-ardosia">Hoje</dt><dd class="font-dados text-xl font-bold">{{ totais.hoje }}</dd></dl>
   </div>
-  <div class="cartao flex items-center gap-3 p-4">
+  <div class="cartao flex items-center gap-3 p-6">
     <span class="mosaico mosaico-ambar">{% icone "calendario" %}</span>
     <dl><dt class="text-xs text-ardosia">Semana</dt><dd class="font-dados text-xl font-bold">{{ totais.semana }}</dd></dl>
   </div>
@@ -22,13 +22,13 @@
   <h2 class="rotulo">Pedidos de correção</h2>
   <ul class="cartao mt-2 divide-y divide-linha">
     {% for p in pedidos %}
-    <li class="flex items-start justify-between gap-3 px-5 py-3.5 text-sm">
+    <li class="flex items-start justify-between gap-3 px-6 py-3.5 text-sm">
       <span>
         <span class="font-dados font-semibold">{{ p.new_check_in|date:"d/m H:i" }} &rarr; {{ p.new_check_out|date:"H:i" }}</span>
         {% if p.decision_note %}<span class="mt-0.5 block text-xs text-ardosia">{{ p.decision_note }}</span>{% endif %}
       </span>
       {% if p.status == 'APROVADO' %}{% include "components/badge.html" with label=p.get_status_display variante="servico" %}
-      {% elif p.status == 'RECUSADO' %}{% include "components/badge.html" with label=p.get_status_display variante="chama" %}
+      {% elif p.status == 'RECUSADO' %}{% include "components/badge.html" with label=p.get_status_display variante="perigo" %}
       {% else %}{% include "components/badge.html" with label=p.get_status_display variante="ambar" %}{% endif %}
     </li>
     {% endfor %}
@@ -56,7 +56,7 @@
     {% endfor %}
   </div>
   {% else %}
-  <p class="mt-10 text-center text-sm text-ardosia">Ainda não há registos. A primeira entrada pica-se no tablet do restaurante.</p>
+  <p class="mt-8 text-center text-sm text-ardosia">Ainda não há registos. A primeira entrada pica-se no tablet do restaurante.</p>
   {% endif %}
 </div>
 {% endblock %}

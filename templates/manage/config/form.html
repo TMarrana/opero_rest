@@ -8,7 +8,7 @@
 <form method="post" class="mt-6 max-w-lg space-y-5">
   {% csrf_token %}
   {% for erro in form.non_field_errors %}
-  <p class="aviso aviso-chama">{{ erro }}</p>
+  <p class="aviso aviso-perigo">{{ erro }}</p>
   {% endfor %}
   <div class="cartao space-y-5 p-6">
     {% for field in form %}
@@ -18,7 +18,7 @@
     <fieldset>
       <legend class="text-sm font-medium">{{ field.label|capfirst }}</legend>
       <div class="mt-2 grid gap-1 text-sm sm:grid-cols-2">{% for opcao in field %}<label class="flex items-center gap-2">{{ opcao.tag }} {{ opcao.choice_label }}</label>{% endfor %}</div>
-      {% for erro in field.errors %}<p class="text-sm font-medium text-chama">{{ erro }}</p>{% endfor %}
+      {% for erro in field.errors %}<p class="text-sm font-medium text-perigo">{{ erro }}</p>{% endfor %}
     </fieldset>
     {% else %}
     {% include "components/campo.html" with field=field %}

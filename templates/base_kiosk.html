@@ -25,9 +25,9 @@ navegador. Não há fila offline: sem rede, nada fica registado.{% endcomment %}
 
   <div x-show="falha" x-cloak role="alert"
        class="fixed inset-0 z-50 flex items-center justify-center bg-floresta/50 px-6 backdrop-blur-sm">
-    <div class="w-full max-w-md rounded-3xl bg-superficie px-7 py-9 text-center shadow-flutuante">
-      <span class="mosaico mx-auto h-16 w-16 rounded-full bg-chama/10 text-chama">{% icone "alerta" "h-8 w-8" %}</span>
-      <p class="mt-5 font-display text-3xl font-bold text-chama">Nada foi registado</p>
+    <div class="w-full max-w-md rounded-2xl bg-superficie px-7 py-9 text-center shadow-flutuante">
+      <span class="mosaico mx-auto h-16 w-16 rounded-full bg-perigo-50 text-perigo">{% icone "alerta" "h-8 w-8" %}</span>
+      <p class="mt-5 font-display text-3xl font-bold text-perigo">Nada foi registado</p>
       <p class="mt-3 text-base" x-text="falha"></p>
       <p class="mt-1 text-sm text-ardosia">Tente de novo daqui a pouco. Se continuar, avise o gerente para registar a marcação à mão.</p>
       <a href="{% url 'kiosk:inicio' %}" hx-boost="false" class="btn btn-primario mt-7 min-h-[64px] w-full text-lg">OK</a>

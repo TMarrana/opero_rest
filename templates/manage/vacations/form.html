@@ -2,12 +2,12 @@
 {% block title %}Registar ausência{% endblock %}
 {% block content %}
 <h1 class="titulo-pagina">Registar ausência</h1>
-<p class="mt-1 text-sm text-ardosia">Em nome do trabalhador. Fica aprovada logo, com o seu nome como decisor.</p>
+<p class="subtitulo-pagina">Em nome do trabalhador. Fica aprovada logo, com o seu nome como decisor.</p>
 
 <form method="post" class="mt-6 max-w-md space-y-5">
   {% csrf_token %}
   {% for erro in form.non_field_errors %}
-  <p class="aviso aviso-chama">{{ erro }}</p>
+  <p class="aviso aviso-perigo">{{ erro }}</p>
   {% endfor %}
   <div class="cartao space-y-5 p-6">
     {% include "components/campo.html" with field=form.worker %}

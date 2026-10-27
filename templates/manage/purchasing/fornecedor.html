@@ -74,7 +74,7 @@
   </section>
 
   <aside class="space-y-4 self-start">
-    <section class="cartao p-4 text-sm">
+    <section class="cartao p-6 text-sm">
       <dl class="space-y-2">
         {% if fornecedor.nif %}<div><dt class="text-xs text-ardosia">NIF</dt><dd class="font-dados">{{ fornecedor.nif }}</dd></div>{% endif %}
         {% if fornecedor.contact_name %}<div><dt class="text-xs text-ardosia">Contacto</dt><dd>{{ fornecedor.contact_name }}</dd></div>{% endif %}
@@ -89,7 +89,7 @@
       <h2 class="cartao-cabecalho cartao-titulo">Últimas encomendas</h2>
       <ul class="divide-y divide-linha">
         {% for encomenda in encomendas %}
-        <li class="flex items-center justify-between px-4 py-2.5 text-sm">
+        <li class="flex items-center justify-between px-6 py-3.5 text-sm">
           <a href="{% url 'purchasing:encomenda' encomenda.pk %}" class="font-dados link-texto">{{ encomenda.reference }}</a>
           {% include "manage/purchasing/_estado.html" %}
         </li>
@@ -97,7 +97,7 @@
       </ul>
     </section>
     {% endif %}
-    <form method="post" class="cartao p-4">
+    <form method="post" class="cartao p-6">
       {% csrf_token %}
       {% if fornecedor.is_active %}
       <input type="hidden" name="acao" value="{% if fornecedor.has_history %}arquivar{% else %}apagar{% endif %}">

@@ -12,7 +12,7 @@
 </header>
 
 {% if erro %}
-<p class="aviso aviso-chama mt-5 flex items-center gap-3 text-base" role="alert">{% icone "alerta" "h-5 w-5 shrink-0" %}{{ erro }}</p>
+<p class="aviso aviso-perigo mt-5 flex items-center gap-3 text-base" role="alert">{% icone "alerta" "h-5 w-5 shrink-0" %}{{ erro }}</p>
 {% endif %}
 
 {# action explícito: com hx-push-url="false" o endereço da página continua o dos nomes. #}
@@ -31,14 +31,14 @@
   <div class="mt-5 grid grid-cols-3 gap-3 font-dados text-3xl font-semibold">
     {% for d in "123456789" %}
     <button type="button" x-on:click="codigo.length < 6 && (codigo += '{{ d }}')"
-            class="min-h-[76px] rounded-2xl border border-linha bg-superficie shadow-cartao transition-colors duration-150 hover:bg-creme active:bg-areia/50">{{ d }}</button>
+            class="min-h-[76px] rounded-2xl border border-linha bg-superficie shadow-cartao transition-colors duration-150 hover:bg-creme active:bg-neutro-100">{{ d }}</button>
     {% endfor %}
     <button type="button" x-on:click="codigo = codigo.slice(0, -1)" aria-label="Apagar"
-            class="flex min-h-[76px] items-center justify-center rounded-2xl bg-areia/50 transition-colors duration-150 hover:bg-areia active:bg-areia">{% icone "apagar" "h-7 w-7" %}</button>
+            class="flex min-h-[76px] items-center justify-center rounded-2xl bg-neutro-100 transition-colors duration-150 hover:bg-neutro-200 active:bg-neutro-200">{% icone "apagar" "h-7 w-7" %}</button>
     <button type="button" x-on:click="codigo.length < 6 && (codigo += '0')"
-            class="min-h-[76px] rounded-2xl border border-linha bg-superficie shadow-cartao transition-colors duration-150 hover:bg-creme active:bg-areia/50">0</button>
+            class="min-h-[76px] rounded-2xl border border-linha bg-superficie shadow-cartao transition-colors duration-150 hover:bg-creme active:bg-neutro-100">0</button>
     <button type="submit" x-bind:disabled="codigo.length < 4"
-            class="min-h-[76px] rounded-2xl bg-floresta font-corpo text-xl font-bold text-creme transition-colors duration-150 hover:bg-floresta/90 disabled:opacity-40">OK</button>
+            class="min-h-[76px] rounded-2xl bg-floresta font-corpo text-xl font-bold text-creme transition-colors duration-150 hover:bg-floresta-800 disabled:opacity-40">OK</button>
   </div>
 </form>
 {% endblock %}

@@ -3,9 +3,9 @@
 {% block title %}Componentes{% endblock %}
 {% block content %}
 <h1 class="titulo-pagina">Sistema de design</h1>
-<p class="subtitulo-pagina">Todos os componentes nos seus estados. Verde-floresta nos preenchimentos, laranja na ação principal e no que está por tratar, títulos em serifa.</p>
+<p class="subtitulo-pagina">Todos os componentes nos seus estados. Verde-floresta nos preenchimentos, laranja só na ação principal e nos contadores, vermelho no que não se desfaz, âmbar nos avisos. Serifa só no título da página.</p>
 
-<section class="mt-10 space-y-4">
+<section class="mt-8 space-y-4">
   <h2 class="cartao-titulo">Botão</h2>
   <div class="flex flex-wrap items-center gap-3">
     {% include "components/botao.html" with label="Novo artigo" variante="acento" type="button" %}
@@ -19,7 +19,7 @@
   </div>
 </section>
 
-<section class="mt-10 space-y-4">
+<section class="mt-8 space-y-4">
   <h2 class="cartao-titulo">Badge e separadores</h2>
   <nav class="separadores" aria-label="Exemplo">
     <a href="#" class="separador separador-ativo" aria-current="page">Todas <span class="font-dados opacity-80">(58)</span></a>
@@ -27,26 +27,27 @@
     <a href="#" class="separador">Recebidas <span class="font-dados text-ardosia">(54)</span></a>
   </nav>
   <div class="flex flex-wrap gap-2">
-    {% include "components/badge.html" with label="Stock baixo" variante="chama" %}
+    {% include "components/badge.html" with label="Stock baixo" variante="alerta" %}
     {% include "components/badge.html" with label="Em serviço" variante="servico" %}
     {% include "components/badge.html" with label="Aprovado" variante="servico" %}
     {% include "components/badge.html" with label="Por decidir" variante="ambar" %}
+    {% include "components/badge.html" with label="Recusado" variante="perigo" %}
     {% include "components/badge.html" with label="Pendente" %}
     <span class="contador">12</span>
   </div>
 </section>
 
-<section class="mt-10 space-y-4">
+<section class="mt-8 space-y-4">
   <h2 class="cartao-titulo">Números</h2>
   <div class="grid max-w-4xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
-    <div class="cartao flex items-center gap-4 p-5"><span class="mosaico mosaico-servico">{% icone "relogio" %}</span><div><p class="font-dados text-2xl font-bold">3</p><p class="text-xs text-ardosia">Em turno agora</p></div></div>
-    <div class="cartao flex items-center gap-4 p-5"><span class="mosaico mosaico-chama">{% icone "pacote" %}</span><div><p class="font-dados text-2xl font-bold">2</p><p class="text-xs text-ardosia">Abaixo do mínimo</p></div></div>
-    <div class="cartao flex items-center gap-4 p-5"><span class="mosaico mosaico-ambar">{% icone "calendario" %}</span><div><p class="font-dados text-2xl font-bold">1</p><p class="text-xs text-ardosia">Férias por decidir</p></div></div>
-    <div class="cartao flex items-center gap-4 p-5"><span class="mosaico mosaico-floresta">{% icone "talao" %}</span><div><p class="font-dados text-2xl font-bold">12 480 €</p><p class="text-xs text-ardosia">Vendas do mês</p></div></div>
+    <div class="cartao flex items-center gap-4 p-6"><span class="mosaico mosaico-servico">{% icone "relogio" %}</span><div><p class="font-dados text-2xl font-bold">3</p><p class="text-xs text-ardosia">Em turno agora</p></div></div>
+    <div class="cartao flex items-center gap-4 p-6"><span class="mosaico mosaico-alerta">{% icone "pacote" %}</span><div><p class="font-dados text-2xl font-bold">2</p><p class="text-xs text-ardosia">Abaixo do mínimo</p></div></div>
+    <div class="cartao flex items-center gap-4 p-6"><span class="mosaico mosaico-ambar">{% icone "calendario" %}</span><div><p class="font-dados text-2xl font-bold">1</p><p class="text-xs text-ardosia">Férias por decidir</p></div></div>
+    <div class="cartao flex items-center gap-4 p-6"><span class="mosaico mosaico-floresta">{% icone "talao" %}</span><div><p class="whitespace-nowrap font-dados text-xl font-bold">12 480 €</p><p class="text-xs text-ardosia">Vendas do mês</p></div></div>
   </div>
 </section>
 
-<section class="mt-10 space-y-4">
+<section class="mt-8 space-y-4">
   <h2 class="cartao-titulo">Campo</h2>
   <div class="grid max-w-3xl gap-6 sm:grid-cols-2">
     <div class="cartao space-y-5 p-6">
@@ -62,7 +63,7 @@
   </div>
 </section>
 
-<section class="mt-10 space-y-4">
+<section class="mt-8 space-y-4">
   <h2 class="cartao-titulo">Talão e cartão de perfil</h2>
   <div class="grid max-w-4xl gap-6 sm:grid-cols-2">
     <div class="cartao-perfil p-5">
@@ -79,18 +80,18 @@
   </div>
 </section>
 
-<section class="mt-10 space-y-4">
+<section class="mt-8 space-y-4">
   <h2 class="cartao-titulo">Tabela</h2>
   <div class="max-w-4xl">{% include "components/tabela.html" %}</div>
 </section>
 
-<section class="mt-10 space-y-4">
+<section class="mt-8 space-y-4">
   <h2 class="cartao-titulo">Modal</h2>
   <button type="button" x-data x-on:click="$dispatch('abrir-modal', { id: 'demo-modal' })" class="btn btn-perigo">Abrir confirmação</button>
   {% include "components/modal.html" with id="demo-modal" titulo="Recusar este pedido de férias?" corpo="O trabalhador vai ver o pedido como recusado. Esta decisão fica no histórico e não se apaga." confirmar_label="Recusar pedido" form_action="." %}
 </section>
 
-<section class="mt-10 space-y-4">
+<section class="mt-8 space-y-4">
   <h2 class="cartao-titulo">Toast</h2>
   <form method="post">
     {% csrf_token %}

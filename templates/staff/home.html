@@ -21,7 +21,7 @@ estado do dia é só para leitura; o ponto pica-se no tablet.{% endcomment %}
 </section>
 
 {% for r in por_resolver %}
-<a href="{% url 'staff:correcao' r.pk %}" class="aviso aviso-chama mt-4 flex items-start gap-3">
+<a href="{% url 'staff:correcao' r.pk %}" class="aviso aviso-alerta mt-4 flex items-start gap-3">
   {% icone "alerta" "mt-0.5 h-5 w-5 shrink-0" %}
   <span><span class="font-semibold">Saída por indicar.</span>
   Entrada de <span class="font-dados">{{ r.check_in|date:"d/m" }} às {{ r.check_in|date:"H:i" }}</span> sem saída: diga a que horas saiu.</span>
@@ -32,8 +32,8 @@ estado do dia é só para leitura; o ponto pica-se no tablet.{% endcomment %}
   <div class="cartao-cabecalho"><h2 class="cartao-titulo">Turno de hoje</h2></div>
   <ul class="divide-y divide-linha">
     {% for t in turnos_hoje %}
-    <li class="flex items-center gap-4 px-5 py-3.5">
-      <span class="mosaico h-10 w-10 bg-floresta/10 text-floresta">{% icone "turnos" "h-[18px] w-[18px]" %}</span>
+    <li class="flex items-center gap-4 px-6 py-3.5">
+      <span class="mosaico h-10 w-10 bg-floresta-100 text-floresta">{% icone "turnos" "h-[18px] w-[18px]" %}</span>
       <span>
         <span class="block font-dados text-base font-semibold">{{ t.start_at|date:"H:i" }}&ndash;{{ t.end_at|date:"H:i" }}</span>
         <span class="block text-xs text-ardosia">{{ t.label }}{% if t.work_area %} · {{ t.work_area.name }}{% endif %}</span>
@@ -43,15 +43,15 @@ estado do dia é só para leitura; o ponto pica-se no tablet.{% endcomment %}
     <li class="px-5 py-4 text-sm text-ardosia">Sem turno publicado para hoje.</li>
     {% endfor %}
   </ul>
-  <p class="border-t border-linha bg-creme/60 px-5 py-3 text-xs text-ardosia">O ponto pica-se no tablet do restaurante.</p>
+  <p class="border-t border-linha bg-neutro-50 px-6 py-3.5 text-xs text-ardosia">O ponto pica-se no tablet do restaurante.</p>
 </section>
 
 <div class="mt-4 grid grid-cols-2 gap-3">
-  <div class="cartao flex items-center gap-3 p-4">
+  <div class="cartao flex items-center gap-3 p-6">
     <span class="mosaico mosaico-servico">{% icone "relogio" %}</span>
     <dl><dt class="text-xs text-ardosia">Hoje</dt><dd class="font-dados text-xl font-bold">{{ totais.hoje }}</dd></dl>
   </div>
-  <div class="cartao flex items-center gap-3 p-4">
+  <div class="cartao flex items-center gap-3 p-6">
     <span class="mosaico mosaico-ambar">{% icone "calendario" %}</span>
     <dl><dt class="text-xs text-ardosia">Semana</dt><dd class="font-dados text-xl font-bold">{{ totais.semana }}</dd></dl>
   </div>
@@ -66,6 +66,6 @@ estado do dia é só para leitura; o ponto pica-se no tablet.{% endcomment %}
 
 <form method="post" action="{% url 'accounts:logout' %}" class="mt-6">
   {% csrf_token %}
-  <button type="submit" class="flex min-h-toque w-full items-center justify-center gap-2 rounded-full text-sm font-semibold text-chama transition-colors hover:bg-chama/5">{% icone "sair" "h-5 w-5" %}Sair</button>
+  <button type="submit" class="flex min-h-toque w-full items-center justify-center gap-2 rounded-full text-sm font-semibold text-ardosia transition-colors hover:bg-perigo-50 hover:text-perigo">{% icone "sair" "h-5 w-5" %}Sair</button>
 </form>
 {% endblock %}

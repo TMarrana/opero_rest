@@ -13,17 +13,17 @@
   <script src="{% static 'js/casa.js' %}" defer></script>
 </head>
 {# A casa em que a página foi aberta vai em cada pedido (Fase 9, core/middleware.py). #}
-<body class="min-h-screen bg-areia text-carvao" data-casa="{{ request.restaurant.pk|default:'' }}"
+<body class="min-h-screen bg-neutro-200 text-carvao" data-casa="{{ request.restaurant.pk|default:'' }}"
       hx-headers='{"X-CSRFToken": "{{ csrf_token }}"{% if request.restaurant %}, "X-Opero-Casa": "{{ request.restaurant.pk }}"{% endif %}}'
       x-data="{ menu: false }">
 
   {# A aplicação numa folha creme sobre fundo areia, como no EMBER (secção 4). #}
   <div class="min-h-screen lg:p-4">
-    <div class="flex min-h-screen flex-col bg-creme lg:min-h-[calc(100vh-2rem)] lg:rounded-4xl lg:ring-1 lg:ring-linha">
+    <div class="flex min-h-screen flex-col bg-creme lg:min-h-[calc(100vh-2rem)] lg:rounded-2xl lg:ring-1 lg:ring-linha">
 
       <header class="flex h-[4.5rem] shrink-0 items-center gap-3 border-b border-linha px-4 sm:px-6 lg:px-10">
         <button type="button" class="btn-icone lg:hidden" x-on:click="menu = true" aria-label="Abrir o menu">{% icone "menu" %}</button>
-        <a href="{% url 'dashboard:home' %}" class="shrink-0 rounded-lg">
+        <a href="{% url 'dashboard:home' %}" class="shrink-0 rounded-xl">
           <img src="{% static 'img/logo-opero-escuro.png' %}" alt="Opero" class="block h-7 w-auto">
         </a>
         <div class="flex-1"></div>
@@ -49,7 +49,7 @@
         {% endif %}
 
         <div class="relative" x-data="{ aberto: false }" x-on:click.outside="aberto = false" x-on:keydown.escape="aberto = false">
-          <button type="button" class="avatar h-11 w-11 cursor-pointer bg-floresta text-sm text-creme transition-colors hover:bg-floresta/90"
+          <button type="button" class="avatar h-11 w-11 cursor-pointer bg-floresta text-sm text-creme transition-colors hover:bg-floresta-800"
                   x-on:click="aberto = !aberto" x-bind:aria-expanded="aberto" aria-haspopup="true"
                   aria-label="Conta de {{ request.user }}">{{ request.user|iniciais }}</button>
           <div x-show="aberto" x-cloak x-transition.opacity.duration.150ms
@@ -61,7 +61,7 @@
             </div>
             <form method="post" action="{% url 'accounts:logout' %}" class="border-t border-linha pt-1">
               {% csrf_token %}
-              <button type="submit" class="nav-item w-full text-chama hover:bg-chama/5">{% icone "sair" "h-5 w-5" %}Sair</button>
+              <button type="submit" class="nav-item w-full text-ardosia hover:bg-perigo-50 hover:text-perigo">{% icone "sair" "h-5 w-5" %}Sair</button>
             </form>
           </div>
         </div>
@@ -71,7 +71,7 @@
         <aside class="hidden w-64 shrink-0 lg:block">
           {% include "partials/nav_manage.html" %}
         </aside>
-        <main class="w-full min-w-0 flex-1 {% block largura %}max-w-6xl{% endblock %}">
+        <main class="w-full min-w-0 flex-1 {% block largura %}max-w-7xl{% endblock %}">
           {% block content %}{% endblock %}
         </main>
       </div>
