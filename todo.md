@@ -20,7 +20,7 @@ Bloqueiam fases ou o piloto. A proposta de cada uma está na secção 12 do plan
 - [x] **Pergunta na saída tardia (R-012).** Decidido a 2026-10-27: entra, como pedido de correção ao gerente. Já está construído. Falta dar conhecimento à AT.
 - [x] **Nome da marca e domínio.** Decidido a 2026-10-27: Opero. O domínio escolhe-se com o hosting (secção 6). Falta dar conhecimento à AT.
 - [x] **Isolamento entre clientes.** Decidido a 2026-10-27: subdomínio por grupo (`<endereço>.opero.pt`), desde o piloto. Já está construído. Falta dar conhecimento à AT.
-- [ ] **Cliente piloto e disponibilidade semanal AT/TM.**
+- [x] **Cliente piloto e disponibilidade semanal AT/TM.** Decidido a 2026-10-27: a Peco, que é o cliente de teste, com duas casas (Peco no Mercado e Peco no Foco), em `peco.opero.pt`. Sem calendário fixo: a AT e o TM estão em contacto constante.
 
 ## 2. Contabilista e jurista (com a AT)
 
@@ -33,7 +33,7 @@ Bloqueiam fases ou o piloto. A proposta de cada uma está na secção 12 do plan
 - [ ] **RGPD (BR-006):** acordo de tratamento de dados (DPA) com o restaurante, lista de subcontratantes, alojamento na UE, retenção e política de privacidade.
 - [ ] **Limite de horas para um registo ficar por resolver.** Proposta: 14 horas.
 
-## 3. Cliente de teste
+## 3. Cliente de teste (Peco)
 
 - [ ] **Pedir o SAF-T de um mês e o relatório de vendas do POS desse mês.** Importar em Vendas → Importar e confirmar que o total sem IVA bate ao cêntimo. É o critério de aceitação da Fase 10. O ficheiro não entra no repositório.
 - [ ] Confirmar com o cliente, a partir do ficheiro:
