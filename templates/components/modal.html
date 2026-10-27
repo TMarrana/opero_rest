@@ -13,18 +13,16 @@ Parâmetros:
      x-show="aberto" x-cloak
      class="fixed inset-0 z-50 flex items-center justify-center p-4"
      role="dialog" aria-modal="true" aria-labelledby="{{ id }}-titulo">
-  <div class="absolute inset-0 bg-carvao/60" x-on:click="aberto = false"></div>
-  <div class="relative w-full max-w-md rounded-md bg-superficie p-6 shadow-xl"
+  <div class="absolute inset-0 bg-floresta/40 backdrop-blur-[2px]" x-on:click="aberto = false"></div>
+  <div class="relative w-full max-w-md rounded-3xl bg-superficie p-7 shadow-flutuante"
        x-on:keydown.escape.window="aberto = false">
-    <h2 id="{{ id }}-titulo" class="font-display text-lg font-bold text-carvao">{{ titulo }}</h2>
+    <h2 id="{{ id }}-titulo" class="font-display text-xl font-bold text-carvao">{{ titulo }}</h2>
     <p class="mt-2 text-sm text-ardosia">{{ corpo }}</p>
-    <div class="mt-6 flex justify-end gap-3">
-      <button type="button" x-on:click="aberto = false"
-              class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-5 py-2.5 text-sm font-semibold text-carvao hover:bg-carvao/5">Cancelar</button>
+    <div class="mt-7 flex flex-wrap justify-end gap-3">
+      <button type="button" x-on:click="aberto = false" class="btn btn-fantasma">Cancelar</button>
       <form method="post" action="{{ form_action }}">
         {% csrf_token %}
-        <button type="submit"
-                class="inline-flex min-h-toque items-center rounded-md bg-chama px-5 py-2.5 text-sm font-semibold text-superficie hover:bg-chama/90">{{ confirmar_label }}</button>
+        <button type="submit" class="btn btn-perigo">{{ confirmar_label }}</button>
       </form>
     </div>
   </div>

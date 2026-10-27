@@ -1,8 +1,9 @@
 {% extends "base_manage.html" %}
+{% load interface %}
 {% block title %}Criar turnos em lote{% endblock %}
 {% block content %}
-<a href="{% url 'shifts:planeador' %}?semana={{ semana|date:'Y-m-d' }}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Turnos</a>
-<h1 class="mt-2 font-display text-2xl font-bold">Criar turnos em lote</h1>
+<a href="{% url 'shifts:planeador' %}?semana={{ semana|date:'Y-m-d' }}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Turnos</a>
+<h1 class="mt-2 titulo-pagina">Criar turnos em lote</h1>
 <p class="mt-1 text-sm text-ardosia">Um turno guardado para vários trabalhadores e dias da semana de {{ semana|date:"d/m" }}. Nascem em rascunho; um turno igual que já exista não se duplica.</p>
 
 <form method="post" class="mt-6 max-w-2xl space-y-5">

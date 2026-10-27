@@ -3,9 +3,9 @@
 {% block title %}Fichas técnicas{% endblock %}
 {% block content %}
 <div class="flex flex-wrap items-end justify-between gap-4">
-  <h1 class="font-display text-2xl font-bold">Fichas técnicas</h1>
+  <h1 class="titulo-pagina">Fichas técnicas</h1>
   {% url 'recipes:nova' as url_nova %}
-  {% include "components/botao.html" with label="Nova ficha" href=url_nova %}
+  {% include "components/botao.html" with variante="acento" label="Nova ficha" href=url_nova %}
 </div>
 {% include "manage/recipes/_nav.html" %}
 <p class="mt-4 text-sm text-ardosia">As fichas são de todo o grupo. O custo é o de {{ request.restaurant }}, com o custo de referência dos artigos desta casa.</p>
@@ -17,7 +17,7 @@
     {% for valor, nome in tipos %}<option value="{{ valor }}"{% if tipo == valor %} selected{% endif %}>{{ nome }}</option>{% endfor %}
   </select>
   <label class="inline-flex min-h-toque items-center gap-2 text-sm"><input type="checkbox" name="arquivadas" value="1" {% if arquivadas %}checked{% endif %} onchange="this.form.requestSubmit()" class="h-4 w-4"> Arquivadas</label>
-  <noscript><button type="submit" class="text-sm underline">Filtrar</button></noscript>
+  <noscript><button type="submit" class="link-texto">Filtrar</button></noscript>
 </form>
 
 <div class="mt-4 cartao">
@@ -28,7 +28,7 @@
       <tbody>
         {% for l in linhas %}
         <tr>
-          <td class="font-medium"><a href="{% url 'recipes:ficha' l.recipe.pk %}" class="underline underline-offset-2">{{ l.recipe.name }}</a>
+          <td class="font-medium"><a href="{% url 'recipes:ficha' l.recipe.pk %}" class="link-texto">{{ l.recipe.name }}</a>
             {% if l.cost.problems %}<span class="block text-xs font-normal text-chama">{{ l.cost.problems|length }} linha{{ l.cost.problems|length|pluralize:"s" }} sem custo nesta casa</span>{% elif not l.version or not l.cost.lines %}<span class="block text-xs font-normal text-ardosia">sem receita</span>{% endif %}</td>
           <td class="text-sm text-ardosia">{{ l.recipe.get_kind_display }}</td>
           <td class="td-dados">{% if l.version %}{{ l.version.portions|numero }}{% endif %}</td>

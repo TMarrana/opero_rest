@@ -3,29 +3,27 @@
 {% block title %}Ponto{% endblock %}
 {% block content %}
 <div class="flex flex-wrap items-end justify-between gap-4">
-  <div class="flex items-baseline gap-4">
-    <h1 class="font-display text-2xl font-bold">Ponto da equipa</h1>
-    <a href="{% url 'attendance:mes' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Fecho do mês</a>
-    <a href="{% url 'attendance:pedidos' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Pedidos</a>
-  </div>
+  <h1 class="titulo-pagina">Ponto da equipa</h1>
   <div class="flex items-center gap-2">
-    <a href="?dia={{ dia_anterior|date:'Y-m-d' }}" class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-3 py-2 text-sm font-semibold hover:bg-carvao/5" aria-label="Dia anterior">&larr;</a>
+    <a href="?dia={{ dia_anterior|date:'Y-m-d' }}" class="btn btn-fantasma btn-sm" aria-label="Dia anterior">&larr;</a>
     <span class="font-dados text-sm font-semibold">{{ dia|date:"D, d M Y" }}</span>
     {% if dia < hoje %}
-    <a href="?dia={{ dia_seguinte|date:'Y-m-d' }}" class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-3 py-2 text-sm font-semibold hover:bg-carvao/5" aria-label="Dia seguinte">&rarr;</a>
+    <a href="?dia={{ dia_seguinte|date:'Y-m-d' }}" class="btn btn-fantasma btn-sm" aria-label="Dia seguinte">&rarr;</a>
     {% endif %}
     {% if dia != hoje %}
-    <a href="{% url 'attendance:dia' %}" class="ml-1 text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Hoje</a>
+    <a href="{% url 'attendance:dia' %}" class="ml-1.5 link-acao">Hoje</a>
     {% endif %}
   </div>
 </div>
 
+{% include "manage/attendance/_nav.html" %}
+
 {% if pedidos_pendentes or total_por_resolver %}
-<a href="{% url 'attendance:pedidos' %}" class="mt-4 flex items-center justify-between rounded-md border border-chama/40 bg-superficie px-4 py-3 text-sm hover:bg-chama/5">
+<a href="{% url 'attendance:pedidos' %}" class="mt-4 flex items-center justify-between rounded-xl border border-chama/40 bg-superficie px-4 py-3 text-sm hover:bg-chama/5">
   <span>
     {% if pedidos_pendentes %}<span class="font-dados font-semibold">{{ pedidos_pendentes }}</span> pedido{{ pedidos_pendentes|pluralize }} de correção por decidir{% endif %}{% if pedidos_pendentes and total_por_resolver %} · {% endif %}{% if total_por_resolver %}<span class="font-dados font-semibold">{{ total_por_resolver }}</span> registo{{ total_por_resolver|pluralize }} por resolver{% endif %}
   </span>
-  <span class="font-semibold underline underline-offset-2">Ver</span>
+  <span class="link-texto">Ver</span>
 </a>
 {% endif %}
 
@@ -76,7 +74,7 @@
           </td>
           <td class="text-right">
             <a href="{% url 'attendance:acrescentar' linha.worker.pk %}?dia={{ dia|date:'Y-m-d' }}"
-               class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Acrescentar registo</a>
+               class="link-acao">Acrescentar registo</a>
           </td>
         </tr>
         {% endfor %}

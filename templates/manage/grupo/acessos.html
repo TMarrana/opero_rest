@@ -1,8 +1,9 @@
 {% extends "base_manage.html" %}
+{% load interface %}
 {% block title %}Acessos · {{ casa.name }}{% endblock %}
 {% block content %}
-<a href="{% url 'grupo:casas' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Casas e acessos</a>
-<h1 class="mt-2 font-display text-2xl font-bold">Acessos a {{ casa.name }}</h1>
+<a href="{% url 'grupo:casas' %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Casas e acessos</a>
+<h1 class="mt-2 titulo-pagina">Acessos a {{ casa.name }}</h1>
 <p class="mt-1 text-sm text-ardosia">Quem entra nesta casa e com que perfil. O perfil vale só aqui: a mesma pessoa pode ser gerente nesta casa e colaboradora noutra. Como Admin do grupo, tem acesso a todas.</p>
 
 <div class="mt-6 cartao">
@@ -22,7 +23,7 @@
               <select name="role" class="campo-input w-auto" aria-label="Perfil de {{ a.user }}">
                 {% for valor, nome in perfis %}<option value="{{ valor }}"{% if valor == a.role %} selected{% endif %}>{{ nome }}</option>{% endfor %}
               </select>
-              <button type="submit" class="text-sm underline underline-offset-2">Guardar</button>
+              <button type="submit" class="link-acao">Guardar</button>
             </form>
           </td>
           <td class="whitespace-nowrap text-right">
@@ -30,8 +31,8 @@
               {% csrf_token %}
               <input type="hidden" name="user" value="{{ a.user.pk }}">
               <input type="hidden" name="acao" value="tirar">
-              <button type="button" x-show="!confirmar" x-on:click="confirmar = true" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Tirar acesso</button>
-              <button type="submit" x-show="confirmar" x-cloak class="text-sm font-semibold text-chama underline underline-offset-2">Confirmar</button>
+              <button type="button" x-show="!confirmar" x-on:click="confirmar = true" class="link-acao">Tirar acesso</button>
+              <button type="submit" x-show="confirmar" x-cloak class="link-acao-perigo">Confirmar</button>
             </form>
           </td>
         </tr>

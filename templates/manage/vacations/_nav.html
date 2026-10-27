@@ -1,0 +1,9 @@
+{# Separadores das férias e ausências, em pílula. #}
+<nav class="separadores mt-5" aria-label="Férias e ausências">
+  {% url 'vacations:calendario' as url_cal %}
+  {% url 'vacations:lista' as url_lista %}
+  {% url 'vacations:saldos' as url_saldos %}
+  <a href="{{ url_cal }}" class="separador {% if request.path == url_cal %}separador-ativo{% endif %}"{% if request.path == url_cal %} aria-current="page"{% endif %}>Calendário</a>
+  <a href="{{ url_lista }}" class="separador {% if request.path == url_lista %}separador-ativo{% endif %}"{% if request.path == url_lista %} aria-current="page"{% endif %}>Pedidos{% if contadores.ferias %} · <span class="font-dados">{{ contadores.ferias }}</span> pendente{{ contadores.ferias|pluralize }}{% endif %}</a>
+  <a href="{{ url_saldos }}" class="separador {% if request.path == url_saldos %}separador-ativo{% endif %}"{% if request.path == url_saldos %} aria-current="page"{% endif %}>Saldos</a>
+</nav>

@@ -1,0 +1,20 @@
+{% load interface %}
+{% comment %}Passos de uma encomenda (o seguimento do pedido do EMBER):
+rascunho → enviada → recebida. «Recebida em parte» fica no último passo, a meio.{% endcomment %}
+{% if encomenda.state != "CANCELADA" %}
+{% with s=encomenda.state %}
+<ol class="cartao mt-6 flex items-center gap-2 px-5 py-4 text-sm" aria-label="Estado da encomenda">
+  <li class="flex items-center gap-2 font-semibold">
+    <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-floresta text-creme">{% icone "visto" "h-4 w-4" %}</span>Criada
+  </li>
+  <li aria-hidden="true" class="h-0.5 flex-1 rounded {% if s != 'RASCUNHO' %}bg-floresta{% else %}bg-linha{% endif %}"></li>
+  <li class="flex items-center gap-2 {% if s != 'RASCUNHO' %}font-semibold{% else %}text-ardosia{% endif %}">
+    <span class="inline-flex h-8 w-8 items-center justify-center rounded-full {% if s != 'RASCUNHO' %}bg-floresta text-creme{% else %}border border-areia bg-superficie{% endif %}">{% icone "camiao" "h-4 w-4" %}</span>Enviada
+  </li>
+  <li aria-hidden="true" class="h-0.5 flex-1 rounded {% if s == 'RECEBIDA' %}bg-floresta{% elif s == 'PARCIAL' %}bg-ambar{% else %}bg-linha{% endif %}"></li>
+  <li class="flex items-center gap-2 {% if s == 'RECEBIDA' or s == 'PARCIAL' %}font-semibold{% else %}text-ardosia{% endif %}">
+    <span class="inline-flex h-8 w-8 items-center justify-center rounded-full {% if s == 'RECEBIDA' %}bg-floresta text-creme{% elif s == 'PARCIAL' %}bg-ambar/20 text-[#8A5A10]{% else %}border border-areia bg-superficie{% endif %}">{% icone "pacote" "h-4 w-4" %}</span>{% if s == 'PARCIAL' %}Recebida em parte{% else %}Recebida{% endif %}
+  </li>
+</ol>
+{% endwith %}
+{% endif %}

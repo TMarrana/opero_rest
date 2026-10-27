@@ -1,79 +1,97 @@
 {% extends "base_manage.html" %}
+{% load interface %}
 {% block title %}Componentes{% endblock %}
 {% block content %}
-<h1 class="font-display text-2xl font-bold">Sistema de design</h1>
-<p class="mt-1 text-sm text-ardosia">Todos os componentes nos seus estados. Uma cor quente, uma cor de estado; se um ecrã tem duas coisas cor de laranja, uma delas está errada.</p>
+<h1 class="titulo-pagina">Sistema de design</h1>
+<p class="subtitulo-pagina">Todos os componentes nos seus estados. Verde-floresta nos preenchimentos, laranja na ação principal e no que está por tratar, títulos em serifa.</p>
 
-<section class="mt-8 space-y-3">
-  <h2 class="font-display text-lg font-bold">Botão</h2>
+<section class="mt-10 space-y-4">
+  <h2 class="cartao-titulo">Botão</h2>
   <div class="flex flex-wrap items-center gap-3">
+    {% include "components/botao.html" with label="Novo artigo" variante="acento" type="button" %}
     {% include "components/botao.html" with label="Registar entrada" type="button" %}
     {% include "components/botao.html" with label="Recusar pedido" variante="perigo" type="button" %}
     {% include "components/botao.html" with label="Marcar entrada" variante="servico" type="button" %}
     {% include "components/botao.html" with label="Cancelar" variante="fantasma" type="button" %}
     {% include "components/botao.html" with label="Desativado" type="button" desativado=True %}
-    {% include "components/botao.html" with label="Ver histórico" href="#" %}
+    {% include "components/botao.html" with label="Ver histórico" variante="fantasma" tamanho="sm" href="#" %}
+    <button type="button" class="btn-icone" aria-label="Pesquisar">{% icone "pesquisa" %}</button>
   </div>
 </section>
 
-<section class="mt-10 space-y-3">
-  <h2 class="font-display text-lg font-bold">Campo</h2>
+<section class="mt-10 space-y-4">
+  <h2 class="cartao-titulo">Badge e separadores</h2>
+  <nav class="separadores" aria-label="Exemplo">
+    <a href="#" class="separador separador-ativo" aria-current="page">Todas <span class="font-dados opacity-80">(58)</span></a>
+    <a href="#" class="separador">Enviadas <span class="font-dados text-ardosia">(1)</span></a>
+    <a href="#" class="separador">Recebidas <span class="font-dados text-ardosia">(54)</span></a>
+  </nav>
+  <div class="flex flex-wrap gap-2">
+    {% include "components/badge.html" with label="Stock baixo" variante="chama" %}
+    {% include "components/badge.html" with label="Em serviço" variante="servico" %}
+    {% include "components/badge.html" with label="Aprovado" variante="servico" %}
+    {% include "components/badge.html" with label="Por decidir" variante="ambar" %}
+    {% include "components/badge.html" with label="Pendente" %}
+    <span class="contador">12</span>
+  </div>
+</section>
+
+<section class="mt-10 space-y-4">
+  <h2 class="cartao-titulo">Números</h2>
+  <div class="grid max-w-4xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="cartao flex items-center gap-4 p-5"><span class="mosaico mosaico-servico">{% icone "relogio" %}</span><div><p class="font-dados text-2xl font-bold">3</p><p class="text-xs text-ardosia">Em turno agora</p></div></div>
+    <div class="cartao flex items-center gap-4 p-5"><span class="mosaico mosaico-chama">{% icone "pacote" %}</span><div><p class="font-dados text-2xl font-bold">2</p><p class="text-xs text-ardosia">Abaixo do mínimo</p></div></div>
+    <div class="cartao flex items-center gap-4 p-5"><span class="mosaico mosaico-ambar">{% icone "calendario" %}</span><div><p class="font-dados text-2xl font-bold">1</p><p class="text-xs text-ardosia">Férias por decidir</p></div></div>
+    <div class="cartao flex items-center gap-4 p-5"><span class="mosaico mosaico-floresta">{% icone "talao" %}</span><div><p class="font-dados text-2xl font-bold">12 480 €</p><p class="text-xs text-ardosia">Vendas do mês</p></div></div>
+  </div>
+</section>
+
+<section class="mt-10 space-y-4">
+  <h2 class="cartao-titulo">Campo</h2>
   <div class="grid max-w-3xl gap-6 sm:grid-cols-2">
-    <div class="cartao p-5 space-y-5">
-      <p class="text-xs font-semibold uppercase tracking-wide text-ardosia">Normal</p>
+    <div class="cartao space-y-5 p-6">
+      <p class="rotulo">Normal</p>
       {% include "components/campo.html" with field=form_ok.nome %}
       {% include "components/campo.html" with field=form_ok.quantidade %}
     </div>
-    <div class="cartao p-5 space-y-5">
-      <p class="text-xs font-semibold uppercase tracking-wide text-ardosia">Com erro</p>
+    <div class="cartao space-y-5 p-6">
+      <p class="rotulo">Com erro</p>
       {% include "components/campo.html" with field=form_erro.nome %}
       {% include "components/campo.html" with field=form_erro.quantidade %}
     </div>
   </div>
 </section>
 
-<section class="mt-10 space-y-3">
-  <h2 class="font-display text-lg font-bold">Badge</h2>
-  <div class="flex flex-wrap gap-3">
-    {% include "components/badge.html" with label="Stock baixo" variante="chama" %}
-    {% include "components/badge.html" with label="Em serviço" variante="servico" %}
-    {% include "components/badge.html" with label="Aprovado" variante="servico" %}
-    {% include "components/badge.html" with label="Pendente" %}
-  </div>
-</section>
-
-<section class="mt-10 space-y-3">
-  <h2 class="font-display text-lg font-bold">Talão</h2>
+<section class="mt-10 space-y-4">
+  <h2 class="cartao-titulo">Talão e cartão de perfil</h2>
   <div class="grid max-w-4xl gap-6 sm:grid-cols-2">
-    <div class="rail-taloes">
-      {% include "components/talao.html" with timestamp="04 SET 2026 · 11:42" titulo="Entrada · Tomate chucha" detalhe="+12,500 KG → 34,200 KG" autor="registado por Rui Gomes" %}
-      {% include "components/talao.html" with timestamp="04 SET 2026 · 09:15" titulo="Saída · Azeite virgem extra" detalhe="−1,000 L → 2,000 L" autor="registado por Rui Gomes" %}
-      {% include "components/talao.html" with timestamp="03 SET 2026 · 18:03" titulo="Ajuste − · Guardanapos 33×33" detalhe="−2 EMB → 18 EMB · contagem física" autor="registado por Ana Torres" %}
+    <div class="cartao-perfil p-5">
+      <span class="avatar h-14 w-14 text-lg">MS</span>
+      <p class="mt-3 font-display text-lg font-bold">Marta Silva</p>
+      <p class="text-xs text-creme/70">Cozinha · desde 2024</p>
+      <p class="mt-4 inline-flex items-center gap-2 rounded-full border border-creme/10 bg-creme/10 px-3 py-1.5 text-xs font-semibold text-ambar">{% icone "relogio" "h-4 w-4" %}Em turno desde 08:58</p>
     </div>
-    <div class="rail-taloes border-carvao bg-carvao">
-      {% include "components/talao.html" with escuro=True timestamp="04 SET 2026 · 09:02" titulo="Entrada" detalhe="turno aberto" autor="Marta Silva" %}
-      {% include "components/talao.html" with escuro=True timestamp="03 SET 2026 · 17:31" titulo="Saída" detalhe="8h12 de turno" autor="Marta Silva" %}
+    <div class="rail-taloes">
+      {% include "components/talao.html" with timestamp="04 set 2026 · 11:42" titulo="Entrada · Tomate chucha" detalhe="+12,500 KG → 34,200 KG" autor="registado por Rui Gomes" %}
+      {% include "components/talao.html" with timestamp="04 set 2026 · 09:15" titulo="Saída · Azeite virgem extra" detalhe="−1,000 L → 2,000 L" autor="registado por Rui Gomes" %}
+      {% include "components/talao.html" with timestamp="03 set 2026 · 18:03" titulo="Ajuste − · Guardanapos 33×33" detalhe="−2 EMB → 18 EMB · contagem física" autor="registado por Ana Torres" %}
     </div>
   </div>
 </section>
 
-<section class="mt-10 space-y-3">
-  <h2 class="font-display text-lg font-bold">Tabela</h2>
+<section class="mt-10 space-y-4">
+  <h2 class="cartao-titulo">Tabela</h2>
   <div class="max-w-4xl">{% include "components/tabela.html" %}</div>
 </section>
 
-<section class="mt-10 space-y-3">
-  <h2 class="font-display text-lg font-bold">Modal</h2>
-  <button type="button" x-data
-          x-on:click="$dispatch('abrir-modal', { id: 'demo-modal' })"
-          class="inline-flex min-h-toque items-center rounded-md bg-chama px-5 py-2.5 text-sm font-semibold text-superficie hover:bg-chama/90">
-    Abrir confirmação
-  </button>
+<section class="mt-10 space-y-4">
+  <h2 class="cartao-titulo">Modal</h2>
+  <button type="button" x-data x-on:click="$dispatch('abrir-modal', { id: 'demo-modal' })" class="btn btn-perigo">Abrir confirmação</button>
   {% include "components/modal.html" with id="demo-modal" titulo="Recusar este pedido de férias?" corpo="O trabalhador vai ver o pedido como recusado. Esta decisão fica no histórico e não se apaga." confirmar_label="Recusar pedido" form_action="." %}
 </section>
 
-<section class="mt-10 space-y-3">
-  <h2 class="font-display text-lg font-bold">Toast</h2>
+<section class="mt-10 space-y-4">
+  <h2 class="cartao-titulo">Toast</h2>
   <form method="post">
     {% csrf_token %}
     {% include "components/botao.html" with label="Registar entrada" %}

@@ -1,13 +1,14 @@
 {% extends "base_manage.html" %}
+{% load interface %}
 {% block title %}Registar consumo{% endblock %}
 {% block content %}
-<a href="{% url 'inventory:consumos' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Consumos internos</a>
-<h1 class="mt-2 font-display text-2xl font-bold">Registar consumo</h1>
+<a href="{% url 'inventory:consumos' %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Consumos internos</a>
+<h1 class="mt-2 titulo-pagina">Registar consumo</h1>
 <p class="mt-1 text-sm text-ardosia">Cada artigo sai do stock agora, valorizado ao custo de referência de hoje.</p>
 
 <form method="post" class="mt-6 max-w-2xl space-y-5">
   {% csrf_token %}
-  {% if erro %}<p class="rounded-md bg-chama/10 px-4 py-3 text-sm font-medium text-chama" role="alert">{{ erro }}</p>{% endif %}
+  {% if erro %}<p class="aviso aviso-chama" role="alert">{{ erro }}</p>{% endif %}
   <div class="cartao grid gap-5 p-6 sm:grid-cols-3">
     <div class="space-y-1.5 sm:col-span-2">
       <label for="pessoa" class="block text-sm font-medium">Quem consumiu <span class="text-ardosia" aria-hidden="true">*</span></label>
@@ -49,7 +50,7 @@
         {% endfor %}
       </tbody>
     </table>
-    <p class="border-t border-ardosia/10 px-4 py-2.5 text-xs text-ardosia">As linhas sem artigo ficam de fora. Um artigo sem custo de referência entra no stock, mas fica sem valor no mapa.</p>
+    <p class="border-t border-linha px-4 py-2.5 text-xs text-ardosia">As linhas sem artigo ficam de fora. Um artigo sem custo de referência entra no stock, mas fica sem valor no mapa.</p>
   </div>
 
   <div class="cartao p-6">

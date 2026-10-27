@@ -2,7 +2,7 @@
    Estáticos: cache-first. Páginas: network-first com fallback ao cache.
    POSTs nunca passam por aqui. Desde a Fase 7 não há fila offline: a app
    só consulta e pede, e o ponto pica-se no tablet. */
-const CACHE = "opero-shell-v11";
+const CACHE = "opero-shell-v12";
 const SHELL = [
   "/static/css/app.css",
   "/static/js/htmx.min.js",
@@ -11,11 +11,9 @@ const SHELL = [
   "/static/manifest.webmanifest",
   "/static/icons/icon-192.png",
   "/static/icons/icon-512.png",
-  "/static/fonts/archivo-v25-latin-700.woff2",
-  "/static/fonts/archivo-v25-latin-800.woff2",
-  "/static/fonts/ibm-plex-sans-v23-latin-regular.woff2",
-  "/static/fonts/ibm-plex-sans-v23-latin-600.woff2",
-  "/static/fonts/ibm-plex-mono-v20-latin-regular.woff2",
+  "/static/fonts/inter-v20-latin-variable.woff2",
+  "/static/fonts/playfair-display-v40-latin-variable.woff2",
+  "/static/img/logo-opero-escuro.png",
 ];
 
 self.addEventListener("install", (event) => {

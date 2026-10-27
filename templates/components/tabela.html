@@ -1,18 +1,20 @@
 {% comment %}
 Padrão de tabela do backoffice — as classes vivem em input.css:
 
-  .cartao      — contentor branco com borda (também para formulários)
-  .tabela      — a <table>; cabeçalho ardosia, linhas com hover
-  .th-dados    — <th> de coluna numérica, alinhado à direita
-  .td-dados    — <td> numérico: mono, figuras tabulares, à direita
+  .cartao           — contentor branco, cantos de 16px (também para formulários)
+  .cartao-cabecalho — barra do título, com .cartao-titulo e .link-ver
+  .tabela           — a <table>; cabeçalho pequeno em maiúsculas, linhas com hover
+  .th-dados         — <th> de coluna numérica, alinhado à direita
+  .td-dados         — <td> numérico: figuras tabulares, à direita
+  .link-acao        — ação de uma linha, em pílula
 
 Este ficheiro renderiza a tabela de demonstração da página de componentes.
 Nos ecrãs reais, compõe-se o markup diretamente com estas classes —
 listagens têm sempre pesquisa (secção 9).
 {% endcomment %}
 <div class="cartao">
-  <div class="flex items-baseline justify-between border-b border-ardosia/15 px-4 py-3">
-    <h3 class="font-display text-base font-bold">Artigos</h3>
+  <div class="cartao-cabecalho">
+    <h3 class="cartao-titulo">Artigos</h3>
     <span class="font-dados text-sm text-ardosia">3</span>
   </div>
   <div class="overflow-x-auto">
@@ -24,29 +26,33 @@ listagens têm sempre pesquisa (secção 9).
           <th class="th-dados">Stock</th>
           <th class="th-dados">Mínimo</th>
           <th>Estado</th>
+          <th><span class="sr-only">Ações</span></th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td>Tomate chucha</td>
-          <td>Frescos</td>
+          <td class="font-medium">Tomate chucha</td>
+          <td class="text-ardosia">Frescos</td>
           <td class="td-dados">34,200 KG</td>
-          <td class="td-dados">10,000 KG</td>
+          <td class="td-dados text-ardosia">10,000 KG</td>
           <td>{% include "components/badge.html" with label="OK" variante="neutro" %}</td>
+          <td class="text-right"><a href="#" class="link-acao">Movimento</a></td>
         </tr>
         <tr>
-          <td>Azeite virgem extra</td>
-          <td>Mercearia</td>
+          <td class="font-medium">Azeite virgem extra</td>
+          <td class="text-ardosia">Mercearia</td>
           <td class="td-dados">2,000 L</td>
-          <td class="td-dados">6,000 L</td>
+          <td class="td-dados text-ardosia">6,000 L</td>
           <td>{% include "components/badge.html" with label="Stock baixo" variante="chama" %}</td>
+          <td class="text-right"><a href="#" class="link-acao">Movimento</a></td>
         </tr>
         <tr>
-          <td>Guardanapos 33×33</td>
-          <td>Embalagem</td>
+          <td class="font-medium">Guardanapos 33×33</td>
+          <td class="text-ardosia">Embalagem</td>
           <td class="td-dados">18 EMB</td>
-          <td class="td-dados">5 EMB</td>
+          <td class="td-dados text-ardosia">5 EMB</td>
           <td>{% include "components/badge.html" with label="OK" variante="neutro" %}</td>
+          <td class="text-right"><a href="#" class="link-acao">Movimento</a></td>
         </tr>
       </tbody>
     </table>

@@ -1,5 +1,6 @@
+{% load interface %}
 {% comment %}
-Toasts de confirmação (secção 9). Duas fontes:
+Toasts de confirmação (secção 9), em pílula. Duas fontes:
 - mensagens Django (render no load da página);
 - evento HTMX "toast" (HX-Trigger), com detail {texto, tom}.
 O verbo do toast é o do botão que o despoletou.
@@ -7,18 +8,21 @@ O verbo do toast é o do botão que o despoletou.
 <div aria-live="polite"
      x-data="{ lista: [] }"
      x-on:toast.window="lista.push($event.detail); setTimeout(() => lista.shift(), 4000)"
-     class="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex flex-col items-center gap-2 px-4">
+     class="pointer-events-none fixed inset-x-0 bottom-5 z-50 flex flex-col items-center gap-2 px-4">
   {% for message in messages %}
-  <div x-data="{ visivel: true }" x-show="visivel" x-init="setTimeout(() => visivel = false, 4000)"
-       class="pointer-events-auto flex items-center gap-3 rounded-md px-4 py-3 text-sm font-semibold shadow-lg
-              {% if message.tags == 'error' %}bg-chama text-superficie{% elif message.tags == 'success' %}bg-servico text-carvao{% else %}bg-carvao text-aco{% endif %}">
+  <div x-data="{ visivel: true }" x-show="visivel" x-init="setTimeout(() => visivel = false, 4000)" x-transition.opacity
+       class="pointer-events-auto flex max-w-lg items-center gap-3 rounded-2xl py-2.5 pl-3 pr-4 text-sm font-semibold shadow-flutuante
+              {% if message.tags == 'error' %}bg-chama text-superficie{% elif message.tags == 'success' %}bg-floresta text-creme{% else %}bg-carvao text-creme{% endif %}">
+    <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-superficie/15">
+      {% if message.tags == 'error' %}{% icone "alerta" "h-4 w-4" %}{% elif message.tags == 'success' %}{% icone "visto" "h-4 w-4" %}{% else %}{% icone "info" "h-4 w-4" %}{% endif %}
+    </span>
     <span>{{ message }}</span>
-    <button type="button" x-on:click="visivel = false" class="opacity-60 hover:opacity-100" aria-label="Fechar">✕</button>
+    <button type="button" x-on:click="visivel = false" class="ml-1 opacity-70 hover:opacity-100" aria-label="Fechar">{% icone "fechar" "h-4 w-4" %}</button>
   </div>
   {% endfor %}
   <template x-for="(t, i) in lista" :key="i">
-    <div class="pointer-events-auto flex items-center gap-3 rounded-md px-4 py-3 text-sm font-semibold shadow-lg"
-         :class="t.tom === 'erro' ? 'bg-chama text-superficie' : (t.tom === 'sucesso' ? 'bg-servico text-carvao' : 'bg-carvao text-aco')">
+    <div class="pointer-events-auto flex max-w-lg items-center gap-3 rounded-2xl px-5 py-3 text-sm font-semibold shadow-flutuante"
+         :class="t.tom === 'erro' ? 'bg-chama text-superficie' : (t.tom === 'sucesso' ? 'bg-floresta text-creme' : 'bg-carvao text-creme')">
       <span x-text="t.texto"></span>
     </div>
   </template>

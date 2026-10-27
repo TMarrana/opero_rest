@@ -3,7 +3,7 @@
 {% block content %}
 <div class="flex flex-wrap items-end justify-between gap-4">
   <div>
-    <h1 class="font-display text-2xl font-bold">Stock</h1>
+    <h1 class="titulo-pagina">Stock</h1>
     <p class="mt-1 text-sm text-ardosia">
       {% include "partials/inventory/contador_baixo.html" %}
     </p>
@@ -13,7 +13,7 @@
     {% include "components/botao.html" with label="Categorias" variante="fantasma" href="/gestao/stock/categorias/" %}
     {% url 'inventory:consumos' as url_consumos %}
     {% include "components/botao.html" with label="Consumos" variante="fantasma" href=url_consumos %}
-    {% include "components/botao.html" with label="Novo artigo" href="/gestao/stock/novo/" %}
+    {% include "components/botao.html" with variante="acento" label="Novo artigo" href="/gestao/stock/novo/" %}
   </div>
 </div>
 

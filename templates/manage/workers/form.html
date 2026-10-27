@@ -1,7 +1,7 @@
 {% extends "base_manage.html" %}
 {% block title %}{% if worker %}Editar trabalhador{% else %}Novo trabalhador{% endif %}{% endblock %}
 {% block content %}
-<h1 class="font-display text-2xl font-bold">{% if worker %}{{ worker.full_name }}{% else %}Novo trabalhador{% endif %}</h1>
+<h1 class="titulo-pagina">{% if worker %}{{ worker.full_name }}{% else %}Novo trabalhador{% endif %}</h1>
 <form method="post" class="mt-6 max-w-xl space-y-5">
   {% csrf_token %}
   <div class="cartao space-y-5 p-6">

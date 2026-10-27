@@ -1,15 +1,15 @@
 {% comment %}Fragmento carregado para #modal-slot via HTMX.{% endcomment %}
 <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="mov-titulo">
-  <div class="absolute inset-0 bg-carvao/60" onclick="document.getElementById('modal-slot').innerHTML = ''"></div>
-  <div class="relative w-full max-w-md rounded-md bg-superficie p-6 shadow-xl">
-    <h2 id="mov-titulo" class="font-display text-lg font-bold text-carvao">Registar movimento</h2>
+  <div class="absolute inset-0 bg-floresta/40 backdrop-blur-[2px]" onclick="document.getElementById('modal-slot').innerHTML = ''"></div>
+  <div class="relative w-full max-w-md rounded-3xl bg-superficie p-7 shadow-flutuante">
+    <h2 id="mov-titulo" class="font-display text-xl font-bold text-carvao">Registar movimento</h2>
     <p class="mt-0.5 text-sm text-ardosia">{{ item.name }} · stock atual <span class="font-dados">{{ item.current_stock }} {{ item.unit }}</span></p>
 
     <form class="mt-5 space-y-4"
           hx-post="{% url 'inventory:movimento' item.pk %}"
           hx-target="#item-{{ item.pk }}" hx-swap="outerHTML">
       {% for erro in form.non_field_errors %}
-      <p class="rounded-md bg-chama/10 px-4 py-3 text-sm font-medium text-chama">{{ erro }}</p>
+      <p class="aviso aviso-chama">{{ erro }}</p>
       {% endfor %}
       {% include "components/campo.html" with field=form.movement_type %}
       <div class="grid grid-cols-2 gap-4">
@@ -20,7 +20,7 @@
       {% include "components/campo.html" with field=form.reference %}
       <div class="mt-2 flex justify-end gap-3">
         <button type="button" onclick="document.getElementById('modal-slot').innerHTML = ''"
-                class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-5 py-2.5 text-sm font-semibold text-carvao hover:bg-carvao/5">Cancelar</button>
+                class="btn btn-fantasma">Cancelar</button>
         {% include "components/botao.html" with label="Registar movimento" %}
       </div>
     </form>

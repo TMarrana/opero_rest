@@ -1,0 +1,9 @@
+{# Separadores do ponto, em pílula. Os pedidos contam também os registos por resolver. #}
+<nav class="separadores mt-5" aria-label="Ponto">
+  {% url 'attendance:dia' as url_dia %}
+  {% url 'attendance:mes' as url_mes %}
+  {% url 'attendance:pedidos' as url_pedidos %}
+  <a href="{{ url_dia }}" class="separador {% if request.path == url_dia %}separador-ativo{% endif %}"{% if request.path == url_dia %} aria-current="page"{% endif %}>Ponto da equipa</a>
+  <a href="{{ url_mes }}" class="separador {% if request.path == url_mes %}separador-ativo{% endif %}"{% if request.path == url_mes %} aria-current="page"{% endif %}>Fecho do mês</a>
+  <a href="{{ url_pedidos }}" class="separador {% if request.path == url_pedidos %}separador-ativo{% endif %}"{% if request.path == url_pedidos %} aria-current="page"{% endif %}>Pedidos{% if contadores.ponto %} <span class="contador">{{ contadores.ponto }}<span class="sr-only"> por tratar</span></span>{% endif %}</a>
+</nav>

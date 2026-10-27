@@ -1,13 +1,17 @@
 {% comment %}Painel lateral de uma célula do planeador. Carregado por hx-get;
 as ações são POST normais que voltam à semana.{% endcomment %}
 <div class="cartao p-4">
-  <h2 class="font-display text-base font-bold">{{ worker.full_name }}</h2>
+  <div class="flex items-start justify-between gap-2">
+    <h2 class="cartao-titulo">{{ worker.full_name }}</h2>
+    <button type="button" x-data x-on:click="document.getElementById('painel').innerHTML = ''"
+            class="-mr-1 -mt-1 inline-flex min-h-toque min-w-toque items-center justify-center text-lg text-ardosia hover:text-carvao" aria-label="Fechar">&times;</button>
+  </div>
   <p class="font-dados text-sm text-ardosia">{{ dia|date:"l, d/m" }}</p>
 
   {% if turnos %}
   <ul class="mt-3 space-y-2">
     {% for s in turnos %}
-    <li class="rounded border border-ardosia/30 px-2 py-1.5 text-sm">
+    <li class="rounded-lg border border-linha px-2 py-1.5 text-sm">
       <span class="font-dados">{{ s.start_at|date:"H:i" }}&ndash;{{ s.end_at|date:"H:i" }}</span> · {{ s.label }}
       <span class="block text-xs text-ardosia">{% if s.pending_removal %}a remover na publicação{% else %}{{ s.get_state_display }}{% endif %}</span>
       {% if not s.pending_removal %}
@@ -42,12 +46,12 @@ as ações são POST normais que voltam à semana.{% endcomment %}
     {% include "components/botao.html" with label="Acrescentar turno" %}
   </form>
 
-  <form method="post" action="{% url 'shifts:celula' worker.pk dia|date:'Y-m-d' %}" class="mt-4 border-t border-ardosia/15 pt-3">
+  <form method="post" action="{% url 'shifts:celula' worker.pk dia|date:'Y-m-d' %}" class="mt-4 border-t border-linha pt-3">
     {% csrf_token %}
     {% if folga %}
-    <button type="submit" name="acao" value="tirar_folga" class="text-sm underline underline-offset-2">Tirar a folga</button>
+    <button type="submit" name="acao" value="tirar_folga" class="link-acao">Tirar a folga</button>
     {% else %}
-    <button type="submit" name="acao" value="folga" class="text-sm underline underline-offset-2">Marcar folga</button>
+    <button type="submit" name="acao" value="folga" class="link-acao">Marcar folga</button>
     {% endif %}
   </form>
 </div>

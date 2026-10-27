@@ -1,11 +1,12 @@
 {% extends "base_manage.html" %}
+{% load interface %}
 {% block title %}{{ secao.titulo }}{% endblock %}
 {% block content %}
-<a href="{% url 'config:inicio' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Configuração</a>
+<a href="{% url 'config:inicio' %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Configuração</a>
 <div class="mt-2 flex flex-wrap items-end justify-between gap-4">
-  <h1 class="font-display text-2xl font-bold">{{ secao.titulo }}</h1>
+  <h1 class="titulo-pagina">{{ secao.titulo }}</h1>
   {% url 'config:novo' secao.slug as url_novo %}
-  {% include "components/botao.html" with label="Acrescentar" href=url_novo %}
+  {% include "components/botao.html" with variante="acento" label="Acrescentar" href=url_novo %}
 </div>
 <p class="mt-1 text-sm text-ardosia">{{ secao.ajuda }}</p>
 
@@ -26,14 +27,14 @@
           {% endfor %}
           <td>{% if l.obj.archived_at %}{% include "components/badge.html" with label="Arquivado" %}{% else %}<span class="text-sm text-ardosia">—</span>{% endif %}</td>
           <td class="whitespace-nowrap text-right">
-            <a href="{% url 'config:editar' secao.slug l.obj.pk %}" class="text-sm underline underline-offset-2">Editar</a>
+            <a href="{% url 'config:editar' secao.slug l.obj.pk %}" class="link-acao">Editar</a>
             <form method="post" action="{% url 'config:remover' secao.slug l.obj.pk %}" class="ml-3 inline" x-data="{ confirmar: false }">
               {% csrf_token %}
               {% if secao.arquiva %}
-              <button type="submit" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">{% if l.obj.archived_at %}Repor{% else %}Arquivar{% endif %}</button>
+              <button type="submit" class="link-acao">{% if l.obj.archived_at %}Repor{% else %}Arquivar{% endif %}</button>
               {% else %}
-              <button type="button" x-show="!confirmar" x-on:click="confirmar = true" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Apagar</button>
-              <button type="submit" x-show="confirmar" x-cloak class="text-sm font-semibold text-chama underline underline-offset-2">Confirmar</button>
+              <button type="button" x-show="!confirmar" x-on:click="confirmar = true" class="link-acao">Apagar</button>
+              <button type="submit" x-show="confirmar" x-cloak class="link-acao-perigo">Confirmar</button>
               {% endif %}
             </form>
           </td>
@@ -51,7 +52,7 @@
 <section class="mt-10">
   <h2 class="font-display text-lg font-bold">Feriados nacionais de {{ ano }}</h2>
   <p class="mt-1 text-sm text-ardosia">Já incluídos na contagem de dias de ausência.</p>
-  <ul class="mt-3 cartao divide-y divide-ardosia/10">
+  <ul class="mt-3 cartao divide-y divide-linha">
     {% for data, nome in nacionais %}
     <li class="flex justify-between px-4 py-2 text-sm"><span>{{ nome }}</span><span class="font-dados">{{ data|date:"d/m" }}</span></li>
     {% endfor %}

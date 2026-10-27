@@ -1,10 +1,11 @@
 {% extends "base_manage.html" %}
+{% load interface %}
 {% block title %}Importar vendas{% endblock %}
 {% block content %}
 {% comment %}Importação do SAF-T (Fase 10). O erro de um ficheiro recusado fica
 no ecrã, junto ao formulário, porque diz o que fazer a seguir.{% endcomment %}
-<a href="{% url 'sales:vendas' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Vendas</a>
-<h1 class="mt-2 font-display text-2xl font-bold">Importar vendas</h1>
+<a href="{% url 'sales:vendas' %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Vendas</a>
+<h1 class="mt-2 titulo-pagina">Importar vendas</h1>
 <p class="mt-1 max-w-2xl text-sm text-ardosia">
   Carregue o ficheiro SAF-T de faturação que o POS exporta. O Opero lê as vendas e não altera nada no POS nem no stock.
   Pode carregar o mesmo período mais de uma vez: só entram os documentos novos e os que mudaram de estado.
@@ -14,7 +15,7 @@ no ecrã, junto ao formulário, porque diz o que fazer a seguir.{% endcomment %}
   <form method="post" enctype="multipart/form-data" class="space-y-5" x-data="{ a_enviar: false }" x-on:submit="a_enviar = true">
     {% csrf_token %}
     {% if erro %}
-    <p class="rounded-md bg-chama/10 px-4 py-3 text-sm font-medium text-chama" role="alert">{{ erro }}</p>
+    <p class="aviso aviso-chama" role="alert">{{ erro }}</p>
     {% endif %}
     <div class="cartao space-y-5 p-6">
       {% include "components/campo.html" with field=form.ficheiro %}
@@ -24,12 +25,12 @@ no ecrã, junto ao formulário, porque diz o que fazer a seguir.{% endcomment %}
         {% if regras.series %}<div class="flex justify-between gap-4"><dt class="text-ardosia">Séries desta casa</dt><dd class="font-dados">{{ regras.series }}</dd></div>{% endif %}
       </dl>
       {% if request.role == "ADMIN" %}
-      <p class="text-sm"><a href="{% url 'sales:regras' %}" class="underline underline-offset-2">Mudar as regras de vendas</a></p>
+      <p class="text-sm"><a href="{% url 'sales:regras' %}" class="link-texto">Mudar as regras de vendas</a></p>
       {% endif %}
     </div>
     <div class="flex justify-end">
       <button type="submit" x-bind:disabled="a_enviar"
-              class="inline-flex min-h-toque items-center justify-center rounded-md bg-carvao px-5 py-2.5 text-sm font-semibold text-superficie hover:bg-carvao/85 disabled:opacity-50">
+              class="btn btn-primario">
         <span x-show="!a_enviar">Importar</span>
         <span x-show="a_enviar" x-cloak>A ler o ficheiro…</span>
       </button>
@@ -37,7 +38,7 @@ no ecrã, junto ao formulário, porque diz o que fazer a seguir.{% endcomment %}
   </form>
 
   <section class="cartao self-start">
-    <h2 class="border-b border-ardosia/15 px-4 py-3 font-display text-base font-bold">Importações</h2>
+    <h2 class="cartao-cabecalho cartao-titulo">Importações</h2>
     {% if importacoes %}
     <div>
       {% for i in importacoes %}

@@ -1,38 +1,44 @@
 {% extends "base_kiosk.html" %}
+{% load interface %}
 {% block title %}Picar{% endblock %}
 {% block content %}
 {% comment %}Só as ações possíveis no estado atual (secção 5). Cada botão
 leva o token de marcação desta pessoa, que vale uma vez e durante um
 minuto. As pausas aparecem ao lado da Saída, sem passo extra.{% endcomment %}
 {% include "kiosk/_voltar.html" %}
-<header class="flex items-baseline justify-between gap-4">
-  <h1 class="font-display text-3xl font-extrabold">Olá, {{ worker.full_name }}</h1>
-  <a href="{% url 'kiosk:inicio' %}" class="min-h-toque py-2 text-base text-aco/70 underline underline-offset-4">Cancelar</a>
+<header class="cartao-perfil flex items-center justify-between gap-4 px-6 py-6">
+  <div class="flex min-w-0 items-center gap-4">
+    <span class="avatar h-14 w-14 text-lg">{{ worker.full_name|iniciais }}</span>
+    <div class="min-w-0">
+      <h1 class="truncate font-display text-3xl font-bold">Olá, {{ worker.full_name }}</h1>
+      <p class="mt-2 inline-flex items-center gap-2 rounded-full border border-creme/10 bg-creme/10 px-3 py-1.5 font-dados text-base font-semibold text-ambar">
+        {% icone "relogio" "h-4 w-4 shrink-0" %}
+        <span>{% if pausa %}{{ pausa.break_type.name }} desde {{ pausa.start|date:"H:i" }}
+        {% elif entry %}Em turno desde {% if entry.work_date != hoje %}{{ entry.check_in|date:"d/m" }} às {% endif %}{{ entry.check_in|date:"H:i" }}
+        {% else %}Fora de turno{% endif %}</span>
+      </p>
+    </div>
+  </div>
+  <a href="{% url 'kiosk:inicio' %}" class="btn shrink-0 border border-creme/25 text-base text-creme hover:bg-creme/10">Cancelar</a>
 </header>
-
-<p class="mt-2 font-dados text-lg text-aco/80">
-  {% if pausa %}{{ pausa.break_type.name }} desde {{ pausa.start|date:"H:i" }}
-  {% elif entry %}Em turno desde {% if entry.work_date != hoje %}{{ entry.check_in|date:"d/m" }} às {% endif %}{{ entry.check_in|date:"H:i" }}
-  {% else %}Fora de turno{% endif %}
-</p>
 {% if saida_esquecida %}
-<p class="mt-3 rounded-md border border-chama px-4 py-3 text-base">Já passou da hora prevista de saída. Se acabou de chegar para outro turno, pique primeiro a saída e depois a entrada, e {% if worker.user_id %}peça na app{% else %}peça ao gerente{% endif %} a correção da hora de saída.</p>
+<p class="aviso aviso-chama mt-4 flex items-start gap-3 text-base">{% icone "alerta" "mt-0.5 h-5 w-5 shrink-0" %}<span>Já passou da hora prevista de saída. Se acabou de chegar para outro turno, pique primeiro a saída e depois a entrada, e {% if worker.user_id %}peça na app{% else %}peça ao gerente{% endif %} a correção da hora de saída.</span></p>
 {% endif %}
 
-<div class="mt-8 space-y-4">
+<div class="mt-6 space-y-3">
   {% if pausa %}
   <form method="post" action="{% url 'kiosk:marcar' worker.pk %}" hx-disabled-elt="find button">
     {% csrf_token %}
     <input type="hidden" name="token" value="{{ token }}">
     <input type="hidden" name="acao" value="fim_pausa">
-    <button type="submit" class="min-h-[30vh] w-full rounded-lg border-2 border-aco bg-aco/10 font-display text-5xl font-extrabold uppercase tracking-wide text-aco hover:bg-aco/20">Terminar pausa</button>
+    <button type="submit" class="flex min-h-[30vh] w-full items-center justify-center gap-4 rounded-3xl border-2 border-floresta bg-superficie text-5xl font-bold tracking-tight text-floresta transition-colors duration-150 hover:bg-floresta/5">{% icone "entrar" "h-12 w-12" %}Terminar pausa</button>
   </form>
   {% elif entry %}
   <form method="post" action="{% url 'kiosk:marcar' worker.pk %}" hx-disabled-elt="find button">
     {% csrf_token %}
     <input type="hidden" name="token" value="{{ token }}">
     <input type="hidden" name="acao" value="saida">
-    <button type="submit" class="min-h-[30vh] w-full rounded-lg bg-chama font-display text-5xl font-extrabold uppercase tracking-wide text-superficie hover:bg-chama/90">Saída</button>
+    <button type="submit" class="flex min-h-[30vh] w-full items-center justify-center gap-4 rounded-3xl bg-chama text-5xl font-bold tracking-tight text-superficie shadow-flutuante transition-colors duration-150 hover:bg-chama/90">{% icone "sair" "h-12 w-12" %}Saída</button>
   </form>
   {% if tipos_pausa %}
   <div class="grid gap-3 {% if tipos_pausa|length > 1 %}grid-cols-2{% endif %}">
@@ -42,8 +48,8 @@ minuto. As pausas aparecem ao lado da Saída, sem passo extra.{% endcomment %}
       <input type="hidden" name="token" value="{{ token }}">
       <input type="hidden" name="acao" value="pausa">
       <input type="hidden" name="tipo_pausa" value="{{ tipo.pk }}">
-      <button type="submit" class="min-h-[72px] w-full rounded-lg border border-aco/40 px-3 py-3 text-lg font-semibold text-aco hover:bg-aco/10">
-        {% if tipos_pausa|length > 1 %}Pausa · {{ tipo.name }}{% else %}Iniciar pausa{% endif %}
+      <button type="submit" class="flex min-h-[80px] w-full items-center justify-center gap-3 rounded-2xl border border-linha bg-superficie px-3 py-3 text-lg font-semibold shadow-cartao transition-colors duration-150 hover:bg-creme">
+        {% icone "pausa" "h-5 w-5 text-floresta" %}{% if tipos_pausa|length > 1 %}Pausa · {{ tipo.name }}{% else %}Iniciar pausa{% endif %}
       </button>
     </form>
     {% endfor %}
@@ -54,7 +60,7 @@ minuto. As pausas aparecem ao lado da Saída, sem passo extra.{% endcomment %}
     {% csrf_token %}
     <input type="hidden" name="token" value="{{ token }}">
     <input type="hidden" name="acao" value="entrada">
-    <button type="submit" class="min-h-[30vh] w-full rounded-lg bg-servico font-display text-5xl font-extrabold uppercase tracking-wide text-carvao hover:bg-servico/90">Entrada</button>
+    <button type="submit" class="flex min-h-[30vh] w-full items-center justify-center gap-4 rounded-3xl bg-floresta text-5xl font-bold tracking-tight text-creme shadow-flutuante transition-colors duration-150 hover:bg-floresta/90">{% icone "entrar" "h-12 w-12" %}Entrada</button>
   </form>
   {% endif %}
 </div>

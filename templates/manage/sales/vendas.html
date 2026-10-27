@@ -6,11 +6,11 @@
 anulados, com as notas de crédito a abater. Os valores são sem IVA.{% endcomment %}
 <div class="flex flex-wrap items-end justify-between gap-4">
   <div>
-    <h1 class="font-display text-2xl font-bold">Vendas</h1>
+    <h1 class="titulo-pagina">Vendas</h1>
     {% if ultimo_dia %}<p class="mt-1 text-sm text-ardosia">Valores sem IVA. Último dia importado: <span class="font-dados">{{ ultimo_dia|date:"d/m/Y" }}</span>.</p>{% endif %}
   </div>
   {% url 'sales:importar' as url_importar %}
-  {% include "components/botao.html" with label="Importar SAF-T" href=url_importar %}
+  {% include "components/botao.html" with variante="acento" label="Importar SAF-T" href=url_importar %}
 </div>
 
 {% if not tem_importacoes %}
@@ -23,13 +23,13 @@ anulados, com as notas de crédito a abater. Os valores são sem IVA.{% endcomme
 <div class="mt-6 flex flex-wrap items-center justify-between gap-4">
   <div class="flex items-center gap-2">
     {% if mes %}
-    <a href="?mes={{ mes_anterior|date:'Y-m' }}" class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-3 py-2 text-sm font-semibold hover:bg-carvao/5" aria-label="Mês anterior">&larr;</a>
+    <a href="?mes={{ mes_anterior|date:'Y-m' }}" class="btn btn-fantasma btn-sm" aria-label="Mês anterior">&larr;</a>
     <span class="font-dados text-sm font-semibold">{{ mes|date:"m/Y" }}</span>
     {% if mes_seguinte %}
-    <a href="?mes={{ mes_seguinte|date:'Y-m' }}" class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-3 py-2 text-sm font-semibold hover:bg-carvao/5" aria-label="Mês seguinte">&rarr;</a>
+    <a href="?mes={{ mes_seguinte|date:'Y-m' }}" class="btn btn-fantasma btn-sm" aria-label="Mês seguinte">&rarr;</a>
     {% endif %}
     {% else %}
-    <a href="?mes={{ inicio|date:'Y-m' }}" class="text-sm underline underline-offset-2">Ver o mês</a>
+    <a href="?mes={{ inicio|date:'Y-m' }}" class="link-acao">Ver o mês</a>
     {% endif %}
   </div>
   <form method="get" class="flex flex-wrap items-center gap-2 text-sm">
@@ -37,29 +37,29 @@ anulados, com as notas de crédito a abater. Os valores são sem IVA.{% endcomme
     <input id="de" type="date" name="de" value="{{ inicio|date:'Y-m-d' }}" class="campo-input font-dados w-40">
     <label for="ate" class="text-ardosia">a</label>
     <input id="ate" type="date" name="ate" value="{{ fim|date:'Y-m-d' }}" class="campo-input font-dados w-40">
-    <button type="submit" class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-3 py-2 font-semibold hover:bg-carvao/5">Ver</button>
+    <button type="submit" class="btn btn-fantasma btn-sm">Ver</button>
   </form>
 </div>
 
 {# ---- Resumo do período, comparado com o anterior ---- #}
 <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
   <div class="cartao p-4">
-    <p class="text-xs uppercase tracking-wide text-ardosia">Vendas sem IVA</p>
+    <p class="rotulo">Vendas sem IVA</p>
     <p class="mt-1 font-dados text-2xl font-semibold">{{ atual.total|euros }}</p>
     <p class="font-dados text-xs text-ardosia">{{ var_total|variacao }}</p>
   </div>
   <div class="cartao p-4">
-    <p class="text-xs uppercase tracking-wide text-ardosia">Documentos de venda</p>
+    <p class="rotulo">Documentos de venda</p>
     <p class="mt-1 font-dados text-2xl font-semibold">{{ atual.vendas|numero }}</p>
     <p class="font-dados text-xs text-ardosia">{{ var_vendas|variacao }}{% if atual.notas %}{% if var_vendas is not None %} · {% endif %}{{ atual.notas }} nota{{ atual.notas|pluralize }} de crédito{% endif %}</p>
   </div>
   <div class="cartao p-4">
-    <p class="text-xs uppercase tracking-wide text-ardosia">Ticket médio</p>
+    <p class="rotulo">Ticket médio</p>
     <p class="mt-1 font-dados text-2xl font-semibold">{{ atual.ticket|euros }}</p>
     <p class="font-dados text-xs text-ardosia">{{ var_ticket|variacao }}</p>
   </div>
   <div class="cartao p-4">
-    <p class="text-xs uppercase tracking-wide text-ardosia">Vendas por hora trabalhada</p>
+    <p class="rotulo">Vendas por hora trabalhada</p>
     <p class="mt-1 font-dados text-2xl font-semibold">{{ totais.por_hora|euros }}</p>
     <p class="font-dados text-xs text-ardosia">
       {% if totais.horas %}{{ totais.horas|horas }} trabalhadas{% else %}sem horas de ponto{% endif %}{% if totais.custo_pessoal %} · pessoal {{ totais.custo_pessoal }} %{% endif %}
@@ -69,14 +69,14 @@ anulados, com as notas de crédito a abater. Os valores são sem IVA.{% endcomme
 <p class="mt-2 text-xs text-ardosia">
   {% if anterior.vendas %}Comparado com <span class="font-dados">{{ anterior_inicio|date:"d/m" }} a {{ anterior_fim|date:"d/m/Y" }}</span>: {{ anterior.total|euros }}.
   {% else %}Sem vendas importadas de <span class="font-dados">{{ anterior_inicio|date:"d/m" }} a {{ anterior_fim|date:"d/m/Y" }}</span> para comparar.{% endif %}
-  {% if not regras.hourly_cost and request.role == "ADMIN" %}Para ver o custo de pessoal estimado, indique o custo médio por hora nas <a href="{% url 'sales:regras' %}" class="underline underline-offset-2">regras de vendas</a>.{% endif %}
+  {% if not regras.hourly_cost and request.role == "ADMIN" %}Para ver o custo de pessoal estimado, indique o custo médio por hora nas <a href="{% url 'sales:regras' %}" class="link-texto">regras de vendas</a>.{% endif %}
 </p>
 
 {# ---- Por dia, com as horas do ponto ---- #}
 <section class="mt-6 cartao">
-  <div class="flex items-baseline justify-between border-b border-ardosia/15 px-4 py-3">
-    <h2 class="font-display text-base font-bold">Por dia</h2>
-    <a href="?{{ query }}&amp;exportar=dias" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Exportar CSV</a>
+  <div class="cartao-cabecalho">
+    <h2 class="cartao-titulo">Por dia</h2>
+    <a href="?{{ query }}&amp;exportar=dias" class="link-acao">Exportar CSV</a>
   </div>
   <div class="overflow-x-auto">
     <table class="tabela">
@@ -96,7 +96,7 @@ anulados, com as notas de crédito a abater. Os valores são sem IVA.{% endcomme
         {% for d in dias %}
         <tr>
           <td class="whitespace-nowrap font-dados text-sm {% if d.fim_de_semana %}font-semibold{% endif %}">{{ d.dia|date:"D d/m" }}</td>
-          <td><div class="h-2 rounded-sm bg-carvao" style="width: {{ d.barra }}%"></div></td>
+          <td><div class="h-2 rounded bg-floresta" style="width: {{ d.barra }}%"></div></td>
           <td class="td-dados">{% if d.total %}{{ d.total|euros }}{% else %}<span class="text-ardosia">—</span>{% endif %}</td>
           <td class="td-dados">{{ d.vendas|default:"" }}</td>
           <td class="td-dados">{% if d.ticket %}{{ d.ticket|euros }}{% endif %}</td>
@@ -107,7 +107,7 @@ anulados, com as notas de crédito a abater. Os valores são sem IVA.{% endcomme
         {% endfor %}
       </tbody>
       <tfoot>
-        <tr class="border-t border-ardosia/30 font-semibold">
+        <tr class="border-t border-linha font-semibold">
           <td class="px-4 py-3 text-sm">Total</td>
           <td></td>
           <td class="td-dados px-4 py-3">{{ totais.total|euros }}</td>
@@ -120,7 +120,7 @@ anulados, com as notas de crédito a abater. Os valores são sem IVA.{% endcomme
       </tfoot>
     </table>
   </div>
-  <p class="border-t border-ardosia/10 px-4 py-2.5 text-xs text-ardosia">
+  <p class="border-t border-linha px-4 py-2.5 text-xs text-ardosia">
     As horas são as do ponto, sem pausas não pagas. Num dia sem ponto, usam-se as dos turnos publicados («prev.»).
     O dia de serviço vai até às <span class="font-dados">{{ regras.day_cutoff_hour|stringformat:"02d" }}:00</span> do dia seguinte.
   </p>
@@ -129,8 +129,8 @@ anulados, com as notas de crédito a abater. Os valores são sem IVA.{% endcomme
 {# ---- Mapa da semana: dia da semana × hora ---- #}
 {% if mapa %}
 <section class="mt-6 cartao">
-  <div class="flex items-baseline justify-between border-b border-ardosia/15 px-4 py-3">
-    <h2 class="font-display text-base font-bold">Por hora</h2>
+  <div class="cartao-cabecalho">
+    <h2 class="cartao-titulo">Por hora</h2>
     <span class="text-xs text-ardosia">Soma do período. Mais escuro, mais vendas.</span>
   </div>
   <div class="overflow-x-auto p-4">
@@ -147,8 +147,8 @@ anulados, com as notas de crédito a abater. Os valores são sem IVA.{% endcomme
         <tr>
           <th scope="row" class="pr-2 text-left text-xs font-medium">{{ linha.dia }}</th>
           {% for c in linha.celulas %}
-          <td class="h-7 min-w-[1.75rem] rounded-sm {% if not c.nivel %}bg-aco{% endif %}"
-              {% if c.nivel %}style="background-color: rgb(var(--cor-carvao) / {{ c.nivel|stringformat:'.2f' }})"{% endif %}
+          <td class="h-7 min-w-[1.75rem] rounded {% if not c.nivel %}bg-creme{% endif %}"
+              {% if c.nivel %}style="background-color: rgb(var(--cor-floresta) / {{ c.nivel|stringformat:'.2f' }})"{% endif %}
               title="{{ linha.dia }} {{ c.hora|stringformat:'02d' }}h · {{ c.valor|euros }}"><span class="sr-only">{{ c.hora }}h {{ c.valor|euros }}</span></td>
           {% endfor %}
           <td class="whitespace-nowrap pl-3 text-right font-dados text-xs">{{ linha.total|euros }}</td>
@@ -162,9 +162,9 @@ anulados, com as notas de crédito a abater. Os valores são sem IVA.{% endcomme
 
 <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
   <section class="cartao self-start">
-    <div class="flex items-baseline justify-between border-b border-ardosia/15 px-4 py-3">
-      <h2 class="font-display text-base font-bold">Produtos mais vendidos</h2>
-      <a href="?{{ query }}&amp;exportar=produtos" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Exportar todos</a>
+    <div class="cartao-cabecalho">
+      <h2 class="cartao-titulo">Produtos mais vendidos</h2>
+      <a href="?{{ query }}&amp;exportar=produtos" class="link-acao">Exportar todos</a>
     </div>
     {% if produtos %}
     <div class="overflow-x-auto">
@@ -188,16 +188,16 @@ anulados, com as notas de crédito a abater. Os valores são sem IVA.{% endcomme
   </section>
 
   <section class="cartao self-start">
-    <h2 class="border-b border-ardosia/15 px-4 py-3 font-display text-base font-bold">Por família</h2>
+    <h2 class="cartao-cabecalho cartao-titulo">Por família</h2>
     {% if familias %}
-    <ul class="divide-y divide-ardosia/10">
+    <ul class="divide-y divide-linha">
       {% for f in familias %}
       <li class="px-4 py-2.5 text-sm">
         <div class="flex items-baseline justify-between gap-3">
           <span class="font-medium">{{ f.product__group|default:"Sem família" }}</span>
           <span class="font-dados">{{ f.total|euros }}</span>
         </div>
-        {% if f.peso %}<div class="mt-1 h-1.5 rounded-sm bg-carvao" style="width: {{ f.peso|stringformat:'.1f' }}%"></div>{% endif %}
+        {% if f.peso %}<div class="mt-1 h-1.5 rounded bg-floresta" style="width: {{ f.peso|stringformat:'.1f' }}%"></div>{% endif %}
       </li>
       {% endfor %}
     </ul>

@@ -3,9 +3,9 @@
 {% block title %}Produtos do POS sem ficha{% endblock %}
 {% block content %}
 <div class="flex flex-wrap items-end justify-between gap-4">
-  <h1 class="font-display text-2xl font-bold">Fichas técnicas</h1>
+  <h1 class="titulo-pagina">Fichas técnicas</h1>
   {% url 'recipes:nova' as url_nova %}
-  {% include "components/botao.html" with label="Nova ficha" href=url_nova %}
+  {% include "components/botao.html" with variante="acento" label="Nova ficha" href=url_nova %}
 </div>
 {% include "manage/recipes/_nav.html" %}
 <p class="mt-4 text-sm text-ardosia">
@@ -36,10 +36,10 @@
                   <option value="">Ligar a…</option>
                   {% for f in fichas %}<option value="{{ f.pk }}">{{ f.name }}</option>{% endfor %}
                 </select>
-                <button type="submit" class="text-sm font-semibold underline underline-offset-2">Ligar</button>
+                <button type="submit" class="link-acao">Ligar</button>
               </form>
               {% endif %}
-              <a href="{% url 'recipes:nova' %}?produto={{ l.product.pk }}" class="text-sm underline underline-offset-2">Criar ficha</a>
+              <a href="{% url 'recipes:nova' %}?produto={{ l.product.pk }}" class="link-acao">Criar ficha</a>
             </div>
           </td>
         </tr>

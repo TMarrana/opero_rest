@@ -1,29 +1,29 @@
 {% extends "base_staff.html" %}
-{% load static %}
+{% load static interface %}
 {% block title %}Entrar{% endblock %}
 {% block content %}
 <div class="flex flex-1 flex-col justify-center">
-  <img src="{% static 'img/logo-opero.png' %}" alt="Opero" class="block h-10 w-auto">
-  <p class="mt-1 text-sm text-ardosia">Entre com o email e a palavra-passe da sua conta.</p>
+  <img src="{% static 'img/logo-opero-escuro.png' %}" alt="Opero" class="mx-auto block h-10 w-auto">
 
-  <form method="post" class="mt-10 space-y-5">
+  <form method="post" class="cartao mt-8 space-y-5 p-6 sm:p-7">
     {% csrf_token %}
+    <div>
+      <h1 class="font-display text-2xl font-bold">Entrar</h1>
+      <p class="mt-1 text-sm text-ardosia">Entre com o email e a palavra-passe da sua conta.</p>
+    </div>
     {% for erro in form.non_field_errors %}
-      <p class="rounded-md bg-chama/15 px-4 py-3 text-sm font-medium text-chama">{{ erro }}</p>
+      <p class="aviso aviso-chama flex items-center gap-2">{% icone "alerta" "h-4 w-4 shrink-0" %}{{ erro }}</p>
     {% endfor %}
     <div class="space-y-1.5">
-      <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-aco">{{ form.username.label }}</label>
+      <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium">{{ form.username.label }}</label>
       {{ form.username }}
     </div>
     <div class="space-y-1.5">
-      <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-aco">{{ form.password.label }}</label>
+      <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium">{{ form.password.label }}</label>
       {{ form.password }}
     </div>
-    <button type="submit"
-            class="w-full min-h-toque rounded-md bg-servico px-5 py-3 font-display text-base font-bold uppercase tracking-wide text-carvao hover:bg-servico/90">
-      Entrar
-    </button>
+    <button type="submit" class="btn btn-primario w-full">Entrar</button>
   </form>
-  <p class="mt-8 text-center text-xs text-ardosia">O ponto pica-se no tablet do restaurante. Esqueceu-se da palavra-passe? Peça ao gerente uma nova.</p>
+  <p class="mt-6 text-center text-xs text-ardosia">O ponto pica-se no tablet do restaurante. Esqueceu-se da palavra-passe? Peça ao gerente uma nova.</p>
 </div>
 {% endblock %}

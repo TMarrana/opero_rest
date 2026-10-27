@@ -2,9 +2,9 @@
 {% block title %}Casas{% endblock %}
 {% block content %}
 <div class="flex flex-wrap items-end justify-between gap-4">
-  <h1 class="font-display text-2xl font-bold">{{ request.user.organization }}</h1>
+  <h1 class="titulo-pagina">{{ request.user.organization }}</h1>
   {% url 'grupo:nova_casa' as url_nova %}
-  {% include "components/botao.html" with label="Acrescentar casa" href=url_nova %}
+  {% include "components/botao.html" with variante="acento" label="Acrescentar casa" href=url_nova %}
 </div>
 {% include "manage/grupo/_nav.html" %}
 
@@ -23,7 +23,7 @@
           <td class="td-dados text-right">{{ casa.memberships.count }}</td>
           <td>{% if casa.is_active %}<span class="text-sm text-ardosia">—</span>{% else %}{% include "components/badge.html" with label="Inativa" %}{% endif %}</td>
           <td class="whitespace-nowrap text-right">
-            <a href="{% url 'grupo:acessos' casa.pk %}" class="text-sm underline underline-offset-2">Acessos</a>
+            <a href="{% url 'grupo:acessos' casa.pk %}" class="link-acao">Acessos</a>
             <a href="{% url 'grupo:editar_casa' casa.pk %}" class="ml-3 text-sm underline underline-offset-2">Editar</a>
           </td>
         </tr>

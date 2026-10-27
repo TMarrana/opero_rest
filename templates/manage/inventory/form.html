@@ -1,7 +1,7 @@
 {% extends "base_manage.html" %}
 {% block title %}{% if item %}Editar artigo{% else %}Novo artigo{% endif %}{% endblock %}
 {% block content %}
-<h1 class="font-display text-2xl font-bold">{% if item %}Editar artigo{% else %}Novo artigo{% endif %}</h1>
+<h1 class="titulo-pagina">{% if item %}Editar artigo{% else %}Novo artigo{% endif %}</h1>
 {% if item %}
 <p class="mt-1 text-sm text-ardosia">Stock atual: <span class="font-dados">{{ item.current_stock }} {{ item.unit }}</span> — o stock só muda por movimento, não aqui.</p>
 {% else %}

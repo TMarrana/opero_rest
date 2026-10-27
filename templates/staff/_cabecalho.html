@@ -1,0 +1,5 @@
+{% load interface %}{# Cabeçalho das páginas da app: voltar e título. Parâmetros: titulo, voltar (url). #}
+<header class="flex items-center gap-3">
+  <a href="{{ voltar }}" class="btn-icone bg-superficie" aria-label="Voltar">{% icone "seta-esquerda" %}</a>
+  <h1 class="font-display text-2xl font-bold leading-tight">{{ titulo }}</h1>
+</header>

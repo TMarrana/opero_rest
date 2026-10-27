@@ -1,16 +1,17 @@
 {% extends "base_manage.html" %}
+{% load interface %}
 {% block title %}{% if ficha %}Editar {{ ficha.name }}{% else %}Nova ficha{% endif %}{% endblock %}
 {% block content %}
 {% comment %}Ficha técnica (Fase 13). Guardar uma receita diferente cria uma
 versão nova, a valer a partir da data escolhida; as anteriores ficam como
 estavam, para o consumo de um dia passado usar a desse dia.{% endcomment %}
 {% if ficha %}
-<a href="{% url 'recipes:ficha' ficha.pk %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">{{ ficha.name }}</a>
-<h1 class="mt-2 font-display text-2xl font-bold">Editar ficha</h1>
+<a href="{% url 'recipes:ficha' ficha.pk %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}{{ ficha.name }}</a>
+<h1 class="mt-2 titulo-pagina">Editar ficha</h1>
 <p class="mt-1 text-sm text-ardosia">Mudar a receita cria uma versão nova. O nome, o tipo e o preço mudam sem versão.</p>
 {% else %}
-<a href="{% url 'recipes:lista' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Fichas técnicas</a>
-<h1 class="mt-2 font-display text-2xl font-bold">Nova ficha</h1>
+<a href="{% url 'recipes:lista' %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Fichas técnicas</a>
+<h1 class="mt-2 titulo-pagina">Nova ficha</h1>
 {% if produto %}<p class="mt-1 text-sm text-ardosia">Fica ligada ao produto do POS <span class="font-dados">{{ produto.code }}</span> · {{ produto.description }}.</p>{% endif %}
 {% endif %}
 
@@ -18,7 +19,7 @@ estavam, para o consumo de um dia passado usar a desse dia.{% endcomment %}
   {% csrf_token %}
   <input type="hidden" name="produto" value="{{ dados.produto|default:'' }}">
   <input type="hidden" name="n_linhas" value="{{ n_linhas }}">
-  {% if erro %}<p class="rounded-md bg-chama/10 px-4 py-3 text-sm font-medium text-chama" role="alert">{{ erro }}</p>{% endif %}
+  {% if erro %}<p class="aviso aviso-chama" role="alert">{{ erro }}</p>{% endif %}
 
   <div class="cartao grid gap-5 p-6 sm:grid-cols-[minmax(0,1fr)_12rem_12rem]">
     <div class="space-y-1.5">
@@ -39,7 +40,7 @@ estavam, para o consumo de um dia passado usar a desse dia.{% endcomment %}
   </div>
 
   <div class="cartao">
-    <div class="grid gap-5 border-b border-ardosia/15 p-6 sm:grid-cols-[10rem_12rem_minmax(0,1fr)]">
+    <div class="grid gap-5 border-b border-linha p-6 sm:grid-cols-[10rem_12rem_minmax(0,1fr)]">
       <div class="space-y-1.5">
         <label for="doses" class="block text-sm font-medium">Doses</label>
         <input id="doses" type="text" inputmode="decimal" name="doses" value="{{ dados.doses }}" required class="campo-input font-dados text-right">
@@ -76,7 +77,7 @@ estavam, para o consumo de um dia passado usar a desse dia.{% endcomment %}
         </tbody>
       </table>
     </div>
-    <p class="border-t border-ardosia/10 px-4 py-2.5 text-xs text-ardosia">
+    <p class="border-t border-linha px-4 py-2.5 text-xs text-ardosia">
       A quantidade é a limpa, na unidade do artigo. A quebra é o que se perde a descascar e a limpar: com 20 %, 200 g limpos gastam 250 g do stock.
       Uma linha sem artigo ou com a quantidade vazia fica de fora. Precisa de mais linhas? Guarde e volte a editar.
     </p>

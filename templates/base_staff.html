@@ -3,19 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#14171C">
+  <meta name="theme-color" content="#FAF6EB">
   <title>{% block title %}Opero{% endblock %} · Opero</title>
   <link rel="manifest" href="{% static 'manifest.webmanifest' %}">
   <link rel="apple-touch-icon" href="{% static 'icons/apple-touch-icon.png' %}">
+  <link rel="preload" href="{% static 'fonts/inter-v20-latin-variable.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{% static 'fonts/playfair-display-v40-latin-variable.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <script src="{% static 'js/htmx.min.js' %}" defer></script>
   <script src="{% static 'js/alpine.min.js' %}" defer></script>
   <script src="{% static 'js/app.js' %}" defer></script>
 </head>
-{# Shell escuro, coluna única, ação na zona do polegar (secção 5). #}
-<body class="min-h-screen bg-carvao text-aco"
+{# Coluna única no telemóvel, fundo creme e cartões brancos (secções 4 e 5). #}
+<body class="min-h-screen bg-creme text-carvao"
       hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-  <main class="mx-auto flex min-h-screen w-full max-w-md flex-col px-5 pb-8 pt-6">
+  <main class="mx-auto flex min-h-screen w-full max-w-md flex-col px-5 pb-10 pt-6">
     {% block content %}{% endblock %}
   </main>
   {% include "components/toast.html" %}

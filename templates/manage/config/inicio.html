@@ -1,39 +1,58 @@
 {% extends "base_manage.html" %}
+{% load interface %}
 {% block title %}Configuração{% endblock %}
 {% block content %}
-<h1 class="font-display text-2xl font-bold">Configuração</h1>
-<p class="mt-1 text-sm text-ardosia">Regras do restaurante para o ponto, as ausências e o planeamento.</p>
+<h1 class="titulo-pagina">Configuração</h1>
+<p class="subtitulo-pagina">Regras do restaurante para o ponto, as ausências e o planeamento.</p>
 
 <ul class="mt-6 grid gap-4 sm:grid-cols-2">
   {% for secao, total in secoes %}
   <li>
-    <a href="{% url 'config:lista' secao.slug %}" class="cartao block p-5 hover:bg-carvao/5">
-      <span class="flex items-baseline justify-between">
-        <span class="font-display text-base font-bold">{{ secao.titulo }}</span>
-        <span class="font-dados text-sm text-ardosia">{{ total }}</span>
+    <a href="{% url 'config:lista' secao.slug %}" class="cartao cartao-link flex h-full items-start gap-4 p-5">
+      {% if secao.slug == "areas" %}<span class="mosaico mosaico-floresta">{% icone "loja" %}</span>
+      {% elif secao.slug == "pausas" %}<span class="mosaico mosaico-ambar">{% icone "cafe" %}</span>
+      {% elif secao.slug == "ausencias" %}<span class="mosaico mosaico-servico">{% icone "calendario" %}</span>
+      {% elif secao.slug == "feriados" %}<span class="mosaico mosaico-chama">{% icone "calendario" %}</span>
+      {% elif secao.slug == "bloqueios" %}<span class="mosaico mosaico-chama">{% icone "cadeado" %}</span>
+      {% elif secao.slug == "turnos" %}<span class="mosaico mosaico-floresta">{% icone "turnos" %}</span>
+      {% else %}<span class="mosaico mosaico-floresta">{% icone "definicoes" %}</span>{% endif %}
+      <span class="min-w-0 flex-1">
+        <span class="flex items-baseline justify-between gap-3">
+          <span class="cartao-titulo">{{ secao.titulo }}</span>
+          <span class="font-dados text-sm text-ardosia">{{ total }}</span>
+        </span>
+        <span class="mt-1 block text-sm text-ardosia">{{ secao.ajuda }}</span>
       </span>
-      <span class="mt-1 block text-sm text-ardosia">{{ secao.ajuda }}</span>
     </a>
   </li>
   {% endfor %}
   {% if request.role == "ADMIN" %}
   <li>
-    <a href="{% url 'inventory:consumo_regras' %}" class="cartao block p-5 hover:bg-carvao/5">
-      <span class="font-display text-base font-bold">Consumos internos</span>
-      <span class="mt-1 block text-sm text-ardosia">Limite de refeições do pessoal por turno.</span>
+    <a href="{% url 'inventory:consumo_regras' %}" class="cartao cartao-link flex h-full items-start gap-4 p-5">
+      <span class="mosaico mosaico-ambar">{% icone "talheres" %}</span>
+      <span class="min-w-0 flex-1">
+        <span class="cartao-titulo">Consumos internos</span>
+        <span class="mt-1 block text-sm text-ardosia">Limite de refeições do pessoal por turno.</span>
+      </span>
     </a>
   </li>
   <li>
-    <a href="{% url 'sales:regras' %}" class="cartao block p-5 hover:bg-carvao/5">
-      <span class="font-display text-base font-bold">Vendas</span>
-      <span class="mt-1 block text-sm text-ardosia">Hora de corte do dia de serviço, séries do SAF-T e custo médio por hora.</span>
+    <a href="{% url 'sales:regras' %}" class="cartao cartao-link flex h-full items-start gap-4 p-5">
+      <span class="mosaico mosaico-floresta">{% icone "talao" %}</span>
+      <span class="min-w-0 flex-1">
+        <span class="cartao-titulo">Vendas</span>
+        <span class="mt-1 block text-sm text-ardosia">Hora de corte do dia de serviço, séries do SAF-T e custo médio por hora.</span>
+      </span>
     </a>
   </li>
   {% endif %}
   <li>
-    <a href="{% url 'accounts:dispositivo' %}" class="cartao block p-5 hover:bg-carvao/5">
-      <span class="font-display text-base font-bold">Dispositivo</span>
-      <span class="mt-1 block text-sm text-ardosia">Ativar este navegador para a equipa entrar com PIN.</span>
+    <a href="{% url 'accounts:dispositivo' %}" class="cartao cartao-link flex h-full items-start gap-4 p-5">
+      <span class="mosaico mosaico-floresta">{% icone "tablet" %}</span>
+      <span class="min-w-0 flex-1">
+        <span class="cartao-titulo">Dispositivo</span>
+        <span class="mt-1 block text-sm text-ardosia">Ativar este navegador como tablet do restaurante, para o quiosque de ponto.</span>
+      </span>
     </a>
   </li>
 </ul>

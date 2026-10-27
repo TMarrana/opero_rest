@@ -2,7 +2,7 @@
 {% block title %}Categorias{% endblock %}
 {% block content %}
 <div class="flex flex-wrap items-end justify-between gap-4">
-  <h1 class="font-display text-2xl font-bold">Categorias</h1>
+  <h1 class="titulo-pagina">Categorias</h1>
   {% include "components/botao.html" with label="Voltar ao stock" variante="fantasma" href="/gestao/stock/" %}
 </div>
 
@@ -17,10 +17,10 @@
           <td class="font-medium">{{ c.name }}</td>
           <td class="td-dados">{{ c.items.count }}</td>
           <td class="text-right">
-            <a href="{% url 'inventory:categoria_editar' c.pk %}" class="mr-3 text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Renomear</a>
+            <a href="{% url 'inventory:categoria_editar' c.pk %}" class="mr-1.5 link-acao">Renomear</a>
             <button type="button" x-data
                     x-on:click="$dispatch('abrir-modal', { id: 'eliminar-{{ c.pk }}' })"
-                    class="text-sm text-ardosia underline underline-offset-2 hover:text-chama">Eliminar</button>
+                    class="link-acao-perigo">Eliminar</button>
           </td>
         </tr>
         {% endfor %}
@@ -34,7 +34,7 @@
   <div>
     <form method="post" class="cartao space-y-4 p-6">
       {% csrf_token %}
-      <h2 class="font-display text-base font-bold">Nova categoria</h2>
+      <h2 class="cartao-titulo">Nova categoria</h2>
       {% include "components/campo.html" with field=form.name %}
       {% include "components/botao.html" with label="Criar categoria" %}
     </form>

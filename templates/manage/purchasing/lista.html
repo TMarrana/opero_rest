@@ -6,7 +6,7 @@
 agrupados pelo fornecedor preferido. Cada grupo cria o rascunho de uma
 encomenda, que ainda se pode mudar antes de enviar.{% endcomment %}
 <div class="flex flex-wrap items-end justify-between gap-4">
-  <h1 class="font-display text-2xl font-bold">Compras</h1>
+  <h1 class="titulo-pagina">Compras</h1>
   {% url 'purchasing:rececao_nova' as url_rececao %}
   {% include "components/botao.html" with label="Receção sem encomenda" variante="fantasma" href=url_rececao %}
 </div>
@@ -19,16 +19,16 @@ encomenda, que ainda se pode mudar antes de enviar.{% endcomment %}
 {% for fornecedor, linhas in grupos %}
 <form method="post" class="mt-6 cartao">
   {% csrf_token %}
-  <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-ardosia/15 px-4 py-3">
+  <div class="cartao-cabecalho">
     {% if fornecedor %}
     <div>
-      <h2 class="font-display text-base font-bold"><a href="{% url 'purchasing:fornecedor' fornecedor.pk %}" class="hover:underline">{{ fornecedor.name }}</a></h2>
+      <h2 class="cartao-titulo"><a href="{% url 'purchasing:fornecedor' fornecedor.pk %}" class="hover:underline">{{ fornecedor.name }}</a></h2>
       {% if fornecedor.delivery_days %}<p class="text-xs text-ardosia">Entrega: {{ fornecedor.delivery_days_display }}</p>{% endif %}
     </div>
     <input type="hidden" name="fornecedor" value="{{ fornecedor.pk }}">
     {% else %}
     <div>
-      <h2 class="font-display text-base font-bold">Sem fornecedor preferido</h2>
+      <h2 class="cartao-titulo">Sem fornecedor preferido</h2>
       <p class="text-xs text-ardosia">Escolha a quem encomendar, ou marque o preferido na página do fornecedor.</p>
     </div>
     <select name="fornecedor" required class="campo-input w-60" aria-label="Fornecedor">
@@ -69,7 +69,7 @@ encomenda, que ainda se pode mudar antes de enviar.{% endcomment %}
       </tbody>
     </table>
   </div>
-  <div class="flex justify-end border-t border-ardosia/10 px-4 py-3">
+  <div class="flex justify-end border-t border-linha px-4 py-3">
     {% include "components/botao.html" with label="Criar encomenda" %}
   </div>
 </form>

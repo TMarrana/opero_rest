@@ -2,9 +2,9 @@
 {% block title %}Fornecedores{% endblock %}
 {% block content %}
 <div class="flex flex-wrap items-end justify-between gap-4">
-  <h1 class="font-display text-2xl font-bold">Compras</h1>
+  <h1 class="titulo-pagina">Compras</h1>
   {% url 'purchasing:fornecedor_novo' as url_novo %}
-  {% include "components/botao.html" with label="Novo fornecedor" href=url_novo %}
+  {% include "components/botao.html" with variante="acento" label="Novo fornecedor" href=url_novo %}
 </div>
 {% include "manage/purchasing/_nav.html" %}
 <p class="mt-4 text-sm text-ardosia">Os fornecedores são de todo o grupo. Os artigos de cada um são os desta casa.</p>
@@ -21,7 +21,7 @@
       <tbody>
         {% for f in fornecedores %}
         <tr {% if not f.is_active %}class="opacity-50"{% endif %}>
-          <td class="font-medium"><a href="{% url 'purchasing:fornecedor' f.pk %}" class="underline underline-offset-2">{{ f.name }}</a>{% if not f.is_active %} <span class="text-xs text-ardosia">(arquivado)</span>{% endif %}
+          <td class="font-medium"><a href="{% url 'purchasing:fornecedor' f.pk %}" class="link-texto">{{ f.name }}</a>{% if not f.is_active %} <span class="text-xs text-ardosia">(arquivado)</span>{% endif %}
             {% if f.nif %}<span class="block font-dados text-xs font-normal text-ardosia">{{ f.nif }}</span>{% endif %}</td>
           <td class="text-sm">{{ f.contact_name }}{% if f.phone %} <span class="font-dados">{{ f.phone }}</span>{% endif %}</td>
           <td class="text-sm text-ardosia">{{ f.delivery_days_display|default:"—" }}</td>

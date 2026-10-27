@@ -1,87 +1,64 @@
 /* Fonte Tailwind do Opero Rest. Gera static/css/app.css via tools/tailwindcss.exe.
-   Direção de design: secção 4 do plan.md. Uma cor quente, uma cor de estado,
-   o resto neutro. Todos os números do sistema em mono tabular. */
+   Direção de design: secção 4 do plan.md, a partir de 2026-10-26 a linguagem
+   do EMBER (Dribbble): fundo creme, cartões brancos arredondados, verde-floresta
+   nos preenchimentos, laranja na ação principal e nos contadores, títulos em
+   serifa. Todos os números em figuras tabulares. */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  /* --- Fontes locais (static/fonts/), sem chamadas externas --- */
+  /* --- Fontes locais (static/fonts/), variáveis, sem chamadas externas --- */
   @font-face {
-    font-family: "Archivo";
-    font-weight: 500;
+    font-family: "Inter";
+    font-style: normal;
+    font-weight: 400 700;
     font-display: swap;
-    src: url("../fonts/archivo-v25-latin-500.woff2") format("woff2");
+    src: url("../fonts/inter-v20-latin-variable.woff2") format("woff2");
   }
   @font-face {
-    font-family: "Archivo";
-    font-weight: 700;
+    font-family: "Playfair Display";
+    font-style: normal;
+    font-weight: 600 800;
     font-display: swap;
-    src: url("../fonts/archivo-v25-latin-700.woff2") format("woff2");
-  }
-  @font-face {
-    font-family: "Archivo";
-    font-weight: 800;
-    font-display: swap;
-    src: url("../fonts/archivo-v25-latin-800.woff2") format("woff2");
-  }
-  @font-face {
-    font-family: "IBM Plex Sans";
-    font-weight: 400;
-    font-display: swap;
-    src: url("../fonts/ibm-plex-sans-v23-latin-regular.woff2") format("woff2");
-  }
-  @font-face {
-    font-family: "IBM Plex Sans";
-    font-weight: 500;
-    font-display: swap;
-    src: url("../fonts/ibm-plex-sans-v23-latin-500.woff2") format("woff2");
-  }
-  @font-face {
-    font-family: "IBM Plex Sans";
-    font-weight: 600;
-    font-display: swap;
-    src: url("../fonts/ibm-plex-sans-v23-latin-600.woff2") format("woff2");
-  }
-  @font-face {
-    font-family: "IBM Plex Mono";
-    font-weight: 400;
-    font-display: swap;
-    src: url("../fonts/ibm-plex-mono-v20-latin-regular.woff2") format("woff2");
-  }
-  @font-face {
-    font-family: "IBM Plex Mono";
-    font-weight: 600;
-    font-display: swap;
-    src: url("../fonts/ibm-plex-mono-v20-latin-600.woff2") format("woff2");
+    src: url("../fonts/playfair-display-v40-latin-variable.woff2") format("woff2");
   }
 
-  /* Triplos RGB para o Tailwind poder aplicar opacidade (/25 etc.).
-     Hex de referência: carvao #14171C · aco #E8ECEF · superficie #FFFFFF
-     · chama #FF4D14 · servico #00C27A · ardosia #5A6672 */
+  /* Triplos RGB para o Tailwind poder aplicar opacidade (/10 etc.).
+     Hex de referência: carvao #221E18 (tinta) · floresta #15302B · creme #FAF6EB
+     · areia #E6DCD0 · linha #ECE5D9 · superficie #FFFFFF · chama #C2461B
+     · servico #2E7D4F · ambar #E39B2D · ardosia #6E675B */
   :root {
-    --cor-carvao: 20 23 28;
-    --cor-aco: 232 236 239;
+    --cor-carvao: 34 30 24;
+    --cor-floresta: 21 48 43;
+    --cor-creme: 250 246 235;
+    --cor-areia: 230 220 208;
+    --cor-linha: 236 229 217;
     --cor-superficie: 255 255 255;
-    --cor-chama: 255 77 20;
-    --cor-servico: 0 194 122;
-    --cor-ardosia: 90 102 114;
+    --cor-chama: 194 70 27;
+    --cor-servico: 46 125 79;
+    --cor-ambar: 227 155 45;
+    --cor-ardosia: 110 103 91;
   }
 
   body {
-    @apply font-corpo antialiased;
+    @apply bg-creme font-corpo text-carvao antialiased;
   }
 
-  /* Regra transversal: números do sistema em mono com figuras tabulares. */
+  ::selection {
+    background: rgb(var(--cor-floresta) / 0.15);
+  }
+
+  /* Regra transversal: números em figuras tabulares, para as colunas alinharem. */
   .font-dados {
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
   }
 
-  /* Foco de teclado visível no backoffice (secção 4). */
+  /* Foco de teclado visível (secção 4). */
   :focus-visible {
-    @apply outline-none ring-2 ring-carvao ring-offset-2 ring-offset-aco;
+    @apply outline-none ring-2 ring-floresta ring-offset-2 ring-offset-creme;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -92,29 +69,247 @@
       transition-duration: 0.01ms !important;
     }
   }
+
+  [x-cloak] {
+    display: none !important;
+  }
 }
 
 @layer components {
-  /* --- Talão de serviço: elemento de assinatura (secção 4). Um bloco
-     mono e um filete tracejado; sem texturas nem bordas rasgadas. --- */
-  .talao {
-    @apply font-dados bg-superficie px-4 py-3 text-sm text-carvao;
+  /* --- Títulos --- */
+  .titulo-pagina {
+    @apply font-display text-[1.875rem] font-bold leading-tight tracking-[-0.01em] text-carvao;
   }
-  .talao + .talao {
-    border-top: 1.5px dashed rgb(var(--cor-ardosia));
+  .subtitulo-pagina {
+    @apply mt-1 text-[0.9375rem] text-ardosia;
   }
-  .rail-taloes {
-    @apply rounded-md border border-ardosia/25 overflow-hidden;
-  }
-  /* Variante para o shell escuro da vista staff. */
-  .talao-escuro {
-    @apply bg-carvao text-aco;
-  }
-  .talao-escuro + .talao-escuro {
-    border-top: 1.5px dashed rgb(90 102 114 / 0.6);
+  .rotulo {
+    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-ardosia;
   }
 
-  /* Indicador de loading HTMX: visível só durante o pedido. */
+  /* --- Cartões: brancos, cantos de 16px, filete quente --- */
+  .cartao {
+    @apply overflow-hidden rounded-2xl border border-linha bg-superficie shadow-cartao;
+  }
+  .cartao-cabecalho {
+    @apply flex flex-wrap items-center justify-between gap-3 border-b border-linha px-5 py-4;
+  }
+  .cartao-titulo {
+    @apply font-display text-lg font-bold leading-snug text-carvao;
+  }
+  .cartao-link {
+    @apply transition-colors duration-150 hover:border-areia hover:bg-creme/60;
+  }
+  .vazio {
+    @apply px-6 py-12 text-center text-sm text-ardosia;
+  }
+
+  /* Cartão verde com o círculo no canto (o cartão de perfil do EMBER). */
+  .cartao-perfil {
+    @apply relative isolate overflow-hidden rounded-2xl bg-floresta text-creme;
+  }
+  .cartao-perfil::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: -3rem;
+    right: -3rem;
+    width: 9.5rem;
+    height: 9.5rem;
+    border-radius: 9999px;
+    background: rgb(255 255 255 / 0.06);
+  }
+
+  /* --- Botões em pílula --- */
+  .btn {
+    @apply inline-flex min-h-toque cursor-pointer select-none items-center justify-center gap-2 whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-sm {
+    @apply min-h-[2.5rem] px-4 py-2;
+  }
+  .btn-primario {
+    @apply bg-floresta text-creme hover:bg-floresta/90;
+  }
+  .btn-acento {
+    @apply bg-chama text-superficie hover:bg-chama/90;
+  }
+  .btn-fantasma {
+    @apply border border-areia bg-superficie text-carvao hover:border-ardosia/40 hover:bg-creme;
+  }
+  .btn-perigo {
+    @apply bg-chama text-superficie hover:bg-chama/90;
+  }
+  .btn-servico {
+    @apply bg-servico text-superficie hover:bg-servico/90;
+  }
+  .btn-icone {
+    @apply inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-linha bg-creme text-carvao transition-colors duration-150 hover:bg-areia/60;
+  }
+
+  /* --- Ligações --- */
+  /* Ação de uma linha: a pílula «Details» do EMBER. */
+  .link-acao {
+    @apply inline-flex min-h-[2.25rem] cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-areia/50 px-3.5 text-sm font-medium text-carvao transition-colors duration-150 hover:bg-areia;
+  }
+  .link-acao-perigo {
+    @apply inline-flex min-h-[2.25rem] cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-chama/30 px-3.5 text-sm font-medium text-[#A83C15] transition-colors duration-150 hover:bg-chama/5;
+  }
+  .link-acao-servico {
+    @apply inline-flex min-h-[2.25rem] cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-servico/10 px-3.5 text-sm font-semibold text-[#256B42] transition-colors duration-150 hover:bg-servico/15;
+  }
+  /* Volta à página de cima, por cima do título. */
+  .link-voltar {
+    @apply inline-flex items-center gap-1.5 text-sm font-medium text-ardosia transition-colors duration-150 hover:text-carvao;
+  }
+  /* «Ver todos» no cabeçalho de um cartão. */
+  .link-ver {
+    @apply inline-flex items-center gap-1 text-sm font-semibold text-carvao transition-colors duration-150 hover:text-floresta;
+  }
+  /* Ligação dentro de uma frase. */
+  .link-texto {
+    @apply font-semibold text-floresta underline decoration-floresta/30 underline-offset-[3px] transition-colors duration-150 hover:decoration-floresta;
+  }
+
+  /* --- Separadores em pílula (os filtros «All · Active · Completed» do EMBER) --- */
+  .separadores {
+    @apply flex flex-wrap gap-2;
+  }
+  .separador {
+    @apply inline-flex min-h-[2.5rem] items-center gap-2 whitespace-nowrap rounded-full border border-areia bg-superficie px-4 text-sm font-medium text-carvao transition-colors duration-150 hover:bg-creme;
+  }
+  .separador-ativo {
+    @apply border-floresta bg-floresta text-creme hover:bg-floresta;
+  }
+
+  /* --- Estados em pílula tingida. Texto escurecido para AA sobre a tinta. --- */
+  .estado {
+    @apply inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold leading-none;
+  }
+  .estado-neutro {
+    @apply bg-areia/60 text-carvao/80;
+  }
+  .estado-servico {
+    @apply bg-servico/10 text-[#256B42];
+  }
+  .estado-chama {
+    @apply bg-chama/10 text-[#A83C15];
+  }
+  .estado-ambar {
+    @apply bg-ambar/15 text-[#8A5A10];
+  }
+
+  /* Contador laranja da navegação (o «12» de My Orders). */
+  .contador {
+    @apply inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-chama px-1.5 text-[11px] font-bold leading-none text-superficie;
+  }
+
+  /* --- Mosaico de ícone tingido (os cartões de números do dashboard) --- */
+  .mosaico {
+    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl;
+  }
+  .mosaico-chama {
+    @apply bg-chama/10 text-chama;
+  }
+  .mosaico-servico {
+    @apply bg-servico/10 text-servico;
+  }
+  .mosaico-ambar {
+    @apply bg-ambar/15 text-[#B5761A];
+  }
+  .mosaico-floresta {
+    @apply bg-floresta/10 text-floresta;
+  }
+
+  /* Avatar: iniciais num círculo creme, como o do cartão de perfil. */
+  .avatar {
+    @apply inline-flex shrink-0 items-center justify-center rounded-full bg-[#ECE4CF] font-semibold text-floresta;
+  }
+
+  /* --- Avisos --- */
+  .aviso {
+    @apply rounded-xl px-4 py-3 text-sm;
+  }
+  .aviso-chama {
+    @apply bg-chama/10 font-medium text-[#A83C15];
+  }
+  .aviso-neutro {
+    @apply border border-linha bg-superficie text-carvao;
+  }
+
+  /* --- Navegação do backoffice (o cartão de navegação do EMBER) --- */
+  .nav-item {
+    @apply flex min-h-[2.75rem] items-center gap-3 rounded-xl px-3 text-[0.9375rem] text-carvao transition-colors duration-150 hover:bg-creme;
+  }
+  .nav-item-ativo {
+    @apply bg-floresta text-creme hover:bg-floresta;
+  }
+
+  /* --- Tabela do backoffice (padrão em components/tabela.html) --- */
+  .tabela {
+    @apply w-full text-sm;
+  }
+  .tabela thead th {
+    @apply whitespace-nowrap border-b border-linha bg-creme/60 px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-ardosia;
+  }
+  .tabela tbody td {
+    @apply border-b border-linha px-5 py-3.5;
+  }
+  .tabela tbody tr:last-child td {
+    @apply border-b-0;
+  }
+  .tabela tbody tr {
+    @apply transition-colors duration-150;
+  }
+  .tabela tbody tr:hover {
+    @apply bg-creme/50;
+  }
+  .tabela tfoot td {
+    @apply border-t border-linha bg-creme/60 px-5 py-3 font-semibold;
+  }
+  /* Grelhas de dias (planeador): células com pouco espaço à volta. */
+  .tabela.tabela-compacta thead th {
+    @apply px-2 py-2.5;
+  }
+  .tabela.tabela-compacta tbody td {
+    @apply px-1.5 py-1.5;
+  }
+  .tabela.tabela-compacta tbody td:first-child {
+    @apply px-4;
+  }
+  .th-dados {
+    text-align: right !important;
+  }
+  .td-dados {
+    @apply font-dados text-right;
+  }
+
+  /* --- Campos de formulário (os widgets Django recebem esta classe nos forms).
+     Borda #9C9387: 3:1 sobre branco, para o campo se ver (WCAG 1.4.11). --- */
+  .campo-input {
+    @apply block w-full min-h-toque rounded-xl border bg-superficie px-4 py-2.5 text-sm text-carvao transition-colors duration-150 placeholder:text-ardosia/80 hover:border-ardosia focus:border-floresta focus:outline-none focus:ring-4 focus:ring-floresta/10;
+    border-color: #9c9387;
+  }
+  .campo-input:focus {
+    border-color: rgb(var(--cor-floresta));
+  }
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: rgb(var(--cor-floresta));
+  }
+
+  /* --- Linha de histórico (o «talão» da secção 4): cada movimento acrescenta
+     uma linha ao cartão; nenhuma se apaga. --- */
+  .rail-taloes {
+    @apply overflow-hidden rounded-2xl border border-linha bg-superficie shadow-cartao;
+  }
+  .talao {
+    @apply font-dados bg-superficie px-5 py-4 text-sm text-carvao;
+  }
+  .talao + .talao {
+    @apply border-t border-linha;
+  }
+
+  /* --- Indicador de loading HTMX: visível só durante o pedido --- */
   .htmx-indicator {
     @apply hidden;
   }
@@ -125,41 +320,4 @@
   .htmx-request .quando-parado {
     @apply hidden;
   }
-}
-
-@layer components {
-  /* --- Cartão e tabela do backoffice (padrão em components/tabela.html) --- */
-  .cartao {
-    @apply overflow-hidden rounded-md border border-ardosia/25 bg-superficie;
-  }
-  .tabela {
-    @apply w-full text-sm;
-  }
-  .tabela thead th {
-    @apply border-b border-ardosia/15 px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-ardosia;
-  }
-  .tabela tbody td {
-    @apply border-b border-ardosia/10 px-4 py-2.5;
-  }
-  .tabela tbody tr:last-child td {
-    @apply border-b-0;
-  }
-  .tabela tbody tr:hover {
-    @apply bg-aco/40;
-  }
-  .th-dados {
-    text-align: right !important;
-  }
-  .td-dados {
-    @apply font-dados text-right;
-  }
-
-  /* Inputs de formulário (widgets Django recebem estas classes nos forms). */
-  .campo-input {
-    @apply block w-full min-h-toque rounded-md border border-ardosia/40 bg-superficie px-3.5 py-2.5 text-sm text-carvao placeholder:text-ardosia/60 focus:border-carvao;
-  }
-}
-
-@layer base {
-  [x-cloak] { display: none !important; }
 }

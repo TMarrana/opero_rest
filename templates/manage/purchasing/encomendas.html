@@ -2,7 +2,7 @@
 {% block title %}Encomendas{% endblock %}
 {% block content %}
 <div class="flex flex-wrap items-end justify-between gap-4">
-  <h1 class="font-display text-2xl font-bold">Compras</h1>
+  <h1 class="titulo-pagina">Compras</h1>
   {% if fornecedores %}
   <form method="post" action="{% url 'purchasing:encomenda_nova' %}" class="flex items-center gap-2">
     {% csrf_token %}
@@ -10,7 +10,7 @@
       <option value="">Fornecedor…</option>
       {% for f in fornecedores %}<option value="{{ f.pk }}">{{ f.name }}</option>{% endfor %}
     </select>
-    {% include "components/botao.html" with label="Nova encomenda" %}
+    {% include "components/botao.html" with variante="acento" label="Nova encomenda" %}
   </form>
   {% endif %}
 </div>
@@ -23,7 +23,7 @@
     <option value="todas"{% if estado == "todas" %} selected{% endif %}>Todas</option>
     {% for valor, nome in estados %}<option value="{{ valor }}"{% if estado == valor %} selected{% endif %}>{{ nome }}</option>{% endfor %}
   </select>
-  <noscript><button type="submit" class="underline">Ver</button></noscript>
+  <noscript><button type="submit" class="link-texto">Ver</button></noscript>
 </form>
 
 <div class="mt-4 cartao">
@@ -34,7 +34,7 @@
       <tbody>
         {% for encomenda in encomendas %}
         <tr>
-          <td class="font-dados font-semibold"><a href="{% url 'purchasing:encomenda' encomenda.pk %}" class="underline underline-offset-2">{{ encomenda.reference }}</a></td>
+          <td class="font-dados font-semibold"><a href="{% url 'purchasing:encomenda' encomenda.pk %}" class="link-texto">{{ encomenda.reference }}</a></td>
           <td class="font-medium">{{ encomenda.supplier.name }}</td>
           <td>{% include "manage/purchasing/_estado.html" %}</td>
           <td class="td-dados">{{ encomenda.n_linhas }}</td>

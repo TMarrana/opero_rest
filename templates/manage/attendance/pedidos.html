@@ -2,9 +2,9 @@
 {% block title %}Pedidos de correção{% endblock %}
 {% block content %}
 <div class="flex flex-wrap items-end justify-between gap-4">
-  <h1 class="font-display text-2xl font-bold">Pedidos de correção</h1>
-  <a href="{% url 'attendance:dia' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Ponto da equipa</a>
+  <h1 class="titulo-pagina">Pedidos de correção</h1>
 </div>
+{% include "manage/attendance/_nav.html" %}
 
 <section class="mt-6">
   <h2 class="font-display text-lg font-bold">Por decidir
@@ -27,9 +27,9 @@
             <td class="text-sm text-ardosia">{{ p.note }}</td>
             <td class="whitespace-nowrap text-right">
               <button type="button" x-data x-on:click="$dispatch('abrir-decisao', { id: {{ p.pk }}, acao: 'aprovar' })"
-                      class="text-sm font-semibold text-servico underline underline-offset-2">Aprovar</button>
+                      class="link-acao-servico">Aprovar</button>
               <button type="button" x-data x-on:click="$dispatch('abrir-decisao', { id: {{ p.pk }}, acao: 'recusar' })"
-                      class="ml-3 text-sm font-semibold text-chama underline underline-offset-2">Recusar</button>
+                      class="ml-1.5 link-acao-perigo">Recusar</button>
             </td>
           </tr>
           {% endfor %}
@@ -47,11 +47,11 @@
   <h2 class="font-display text-lg font-bold">Registos por resolver <span class="font-dados text-base text-chama">{{ por_resolver|length }}</span></h2>
   <p class="mt-1 text-sm text-ardosia">Entradas sem saída que passaram do limite e ainda não têm pedido do colaborador. Não contam para os totais até terem saída.</p>
   <div class="mt-3 cartao">
-    <ul class="divide-y divide-ardosia/10">
+    <ul class="divide-y divide-linha">
       {% for r in por_resolver %}
       <li class="flex items-baseline justify-between px-4 py-2.5 text-sm">
         <span><span class="font-medium">{{ r.worker.full_name }}</span> · <span class="font-dados">entrada {{ r.check_in|date:"d/m H:i" }}</span></span>
-        <a href="{% url 'attendance:corrigir' r.pk %}" class="font-semibold underline underline-offset-2">Indicar saída</a>
+        <a href="{% url 'attendance:corrigir' r.pk %}" class="link-texto">Indicar saída</a>
       </li>
       {% endfor %}
     </ul>

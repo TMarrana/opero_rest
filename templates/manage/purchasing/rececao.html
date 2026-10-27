@@ -1,13 +1,14 @@
 {% extends "base_manage.html" %}
+{% load interface %}
 {% load vendas %}
 {% block title %}Receção {{ rececao.reference }}{% endblock %}
 {% block content %}
-<a href="{% url 'purchasing:rececoes' %}?mes={{ rececao.document_date|date:'Y-m' }}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Receções</a>
-<h1 class="mt-2 font-display text-2xl font-bold"><span class="font-dados">{{ rececao.reference }}</span> · {{ rececao.supplier.name }}</h1>
+<a href="{% url 'purchasing:rececoes' %}?mes={{ rececao.document_date|date:'Y-m' }}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Receções</a>
+<h1 class="mt-2 titulo-pagina"><span class="font-dados">{{ rececao.reference }}</span> · {{ rececao.supplier.name }}</h1>
 <p class="mt-1 text-sm text-ardosia">
   {{ rececao.document_number }} de <span class="font-dados">{{ rececao.document_date|date:"d/m/Y" }}</span>
   · recebida por {{ rececao.received_by }} a <span class="font-dados">{{ rececao.received_at|date:"d/m/Y H:i" }}</span>
-  {% if rececao.order %}· <a href="{% url 'purchasing:encomenda' rececao.order.pk %}" class="underline underline-offset-2">{{ rececao.order.reference }}</a>{% else %}· sem encomenda{% endif %}
+  {% if rececao.order %}· <a href="{% url 'purchasing:encomenda' rececao.order.pk %}" class="link-texto">{{ rececao.order.reference }}</a>{% else %}· sem encomenda{% endif %}
 </p>
 {% if rececao.notes %}<p class="mt-2 text-sm">{{ rececao.notes }}</p>{% endif %}
 
@@ -25,12 +26,12 @@
       {% endfor %}
     </tbody>
     <tfoot>
-      <tr class="border-t border-ardosia/30 font-semibold">
+      <tr class="border-t border-linha font-semibold">
         <td class="px-4 py-3 text-sm" colspan="3">Total sem IVA</td>
         <td class="td-dados px-4 py-3">{{ rececao.total|euros }}</td>
       </tr>
     </tfoot>
   </table>
 </div>
-<p class="mt-3 text-sm text-ardosia">Uma receção não se apaga. Se alguma quantidade estiver errada, corrija o stock com um ajuste no <a href="{% url 'inventory:lista' %}" class="underline underline-offset-2">Stock</a>.</p>
+<p class="mt-3 text-sm text-ardosia">Uma receção não se apaga. Se alguma quantidade estiver errada, corrija o stock com um ajuste no <a href="{% url 'inventory:lista' %}" class="link-texto">Stock</a>.</p>
 {% endblock %}

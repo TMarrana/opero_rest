@@ -42,22 +42,26 @@ class DashboardView(RoleRequiredMixin, TemplateView):
         ctx["stock_baixo"] = itens_baixos[:6]
         ctx["contador_baixo"] = itens_baixos.count()
 
-        ctx["ultimos_movimentos"] = restaurant_scope(
+        movimentos = restaurant_scope(
             request,
             StockMovement.objects.select_related("item", "created_by"),
             field="item__restaurant",
-        )[:5]
+        )
+        ctx["ultimos_movimentos"] = movimentos[:5]
+        ctx["movimentos_hoje"] = movimentos.filter(occurred_at__date=timezone.localdate()).count()
 
         # As áreas de pessoas só aparecem a quem as pode abrir (matriz da secção 7).
         ctx["ve_pessoas"] = request.role in ("ADMIN", "MANAGER")
         if ctx["ve_pessoas"]:
-            ctx["ferias_pendentes"] = restaurant_scope(
+            pendentes = restaurant_scope(
                 request,
                 VacationRequest.objects.filter(status=VacationRequest.Status.PENDENTE)
                 .select_related("worker")
                 .order_by("start_date"),
                 field="worker__restaurant",
-            )[:6]
+            )
+            ctx["ferias_pendentes"] = pendentes[:6]
+            ctx["ferias_pendentes_total"] = pendentes.count()
             entradas = restaurant_scope(request, TimeEntry.objects.all(), field="worker__restaurant")
             ctx["em_turno"] = (
                 entradas.filter(check_out__isnull=True).resolved().select_related("worker").order_by("check_in")
@@ -77,9 +81,11 @@ class DashboardView(RoleRequiredMixin, TemplateView):
             ctx["mes_por_fechar"] = anterior
             ctx["por_aprovar"] = ativos.count() - aprovados
             # Vendas (Fase 10): avisa quando o último dia importado ficou para trás.
-            from sales.reports import ultimo_dia
+            from attendance.month import month_range
+            from sales.reports import resumo, ultimo_dia
 
             ctx["ultimo_dia_vendas"] = ultimo_dia(request.restaurant)
+            ctx["vendas_mes"] = resumo(request.restaurant, *month_range(timezone.localdate())).total
             if ctx["ultimo_dia_vendas"] is not None:
                 atraso = (timezone.localdate() - ctx["ultimo_dia_vendas"]).days
                 ctx["vendas_atraso"] = atraso if atraso > VENDAS_ATRASO_DIAS else 0

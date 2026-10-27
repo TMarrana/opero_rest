@@ -4,7 +4,7 @@
 {% block content %}
 {% comment %}Painel do grupo (Fase 9): uma linha por casa, com os sinais do
 dashboard de cada uma. Para agir, abre-se a casa, que passa a ser a ativa.{% endcomment %}
-<h1 class="font-display text-2xl font-bold">{{ request.user.organization }}</h1>
+<h1 class="titulo-pagina">{{ request.user.organization }}</h1>
 {% include "manage/grupo/_nav.html" %}
 
 <div class="mt-6 cartao">
@@ -39,10 +39,10 @@ dashboard de cada uma. Para agir, abre-se a casa, que passa a ser a ativa.{% end
             <form method="post" action="{% url 'dashboard:mudar_casa' %}" class="inline">
               {% csrf_token %}
               <input type="hidden" name="casa" value="{{ l.casa.pk }}">
-              <button type="submit" class="text-sm underline underline-offset-2">Abrir</button>
+              <button type="submit" class="link-acao">Abrir</button>
             </form>
             {% else %}
-            <a href="{% url 'dashboard:home' %}" class="text-sm underline underline-offset-2">Abrir</a>
+            <a href="{% url 'dashboard:home' %}" class="link-acao">Abrir</a>
             {% endif %}
           </td>
         </tr>

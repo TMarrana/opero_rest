@@ -1,18 +1,19 @@
 {% extends "base_manage.html" %}
+{% load interface %}
 {% load vendas %}
 {% block title %}{{ fornecedor.name }}{% endblock %}
 {% block content %}
-<a href="{% url 'purchasing:fornecedores' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Fornecedores</a>
+<a href="{% url 'purchasing:fornecedores' %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Fornecedores</a>
 <div class="mt-2 flex flex-wrap items-center justify-between gap-4">
-  <h1 class="font-display text-2xl font-bold">{{ fornecedor.name }}{% if not fornecedor.is_active %} <span class="text-base font-normal text-ardosia">(arquivado)</span>{% endif %}</h1>
+  <h1 class="titulo-pagina">{{ fornecedor.name }}{% if not fornecedor.is_active %} <span class="text-base font-normal text-ardosia">(arquivado)</span>{% endif %}</h1>
   {% url 'purchasing:fornecedor_editar' fornecedor.pk as url_editar %}
   {% include "components/botao.html" with label="Editar" variante="fantasma" href=url_editar %}
 </div>
 
 <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
   <section class="cartao self-start">
-    <div class="border-b border-ardosia/15 px-4 py-3">
-      <h2 class="font-display text-base font-bold">Artigos em {{ request.restaurant }}</h2>
+    <div class="cartao-cabecalho">
+      <h2 class="cartao-titulo">Artigos em {{ request.restaurant }}</h2>
       <p class="text-xs text-ardosia">A unidade de compra é a do artigo. Só há um fornecedor preferido por artigo: é ele que aparece na lista de compras.</p>
     </div>
     <div class="overflow-x-auto">
@@ -31,7 +32,7 @@
                 <input type="text" inputmode="decimal" name="last_price" value="{{ a.last_price|campo_preco }}" aria-label="Último preço de {{ a.item.name }}" class="campo-input font-dados w-28 text-right">
                 <span class="w-20 font-dados text-xs text-ardosia">{{ a.last_price_at|date:"d/m/Y" }}</span>
                 <label class="inline-flex items-center gap-2 text-sm"><input type="checkbox" name="preferred" value="1" {% if a.preferred %}checked{% endif %} class="h-4 w-4"> Preferido</label>
-                <button type="submit" class="text-sm font-semibold underline underline-offset-2">Guardar</button>
+                <button type="submit" class="link-acao">Guardar</button>
               </form>
               <form method="post" class="mt-1">
                 {% csrf_token %}
@@ -48,7 +49,7 @@
       </table>
     </div>
     {% if por_ligar %}
-    <form method="post" class="flex flex-wrap items-end gap-3 border-t border-ardosia/10 p-4">
+    <form method="post" class="flex flex-wrap items-end gap-3 border-t border-linha p-4">
       {% csrf_token %}
       <input type="hidden" name="acao" value="ligar">
       <div class="space-y-1.5">
@@ -85,11 +86,11 @@
     </section>
     {% if encomendas %}
     <section class="cartao">
-      <h2 class="border-b border-ardosia/15 px-4 py-3 font-display text-base font-bold">Últimas encomendas</h2>
-      <ul class="divide-y divide-ardosia/10">
+      <h2 class="cartao-cabecalho cartao-titulo">Últimas encomendas</h2>
+      <ul class="divide-y divide-linha">
         {% for encomenda in encomendas %}
         <li class="flex items-center justify-between px-4 py-2.5 text-sm">
-          <a href="{% url 'purchasing:encomenda' encomenda.pk %}" class="font-dados underline underline-offset-2">{{ encomenda.reference }}</a>
+          <a href="{% url 'purchasing:encomenda' encomenda.pk %}" class="font-dados link-texto">{{ encomenda.reference }}</a>
           {% include "manage/purchasing/_estado.html" %}
         </li>
         {% endfor %}
@@ -100,11 +101,11 @@
       {% csrf_token %}
       {% if fornecedor.is_active %}
       <input type="hidden" name="acao" value="{% if fornecedor.has_history %}arquivar{% else %}apagar{% endif %}">
-      <button type="submit" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">{% if fornecedor.has_history %}Arquivar fornecedor{% else %}Apagar fornecedor{% endif %}</button>
+      <button type="submit" class="link-acao">{% if fornecedor.has_history %}Arquivar fornecedor{% else %}Apagar fornecedor{% endif %}</button>
       <p class="mt-1 text-xs text-ardosia">{% if fornecedor.has_history %}Tem encomendas ou receções, por isso arquiva-se: deixa de aparecer nas escolhas e o histórico fica.{% else %}Ainda não tem encomendas nem receções.{% endif %}</p>
       {% else %}
       <input type="hidden" name="acao" value="reativar">
-      <button type="submit" class="text-sm font-semibold underline underline-offset-2">Reativar fornecedor</button>
+      <button type="submit" class="link-acao">Reativar fornecedor</button>
       {% endif %}
     </form>
   </aside>

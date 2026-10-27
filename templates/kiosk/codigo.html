@@ -1,40 +1,44 @@
 {% extends "base_kiosk.html" %}
+{% load interface %}
 {% block title %}Código{% endblock %}
 {% block content %}
 {% include "kiosk/_voltar.html" %}
-<header class="flex items-baseline justify-between gap-4">
-  <h1 class="font-display text-3xl font-extrabold">{{ worker.full_name }}</h1>
-  <a href="{% url 'kiosk:inicio' %}" class="min-h-toque py-2 text-base text-aco/70 underline underline-offset-4">Não sou eu</a>
+<header class="flex items-center justify-between gap-4">
+  <div class="flex min-w-0 items-center gap-4">
+    <span class="avatar h-14 w-14 text-lg">{{ worker.full_name|iniciais }}</span>
+    <h1 class="truncate font-display text-3xl font-bold">{{ worker.full_name }}</h1>
+  </div>
+  <a href="{% url 'kiosk:inicio' %}" class="btn btn-fantasma shrink-0 text-base">Não sou eu</a>
 </header>
 
 {% if erro %}
-<p class="mt-4 rounded-md border border-chama px-4 py-3 text-base font-medium text-chama" role="alert">{{ erro }}</p>
+<p class="aviso aviso-chama mt-5 flex items-center gap-3 text-base" role="alert">{% icone "alerta" "h-5 w-5 shrink-0" %}{{ erro }}</p>
 {% endif %}
 
 {# action explícito: com hx-push-url="false" o endereço da página continua o dos nomes. #}
-<form method="post" action="{% url 'kiosk:codigo' worker.pk %}" class="mx-auto mt-6 w-full max-w-sm" hx-disabled-elt="find button[type=submit]"
+<form method="post" action="{% url 'kiosk:codigo' worker.pk %}" class="mx-auto mt-8 w-full max-w-sm" hx-disabled-elt="find button[type=submit]"
       x-data="{ codigo: '' }"
       x-on:keydown.window="if (/^[0-9]$/.test($event.key) && codigo.length < 6) codigo += $event.key;
                           else if ($event.key === 'Backspace') codigo = codigo.slice(0, -1);
                           else if ($event.key === 'Enter' && codigo.length >= 4) $el.requestSubmit();">
   {% csrf_token %}
   <input type="hidden" name="codigo" x-bind:value="codigo">
-  <p class="flex min-h-[64px] items-center justify-center rounded-md border border-ardosia/40 font-dados text-4xl tracking-[0.5em]"
+  <p class="flex min-h-[72px] items-center justify-center rounded-full border border-linha bg-superficie font-dados text-4xl tracking-[0.5em] shadow-cartao"
      aria-live="polite" x-text="'•'.repeat(codigo.length)"><span class="text-base tracking-normal text-ardosia">Código</span></p>
   {# invisible e não x-show: o teclado não pode mudar de sítio a meio do código. #}
-  <p class="mt-1 text-center text-sm text-ardosia" x-bind:class="codigo && 'invisible'">Escreva o seu código de ponto.</p>
+  <p class="mt-2 text-center text-sm text-ardosia" x-bind:class="codigo && 'invisible'">Escreva o seu código de ponto.</p>
 
-  <div class="mt-4 grid grid-cols-3 gap-3 font-dados text-3xl font-semibold">
+  <div class="mt-5 grid grid-cols-3 gap-3 font-dados text-3xl font-semibold">
     {% for d in "123456789" %}
     <button type="button" x-on:click="codigo.length < 6 && (codigo += '{{ d }}')"
-            class="min-h-[72px] rounded-lg bg-aco/10 hover:bg-aco/20">{{ d }}</button>
+            class="min-h-[76px] rounded-2xl border border-linha bg-superficie shadow-cartao transition-colors duration-150 hover:bg-creme active:bg-areia/50">{{ d }}</button>
     {% endfor %}
     <button type="button" x-on:click="codigo = codigo.slice(0, -1)" aria-label="Apagar"
-            class="min-h-[72px] rounded-lg bg-aco/5 text-2xl hover:bg-aco/20">&larr;</button>
+            class="flex min-h-[76px] items-center justify-center rounded-2xl bg-areia/50 transition-colors duration-150 hover:bg-areia active:bg-areia">{% icone "apagar" "h-7 w-7" %}</button>
     <button type="button" x-on:click="codigo.length < 6 && (codigo += '0')"
-            class="min-h-[72px] rounded-lg bg-aco/10 hover:bg-aco/20">0</button>
+            class="min-h-[76px] rounded-2xl border border-linha bg-superficie shadow-cartao transition-colors duration-150 hover:bg-creme active:bg-areia/50">0</button>
     <button type="submit" x-bind:disabled="codigo.length < 4"
-            class="min-h-[72px] rounded-lg bg-servico font-display text-xl font-extrabold uppercase text-carvao disabled:opacity-40">OK</button>
+            class="min-h-[76px] rounded-2xl bg-floresta font-corpo text-xl font-bold text-creme transition-colors duration-150 hover:bg-floresta/90 disabled:opacity-40">OK</button>
   </div>
 </form>
 {% endblock %}

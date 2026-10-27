@@ -1,8 +1,9 @@
 {% extends "base_manage.html" %}
+{% load interface %}
 {% block title %}{% if fornecedor %}Editar {{ fornecedor.name }}{% else %}Novo fornecedor{% endif %}{% endblock %}
 {% block content %}
-<a href="{% if fornecedor %}{% url 'purchasing:fornecedor' fornecedor.pk %}{% else %}{% url 'purchasing:fornecedores' %}{% endif %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">{% if fornecedor %}{{ fornecedor.name }}{% else %}Fornecedores{% endif %}</a>
-<h1 class="mt-2 font-display text-2xl font-bold">{% if fornecedor %}Editar fornecedor{% else %}Novo fornecedor{% endif %}</h1>
+<a href="{% if fornecedor %}{% url 'purchasing:fornecedor' fornecedor.pk %}{% else %}{% url 'purchasing:fornecedores' %}{% endif %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}{% if fornecedor %}{{ fornecedor.name }}{% else %}Fornecedores{% endif %}</a>
+<h1 class="mt-2 titulo-pagina">{% if fornecedor %}Editar fornecedor{% else %}Novo fornecedor{% endif %}</h1>
 <p class="mt-1 text-sm text-ardosia">Fica disponível em todas as casas do grupo.</p>
 
 <form method="post" class="mt-6 max-w-2xl space-y-5">

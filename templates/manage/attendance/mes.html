@@ -3,19 +3,17 @@
 {% block title %}Fecho do mês{% endblock %}
 {% block content %}
 <div class="flex flex-wrap items-end justify-between gap-4">
-  <div class="flex items-baseline gap-4">
-    <h1 class="font-display text-2xl font-bold">Fecho do mês</h1>
-    <a href="{% url 'attendance:dia' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Ponto da equipa</a>
-  </div>
+  <h1 class="titulo-pagina">Fecho do mês</h1>
   <div class="flex items-center gap-2">
-    <a href="?mes={{ mes_anterior|date:'Y-m' }}" class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-3 py-2 text-sm font-semibold hover:bg-carvao/5" aria-label="Mês anterior">&larr;</a>
+    <a href="?mes={{ mes_anterior|date:'Y-m' }}" class="btn btn-fantasma btn-sm" aria-label="Mês anterior">&larr;</a>
     <span class="font-dados text-sm font-semibold">{{ mes|date:"m/Y" }}</span>
     {% if pode_avancar %}
-    <a href="?mes={{ mes_seguinte|date:'Y-m' }}" class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-3 py-2 text-sm font-semibold hover:bg-carvao/5" aria-label="Mês seguinte">&rarr;</a>
+    <a href="?mes={{ mes_seguinte|date:'Y-m' }}" class="btn btn-fantasma btn-sm" aria-label="Mês seguinte">&rarr;</a>
     {% endif %}
   </div>
 </div>
 <p class="mt-1 text-sm text-ardosia">Um mês aprovado fica bloqueado: não aceita correções, registos manuais nem pedidos de correção até ser reaberto.</p>
+{% include "manage/attendance/_nav.html" %}
 
 <div class="mt-6 flex flex-wrap items-center gap-4">
   {% if pode_aprovar %}
@@ -29,7 +27,7 @@
   <p class="text-sm text-ardosia">O mês ainda não terminou: aprova-se a partir do dia 1 do mês seguinte.</p>
   {% endif %}
   {% if aprovados %}
-  <a href="?mes={{ mes|date:'Y-m' }}&amp;exportar=1" class="text-sm font-semibold underline underline-offset-2">Exportar CSV ({{ aprovados }} aprovado{{ aprovados|pluralize }})</a>
+  <a href="?mes={{ mes|date:'Y-m' }}&amp;exportar=1" class="link-acao">Exportar CSV ({{ aprovados }} aprovado{{ aprovados|pluralize }})</a>
   {% endif %}
 </div>
 
@@ -47,7 +45,7 @@
           <td class="td-dados">{{ l.total|horas }}</td>
           <td class="text-sm">
             {% if l.pronto %}<span class="text-ardosia">—</span>{% else %}
-            <a href="{% url 'attendance:pedidos' %}" class="text-chama underline underline-offset-2">
+            <a href="{% url 'attendance:pedidos' %}" class="link-acao-perigo">
               {% if l.falta.por_resolver %}{{ l.falta.por_resolver }} registo{{ l.falta.por_resolver|pluralize }}{% endif %}{% if l.falta.por_resolver and l.falta.pedidos %} · {% endif %}{% if l.falta.pedidos %}{{ l.falta.pedidos }} pedido{{ l.falta.pedidos|pluralize }}{% endif %}
             </a>{% endif %}
           </td>
@@ -64,9 +62,9 @@
               <input type="hidden" name="mes" value="{{ mes|date:'Y-m' }}">
               <input type="hidden" name="worker" value="{{ l.worker.pk }}">
               <input type="hidden" name="acao" value="reabrir">
-              <button type="button" x-show="!aberto" x-on:click="aberto = true" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Reabrir</button>
+              <button type="button" x-show="!aberto" x-on:click="aberto = true" class="link-acao">Reabrir</button>
               <input x-show="aberto" x-cloak type="text" name="motivo" required maxlength="200" placeholder="Motivo da reabertura" class="campo-input w-56">
-              <button x-show="aberto" x-cloak type="submit" class="text-sm font-semibold text-chama underline underline-offset-2">Reabrir mês</button>
+              <button x-show="aberto" x-cloak type="submit" class="link-acao-perigo">Reabrir mês</button>
             </form>
             {% elif pode_aprovar and l.pronto %}
             <form method="post" class="inline">
@@ -74,7 +72,7 @@
               <input type="hidden" name="mes" value="{{ mes|date:'Y-m' }}">
               <input type="hidden" name="worker" value="{{ l.worker.pk }}">
               <input type="hidden" name="acao" value="aprovar">
-              <button type="submit" class="text-sm font-semibold text-servico underline underline-offset-2">Aprovar</button>
+              <button type="submit" class="link-acao-servico">Aprovar</button>
             </form>
             {% endif %}
           </td>
@@ -94,8 +92,8 @@
   <div class="mt-4 rail-taloes">
     {% for f in reaberturas %}
     <article class="talao">
-      <time class="block text-xs text-ardosia">{{ f.reopened_at|date:"d M Y · H:i"|upper }}</time>
-      <p class="mt-1 font-semibold uppercase tracking-wide">{{ f.worker.full_name }}</p>
+      <time class="block text-xs text-ardosia">{{ f.reopened_at|date:"d M Y · H:i" }}</time>
+      <p class="mt-1 font-semibold">{{ f.worker.full_name }}</p>
       <p class="mt-0.5">aprovado por {{ f.approved_by }} em {{ f.approved_at|date:"d/m" }}</p>
       <p class="mt-1 text-xs text-ardosia">{{ f.reopened_by }} · {{ f.reopen_reason }}</p>
     </article>

@@ -1,88 +1,146 @@
 {% extends "base_manage.html" %}
+{% load interface vendas %}
 {% block title %}Dashboard{% endblock %}
 {% block content %}
-<h1 class="font-display text-2xl font-bold">Dashboard</h1>
+{% now "G" as hora %}{% now "l, j \d\e F" as hoje_extenso %}
+<div>
+  <h1 class="titulo-pagina">{% with h=hora|add:0 %}{% if h < 12 %}Bom dia{% elif h < 20 %}Boa tarde{% else %}Boa noite{% endif %}{% endwith %}, {{ request.user.first_name|default:request.user }}.</h1>
+  <p class="subtitulo-pagina">{{ hoje_extenso|capfirst }} · {{ request.restaurant }}</p>
+</div>
+
+{# Os números do dia, um clique do seu módulo (o topo do dashboard do EMBER). #}
+<div class="mt-6 grid gap-4 sm:grid-cols-2 {% if ve_pessoas %}xl:grid-cols-4{% endif %}">
+  {% if ve_pessoas %}
+  <a href="{% url 'attendance:dia' %}" class="cartao cartao-link flex items-center gap-4 p-5">
+    <span class="mosaico mosaico-servico">{% icone "relogio" %}</span>
+    <span><span class="block font-dados text-2xl font-bold leading-tight">{{ em_turno|length }}</span><span class="block text-xs text-ardosia">Em turno agora</span></span>
+  </a>
+  <a href="{% url 'vacations:lista' %}" class="cartao cartao-link flex items-center gap-4 p-5">
+    <span class="mosaico mosaico-ambar">{% icone "calendario" %}</span>
+    <span><span class="block font-dados text-2xl font-bold leading-tight">{{ ferias_pendentes_total }}</span><span class="block text-xs text-ardosia">Férias por decidir</span></span>
+  </a>
+  {% endif %}
+  <a href="{% url 'inventory:lista' %}?baixo=1" class="cartao cartao-link flex items-center gap-4 p-5">
+    <span class="mosaico mosaico-chama">{% icone "pacote" %}</span>
+    <span><span class="block font-dados text-2xl font-bold leading-tight {% if contador_baixo %}text-chama{% endif %}">{{ contador_baixo }}</span><span class="block text-xs text-ardosia">Abaixo do mínimo</span></span>
+  </a>
+  {% if ve_pessoas %}
+  <a href="{% url 'sales:vendas' %}" class="cartao cartao-link flex items-center gap-4 p-5">
+    <span class="mosaico mosaico-floresta">{% icone "talao" %}</span>
+    <span class="min-w-0">
+      <span class="block truncate font-dados text-2xl font-bold leading-tight">{% if ultimo_dia_vendas %}{{ vendas_mes|euros }}{% else %}—{% endif %}</span>
+      <span class="block text-xs text-ardosia">Vendas de {% now "F" %}{% if ultimo_dia_vendas %} · até {{ ultimo_dia_vendas|date:"d/m" }}{% endif %}</span>
+    </span>
+  </a>
+  {% else %}
+  <a href="{% url 'inventory:historico' %}" class="cartao cartao-link flex items-center gap-4 p-5">
+    <span class="mosaico mosaico-floresta">{% icone "historico" %}</span>
+    <span><span class="block font-dados text-2xl font-bold leading-tight">{{ movimentos_hoje }}</span><span class="block text-xs text-ardosia">Movimentos de hoje</span></span>
+  </a>
+  {% endif %}
+</div>
 
 {% if ve_pessoas %}{% include "partials/dashboard/avisos.html" %}{% endif %}
 
 <div class="mt-6 grid gap-6 lg:grid-cols-2">
 
   <section class="cartao">
-    <div class="flex items-baseline justify-between border-b border-ardosia/15 px-4 py-3">
-      <h2 class="font-display text-base font-bold">Stock abaixo do mínimo</h2>
-      <span class="font-dados text-sm {% if contador_baixo %}font-semibold text-chama{% else %}text-ardosia{% endif %}">{{ contador_baixo }}</span>
+    <div class="cartao-cabecalho">
+      <h2 class="cartao-titulo">Stock abaixo do mínimo</h2>
+      <a href="{% url 'inventory:lista' %}?baixo=1" class="link-ver">Ver todos {% icone "seguinte" "h-4 w-4" %}</a>
     </div>
     {% if stock_baixo %}
-    <ul class="divide-y divide-ardosia/10">
+    <ul class="divide-y divide-linha">
       {% for item in stock_baixo %}
-      <li class="flex items-baseline justify-between px-4 py-2.5 text-sm">
-        <span class="font-medium">{{ item.name }}</span>
-        <span class="font-dados">{{ item.current_stock }} / {{ item.minimum_stock }} {{ item.unit }}</span>
+      <li class="flex items-center gap-4 px-5 py-3">
+        <span class="mosaico h-10 w-10 bg-chama/10 text-chama">{% icone "pacote" "h-[18px] w-[18px]" %}</span>
+        <span class="min-w-0 flex-1">
+          <span class="block truncate text-sm font-semibold">{{ item.name }}</span>
+          <span class="block text-xs text-ardosia">Mínimo <span class="font-dados">{{ item.minimum_stock }} {{ item.unit }}</span>{% if item.category %} · {{ item.category.name }}{% endif %}</span>
+        </span>
+        <span class="font-dados text-sm font-semibold text-chama">{{ item.current_stock }} {{ item.unit }}</span>
       </li>
       {% endfor %}
     </ul>
-    <p class="border-t border-ardosia/10 px-4 py-2.5"><a href="{% url 'inventory:lista' %}?baixo=1" class="text-sm font-medium underline underline-offset-2">Ver todos no stock</a></p>
+    {% if contador_baixo > stock_baixo|length %}
+    <p class="border-t border-linha px-5 py-3 text-xs text-ardosia">Mais <span class="font-dados">{{ contador_baixo|add:"-6" }}</span> no stock.</p>
+    {% endif %}
     {% else %}
-    <p class="px-4 py-8 text-center text-sm text-ardosia">Nenhum artigo abaixo do mínimo.</p>
+    <p class="vazio">Nenhum artigo abaixo do mínimo.</p>
     {% endif %}
   </section>
 
   <section class="cartao">
-    <div class="flex items-baseline justify-between border-b border-ardosia/15 px-4 py-3">
-      <h2 class="font-display text-base font-bold">Últimos movimentos</h2>
-      <a href="{% url 'inventory:historico' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Histórico</a>
+    <div class="cartao-cabecalho">
+      <h2 class="cartao-titulo">Últimos movimentos</h2>
+      <a href="{% url 'inventory:historico' %}" class="link-ver">Histórico {% icone "seguinte" "h-4 w-4" %}</a>
     </div>
     {% if ultimos_movimentos %}
-    <div>
+    <ul class="divide-y divide-linha">
       {% for mov in ultimos_movimentos %}
-      <article class="talao">
-        <time class="block text-xs text-ardosia">{{ mov.occurred_at|date:"d M · H:i"|upper }}</time>
-        <p class="mt-0.5 text-sm font-semibold uppercase tracking-wide">{{ mov.get_movement_type_display }} · {{ mov.item.name }}</p>
-        <p class="text-sm">{% if mov.signed_quantity > 0 %}+{% endif %}{{ mov.signed_quantity }} {{ mov.item.unit }} · {{ mov.created_by }}</p>
-      </article>
+      <li class="flex items-center gap-4 px-5 py-3">
+        {% if mov.signed_quantity > 0 %}
+        <span class="mosaico h-10 w-10 bg-servico/10 text-servico">{% icone "descarregar" "h-[18px] w-[18px]" %}</span>
+        {% else %}
+        <span class="mosaico h-10 w-10 bg-areia/60 text-carvao">{% icone "carregar" "h-[18px] w-[18px]" %}</span>
+        {% endif %}
+        <span class="min-w-0 flex-1">
+          <span class="block truncate text-sm font-semibold">{{ mov.item.name }}</span>
+          <span class="block truncate text-xs text-ardosia">{{ mov.get_movement_type_display }} · <span class="font-dados">{{ mov.occurred_at|date:"d M · H:i" }}</span> · {{ mov.created_by }}</span>
+        </span>
+        <span class="font-dados text-sm font-semibold {% if mov.signed_quantity > 0 %}text-servico{% endif %}">{% if mov.signed_quantity > 0 %}+{% endif %}{{ mov.signed_quantity }} {{ mov.item.unit }}</span>
+      </li>
       {% endfor %}
-    </div>
+    </ul>
     {% else %}
-    <p class="px-4 py-8 text-center text-sm text-ardosia">Ainda não há movimentos. Registe o primeiro no stock.</p>
+    <p class="vazio">Ainda não há movimentos. Registe o primeiro no stock.</p>
     {% endif %}
   </section>
 
   {% if ve_pessoas %}
   <section class="cartao">
-    <div class="flex items-baseline justify-between border-b border-ardosia/15 px-4 py-3">
-      <h2 class="font-display text-base font-bold">Férias pendentes</h2>
-      <a href="{% url 'vacations:lista' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Decidir</a>
+    <div class="cartao-cabecalho">
+      <h2 class="cartao-titulo">Férias pendentes</h2>
+      <a href="{% url 'vacations:lista' %}" class="link-ver">Decidir {% icone "seguinte" "h-4 w-4" %}</a>
     </div>
     {% if ferias_pendentes %}
-    <ul class="divide-y divide-ardosia/10">
+    <ul class="divide-y divide-linha">
       {% for p in ferias_pendentes %}
-      <li class="flex items-baseline justify-between px-4 py-2.5 text-sm">
-        <span class="font-medium">{{ p.worker.full_name }}</span>
-        <span class="font-dados">{{ p.start_date|date:"d M" }} &rarr; {{ p.end_date|date:"d M" }}</span>
+      <li class="flex items-center gap-4 px-5 py-3">
+        <span class="avatar h-10 w-10 text-xs">{{ p.worker.full_name|iniciais }}</span>
+        <span class="min-w-0 flex-1">
+          <span class="block truncate text-sm font-semibold">{{ p.worker.full_name }}</span>
+          <span class="block font-dados text-xs text-ardosia">{{ p.start_date|date:"d M" }} &rarr; {{ p.end_date|date:"d M" }}</span>
+        </span>
+        {% include "components/badge.html" with label="Por decidir" variante="ambar" %}
       </li>
       {% endfor %}
     </ul>
     {% else %}
-    <p class="px-4 py-8 text-center text-sm text-ardosia">Não há pedidos pendentes.</p>
+    <p class="vazio">Não há pedidos pendentes.</p>
     {% endif %}
   </section>
 
   <section class="cartao">
-    <div class="flex items-baseline justify-between border-b border-ardosia/15 px-4 py-3">
-      <h2 class="font-display text-base font-bold">Em turno agora</h2>
-      <a href="{% url 'attendance:dia' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Ponto</a>
+    <div class="cartao-cabecalho">
+      <h2 class="cartao-titulo">Em turno agora</h2>
+      <a href="{% url 'attendance:dia' %}" class="link-ver">Ponto {% icone "seguinte" "h-4 w-4" %}</a>
     </div>
     {% if em_turno %}
-    <ul class="divide-y divide-ardosia/10">
+    <ul class="divide-y divide-linha">
       {% for e in em_turno %}
-      <li class="flex items-baseline justify-between px-4 py-2.5 text-sm">
-        <span class="font-medium">{{ e.worker.full_name }}</span>
-        <span class="font-dados">desde {{ e.check_in|date:"H:i" }}</span>
+      <li class="flex items-center gap-4 px-5 py-3">
+        <span class="avatar h-10 w-10 text-xs">{{ e.worker.full_name|iniciais }}</span>
+        <span class="min-w-0 flex-1">
+          <span class="block truncate text-sm font-semibold">{{ e.worker.full_name }}</span>
+          <span class="block font-dados text-xs text-ardosia">desde {{ e.check_in|date:"H:i" }}</span>
+        </span>
+        {% include "components/badge.html" with label="Em turno" variante="servico" %}
       </li>
       {% endfor %}
     </ul>
     {% else %}
-    <p class="px-4 py-8 text-center text-sm text-ardosia">Ninguém em turno neste momento.</p>
+    <p class="vazio">Ninguém em turno neste momento.</p>
     {% endif %}
   </section>
   {% endif %}

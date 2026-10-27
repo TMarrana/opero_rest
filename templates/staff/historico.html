@@ -1,28 +1,35 @@
 {% extends "base_staff.html" %}
-{% load ponto %}
+{% load ponto interface %}
 {% block title %}Histórico{% endblock %}
 {% block content %}
-<header class="flex items-baseline justify-between">
-  <h1 class="font-display text-xl font-bold">Histórico</h1>
-  <a href="{% url 'staff:home' %}" class="text-sm text-aco/70 underline underline-offset-4 hover:text-superficie">Voltar</a>
-</header>
+{% url 'staff:home' as url_voltar %}{% include "staff/_cabecalho.html" with titulo="Histórico" voltar=url_voltar %}
 
-<dl class="mt-4 space-y-1 font-dados text-sm">
-  <div class="flex justify-between"><dt class="text-ardosia">Hoje</dt><dd>{{ totais.hoje }}</dd></div>
-  <div class="flex justify-between"><dt class="text-ardosia">Semana</dt><dd>{{ totais.semana }}</dd></div>
-</dl>
+<div class="mt-5 grid grid-cols-2 gap-3">
+  <div class="cartao flex items-center gap-3 p-4">
+    <span class="mosaico mosaico-servico">{% icone "relogio" %}</span>
+    <dl><dt class="text-xs text-ardosia">Hoje</dt><dd class="font-dados text-xl font-bold">{{ totais.hoje }}</dd></dl>
+  </div>
+  <div class="cartao flex items-center gap-3 p-4">
+    <span class="mosaico mosaico-ambar">{% icone "calendario" %}</span>
+    <dl><dt class="text-xs text-ardosia">Semana</dt><dd class="font-dados text-xl font-bold">{{ totais.semana }}</dd></dl>
+  </div>
+</div>
 
-<p class="mt-4 text-sm"><a href="{% url 'staff:correcao_nova' %}" class="text-aco/70 underline underline-offset-4 hover:text-superficie">Falta um registo? Peça para o acrescentar</a></p>
+<a href="{% url 'staff:correcao_nova' %}" class="btn btn-fantasma mt-4 w-full">{% icone "mais" "h-4 w-4" %}Falta um registo? Peça para o acrescentar</a>
 
 {% if pedidos %}
 <section class="mt-6">
-  <h2 class="text-sm font-semibold uppercase tracking-wide text-ardosia">Pedidos de correção</h2>
-  <ul class="mt-2 space-y-2 font-dados text-sm">
+  <h2 class="rotulo">Pedidos de correção</h2>
+  <ul class="cartao mt-2 divide-y divide-linha">
     {% for p in pedidos %}
-    <li class="rounded-md border border-ardosia/40 px-3 py-2">
-      {{ p.new_check_in|date:"d/m H:i" }} &rarr; {{ p.new_check_out|date:"H:i" }}
-      <span class="float-right font-sans text-xs font-semibold uppercase {% if p.status == 'APROVADO' %}text-servico{% elif p.status == 'RECUSADO' %}text-chama{% else %}text-ardosia{% endif %}">{{ p.get_status_display }}</span>
-      {% if p.decision_note %}<span class="block font-sans text-xs text-aco/70">{{ p.decision_note }}</span>{% endif %}
+    <li class="flex items-start justify-between gap-3 px-5 py-3.5 text-sm">
+      <span>
+        <span class="font-dados font-semibold">{{ p.new_check_in|date:"d/m H:i" }} &rarr; {{ p.new_check_out|date:"H:i" }}</span>
+        {% if p.decision_note %}<span class="mt-0.5 block text-xs text-ardosia">{{ p.decision_note }}</span>{% endif %}
+      </span>
+      {% if p.status == 'APROVADO' %}{% include "components/badge.html" with label=p.get_status_display variante="servico" %}
+      {% elif p.status == 'RECUSADO' %}{% include "components/badge.html" with label=p.get_status_display variante="chama" %}
+      {% else %}{% include "components/badge.html" with label=p.get_status_display variante="ambar" %}{% endif %}
     </li>
     {% endfor %}
   </ul>
@@ -31,19 +38,20 @@
 
 <div class="mt-6">
   {% if entries %}
-  <div class="rail-taloes border-ardosia/40">
+  <h2 class="rotulo">Registos</h2>
+  <div class="rail-taloes mt-2">
     {% for e in entries %}
-    <article class="talao talao-escuro">
-      <time class="block text-xs text-ardosia">{{ e.work_date|date:"d M Y"|upper }}{% if e.work_area %} · {{ e.work_area.name|upper }}{% endif %}</time>
-      <p class="mt-1 font-semibold uppercase tracking-wide">
+    <article class="talao">
+      <time class="block text-xs text-ardosia">{{ e.work_date|date:"d M Y" }}{% if e.work_area %} · {{ e.work_area.name }}{% endif %}</time>
+      <p class="mt-1 text-base font-semibold">
         {{ e.check_in|date:"H:i" }} &rarr;
         {% if e.check_out %}{{ e.check_out|date:"H:i" }}{% else %}em turno{% endif %}
       </p>
-      {% for p in e.breaks.all %}<p class="mt-0.5 text-xs text-aco/70">{{ p.break_type.name }} {{ p.start|date:"H:i" }}&ndash;{% if p.end %}{{ p.end|date:"H:i" }}{% else %}…{% endif %}{% if not p.break_type.paid %} · não paga{% endif %}</p>{% endfor %}
-      {% if e.check_out %}<p class="mt-0.5">{{ e.worked|horas }}</p>{% endif %}
-      {% if e.corrected_by %}<p class="mt-1 text-xs text-aco/50">corrigido por {{ e.corrected_by }} · {{ e.correction_reason }}</p>{% endif %}
-      {% if e.pk in com_pedido %}<p class="mt-1 text-xs font-semibold uppercase text-ardosia">correção pendente</p>
-      {% elif not e.is_open or e.missing_exit %}<a href="{% url 'staff:correcao' e.pk %}" class="mt-1 inline-block min-h-toque py-2 text-xs text-aco/70 underline underline-offset-2">Pedir correção</a>{% endif %}
+      {% for p in e.breaks.all %}<p class="mt-0.5 text-xs text-ardosia">{{ p.break_type.name }} {{ p.start|date:"H:i" }}&ndash;{% if p.end %}{{ p.end|date:"H:i" }}{% else %}…{% endif %}{% if not p.break_type.paid %} · não paga{% endif %}</p>{% endfor %}
+      {% if e.check_out %}<p class="mt-0.5 text-servico">{{ e.worked|horas }}</p>{% endif %}
+      {% if e.corrected_by %}<p class="mt-1 text-xs text-ardosia">corrigido por {{ e.corrected_by }} · {{ e.correction_reason }}</p>{% endif %}
+      {% if e.pk in com_pedido %}<p class="mt-2">{% include "components/badge.html" with label="correção pendente" variante="ambar" %}</p>
+      {% elif not e.is_open or e.missing_exit %}<a href="{% url 'staff:correcao' e.pk %}" class="link-acao mt-2 min-h-toque">Pedir correção</a>{% endif %}
     </article>
     {% endfor %}
   </div>

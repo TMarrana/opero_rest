@@ -203,7 +203,7 @@ opero_rest/
 
 Fixada aqui para que a implementação não tome decisões visuais avulsas ecrã a ecrã.
 
-**Princípio de partida: isto é _back of house_, não sala.** A estética óbvia de restaurante — creme quente, serifa editorial, terracota — é a da carta e do menu. Está errada para uma ferramenta operacional usada por quem está do outro lado da porta de vaivém. O vocabulário visual vem da cozinha: aço, contraste alto, legibilidade sob luz má e com pressa.
+**Desde 2026-10-27, a linguagem visual é a do shot «EMBER — Restaurant Dashboard» (Tajrin Nahar, Dribbble), por decisão do TM.** Substitui a direção «back of house» anterior (aço, carvão, mono), que rejeitava precisamente o creme, a serifa e a terracota. Do EMBER vem a linguagem: cores, tipografia, forma, cartão de perfil, navegação com contadores, estados em pílula, números com ícone tingido e seguimento por passos. Não vêm o nome, o logo, as fotografias nem os textos. O logo do Opero mantém-se, com uma variante de palavra escura para fundos claros (`static/img/logo-opero-escuro.png`).
 
 ### Paleta
 
@@ -211,38 +211,42 @@ Definida como CSS custom properties em `static/src/input.css` e exposta ao Tailw
 
 | Token | Hex | Uso |
 |---|---|---|
-| `carvao` | `#14171C` | shell da vista staff; texto principal no backoffice |
-| `aco` | `#E8ECEF` | fundo do backoffice |
+| `carvao` | `#221E18` | tinta: texto principal |
+| `floresta` | `#15302B` | preenchimentos: botão primário, item ativo, cartão de perfil |
+| `creme` | `#FAF6EB` | fundo das três superfícies; texto sobre `floresta` |
+| `areia` | `#E6DCD0` | moldura do backoffice, pílulas de ação, bordas de botões |
+| `linha` | `#ECE5D9` | filetes e divisórias |
 | `superficie` | `#FFFFFF` | cartões, tabelas, formulários |
-| `chama` | `#FF4D14` | sinal único: stock abaixo do mínimo, ações irreversíveis |
-| `servico` | `#00C27A` | estado "em serviço", turno aberto, aprovado |
-| `ardosia` | `#5A6672` | texto secundário, labels, metadados |
+| `chama` | `#C2461B` | ação principal da página, contadores, alertas, ações irreversíveis |
+| `servico` | `#2E7D4F` | estado «em serviço», aprovado |
+| `ambar` | `#E39B2D` | à espera, perfil no cartão verde, ícones |
+| `ardosia` | `#6E675B` | texto secundário (5,2:1 sobre creme) |
 
-Uma só cor quente e uma só cor de estado. Tudo o resto é neutro. **Se um ecrã tem duas coisas cor de laranja, uma delas está errada.**
+Hierarquia de botões: **laranja** (`btn-acento`) só na ação principal da página, no cabeçalho, uma por ecrã; **verde** (`btn-primario`) para gravar e para a ação de cada cartão ou linha; **branco** (`btn-fantasma`) para o resto. Estados em pílula tingida (`.estado-*`), com o texto escurecido para AA. A borda dos campos (`#9C9387`) tem 3:1 sobre branco.
 
 ### Tipografia
 
-Três papéis. Ficheiros servidos localmente a partir de `static/fonts/`, sem chamadas ao Google Fonts.
+Ficheiros variáveis servidos localmente a partir de `static/fonts/`, sem chamadas ao Google Fonts.
 
 | Papel | Face | Onde |
 |---|---|---|
-| Display | **Archivo** | títulos de ecrã, o botão de ponto |
-| Corpo | **IBM Plex Sans** | formulários, listagens, prosa |
-| Dados | **IBM Plex Mono** | quantidades, horas, datas, referências |
+| Display | **Playfair Display** (600–800) | títulos de página e de cartão, nomes no cartão de perfil |
+| Corpo | **Inter** (400–700) | tudo o resto, incluindo botões |
+| Dados | **Inter** com figuras tabulares (`font-dados`) | quantidades, horas, datas, valores |
 
-**Regra transversal: todos os números do sistema são mono, com figuras tabulares.** É o que dá coerência às duas superfícies e o que faz uma coluna de quantidades alinhar e ler-se de relance.
+**Regra transversal: todos os números usam figuras tabulares**, para as colunas alinharem.
 
-### Elemento de assinatura — o passe
+### Componentes
 
-O histórico é apresentado como uma sequência de **talões de serviço**: bloco mono, filete tracejado a separar, timestamp em cima, autor em baixo. Usado nos dois lados — histórico de movimentos de stock do gerente e histórico de turnos do colaborador.
+Em `static/src/input.css` e `templates/components/`; a página `/componentes/` mostra-os todos. Os principais: `.cartao` (branco, 16px), `.cartao-perfil` (verde com o círculo no canto), `.nav-item` e `.contador`, `.separadores` (filtros e sub-navegação em pílula), `.mosaico` (ícone tingido), `.link-acao` (ação de uma linha), `.link-voltar` (migalha), `.aviso`. Ícones de traço em linha com `{% load interface %}{% icone "nome" %}` (`core/templatetags/interface.py`, desenhos do Lucide, ISC), e iniciais nos avatares com `|iniciais`.
 
-Não é decoração. O talão comunica visualmente a invariante central do sistema: *o stock só muda por movimento, e os movimentos nunca se apagam*. Um talão acrescenta-se ao rail; não se rasga.
+### O histórico
 
-Sem bordas rasgadas, sem textura de papel, sem skeuomorfismo. Um bloco mono e um filete. A ideia é forte; a execução é contida.
+O antigo «talão» continua a ser a forma do histórico: uma linha por movimento num cartão branco, com a hora em cima e o autor em baixo, que se acrescenta e nunca se apaga. Perdeu o bloco mono e o filete tracejado.
 
 ### Ergonomia
 
-Alvos de toque ≥48px na vista staff. Contraste AA. `prefers-reduced-motion` respeitado. Foco de teclado visível no backoffice.
+Alvos de toque ≥48px na app e no quiosque. Contraste AA (verificado token a token). `prefers-reduced-motion` respeitado. Foco de teclado visível (anel verde). Abaixo de `lg`, a coluna do backoffice abre numa gaveta.
 
 ### Sala limpa
 As funcionalidades inspiradas no estudo da Factorial reconstroem comportamentos e não copiam materiais: nem textos, nem nomes de ecrãs, nem ícones, nem cores. Os termos da Factorial proíbem a engenharia reversa (BR-003). Todo o microcopy é escrito de raiz em português, segundo a secção 9.
@@ -263,7 +267,7 @@ São três produtos sobre o mesmo backend, não um produto com menus condicionai
 
 ### `base_kiosk.html` — quiosque (tablet partilhado)
 
-Shell escuro (`carvao`), botões grandes, sem navegação. Três passos: **nome → código → ação**.
+Fundo creme, cartão verde com o nome, botões grandes, sem navegação. Três passos: **nome → código → ação**.
 
 ```
 ┌─────────────────────────────┐
@@ -293,7 +297,7 @@ Shell escuro (`carvao`), botões grandes, sem navegação. Três passos: **nome 
 
 ### `base_staff.html` — app do colaborador
 
-Mobile-first, shell escuro, coluna única. **Não tem botão de ponto.** O ecrã inicial mostra o estado do dia, só para leitura (em turno desde, em pausa, fora de turno, turno previsto de hoje), os totais do dia e da semana, os avisos de registos por resolver com ligação para o pedido de correção, e três entradas: Turnos, Histórico (onde se pedem as correções) e Férias.
+Mobile-first, fundo creme, coluna única, cartão verde com o estado do dia no topo. **Não tem botão de ponto.** O ecrã inicial mostra o estado do dia, só para leitura (em turno desde, em pausa, fora de turno, turno previsto de hoje), os totais do dia e da semana, os avisos de registos por resolver com ligação para o pedido de correção, e três entradas: Turnos, Histórico (onde se pedem as correções) e Férias.
 
 ```
 ┌───────────────────┐
@@ -316,7 +320,7 @@ Entra-se com email e password. A sessão dura o defeito do Django (14 dias), por
 
 ### `base_manage.html` — backoffice
 
-Desktop-first, funcional em tablet. A entrada Férias abre o calendário mensal da Fase 8. Rail de navegação fixo à esquerda com as seis áreas do docx:
+Desktop-first, funcional em tablet. A aplicação numa folha creme sobre fundo areia, com cabeçalho (logo, casa, conta) e uma coluna à esquerda: o cartão de perfil e o cartão de navegação, com contadores do que está por tratar. A entrada Férias abre o calendário mensal da Fase 8. As áreas do docx:
 
 `Dashboard · Trabalhadores · Ponto · Férias · Stock · Configuração`
 
@@ -1126,6 +1130,7 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 
 | Data | Fase | O que foi feito | Por fechar | Próximo passo |
 |---|---|---|---|---|
+| 2026-10-27 | — | **Frontend refeito com a linguagem do EMBER** (shot do Dribbble indicado pelo TM). Secção 4 reescrita.<br>• **Base:** tokens novos (`floresta`, `creme`, `areia`, `linha`, `ambar`; `aco` saiu), Inter e Playfair Display variáveis em `static/fonts/` (as fontes antigas saíram), componentes novos em `input.css`, ícones em `core/templatetags/interface.py`, logo escuro.<br>• **Backoffice:** moldura areia, cabeçalho com a casa e a conta, cartão de perfil verde e navegação com ícones e contadores (`core/context_processors.py`: `nav_secao` e `contadores`, calculados só se usados). Dashboard com saudação, quatro números com ícone, «Por tratar» e listas em linhas (a view ganhou `vendas_mes`, `ferias_pendentes_total`, `movimentos_hoje`). Separadores em pílula no Ponto, Férias, Compras, Fichas e Grupo. Ação principal de cada página a laranja. Seguimento por passos na encomenda. Planeador com a largura toda e painel por cima da grelha, como no calendário.<br>• **Quiosque e app:** passam de escuros a claros, com o cartão verde no topo; ações e textos iguais.<br>• **Resto:** 59 templates convertidos por um script de tokens e revistos no browser. Service worker para v12 e manifest creme.<br>347 testes a passar (um teste deixou de contar a classe `talao-escuro` e conta `data-consumo`); `check` limpo. Visto no browser como `admin@tasca.pt`: dashboard, trabalhadores, stock e modal do movimento, ponto, férias, calendário, turnos, compras, encomenda, fichas, vendas, configuração, dispositivo e componentes. | **Por ver no browser** (a extensão do Chrome caiu a meio): quiosque, app do colaborador, login, área do grupo, formulários e os passos da encomenda; só os testes os renderizaram. Os ícones da PWA continuam escuros. Nada commitado. | Ver no browser o quiosque (este browser está ativado), a app com uma conta de colaborador, o login e o Grupo com `dono@tasca.pt`. Depois commitar. |
 | 2026-10-26 (6ª) | 12, 13 | **Fase 12 commitada e enviada** (`b4ee837`). **Fase 13: fichas técnicas**, app nova `recipes`.<br>• **Modelos:** `Recipe` (do grupo), `RecipeVersion` (data de início, doses, preparação), `RecipeLine` (artigo pelo nome e unidade, ou preparação, quantidade e quebra), `RecipeProduct` (um produto do POS, uma ficha). Migração `recipes/0001`.<br>• **Serviços (`recipes/services.py`):** criar e mudar fichas, com uma versão nova só quando a receita muda; custo por dose em cada casa, com as linhas sem artigo, com outra unidade ou sem custo assinaladas; preparações a um nível; preço do POS ou de referência e food cost; ligar produtos; produtos sem ficha pelo peso nas vendas de 90 dias. `recipes/signals.py` acompanha a mudança de nome de um artigo.<br>• **Ecrãs:** Fichas no rail, com a lista (custo, preço e food cost da casa ativa), a ficha (receita com custo, produtos do POS, versões, onde entra), o formulário (dados e receita juntos), a ficha para a cozinha para N doses e os produtos do POS sem ficha.<br>• **Demo:** o Bitoque com duas versões e o molho como preparação, e o café, ligados ao P001 e ao C001 nas duas casas. Na Esquina, o Bitoque custa 3,10 € (34,7 % de food cost).<br>28 testes novos, 347 no total; `check` e `makemigrations --check` limpos; migração e `demo` aplicados ao `db.sqlite3` (cópia de segurança fora do repositório). CSS reconstruído e service worker para v11.<br>No browser, como `dono@tasca.pt` na Esquina: a lista, a ficha do Bitoque, os produtos sem ficha e a edição, que criou a versão 3 (dois ovos). As capturas de ecrã falharam (o separador do Chrome não respondia), por isso as páginas foram lidas só pelo texto. Daí saiu um acerto: o custo de cada linha passou a ter duas casas («0,2504 €»). Antes, o Bitoque da Ribeira, sem nenhum artigo com custo, aparecia a 0,00 € e passou a «—». | A revisão visual dos ecrãs novos. O consumo de pratos nos consumos internos (Fase 12). A decisão do catálogo de artigos (secção 12), que mudaria a ligação das linhas. A versão 3 do Bitoque ficou no `db.sqlite3`. Fase 13 por commitar. | Ver os ecrãs das fichas com o browser a funcionar. Depois, o consumo de pratos nos consumos internos (com `version_on` do dia do consumo) e a Fase 14. |
 | 2026-10-26 (5ª) | 11, 12 | **Fase 11 commitada e enviada** (`7406bea`). **Fase 12: consumos internos**, em `inventory`.<br>• **Modelos:** `InternalConsumption` (pessoa ou casa, motivo, dia, acima do limite, anulação), `ConsumptionLine` (custo e valor do momento, movimento e movimento da anulação), `ConsumptionSettings` (refeições por turno). `StockMovement.Origin.CONSUMO`. Migração `inventory/0004`.<br>• **Serviços (`inventory/consumption.py`):** registar numa transação, com uma `SAIDA` por linha pelo `register_movement()`; limite de refeições pelos turnos do dia (ponto, ou turnos publicados); anular com uma `ENTRADA` por linha; mapa do mês e CSV.<br>• **Ecrãs:** Stock → Consumos (mapa do mês por pessoa, consumos em talões, filtro por pessoa, anular com motivo, CSV), Registar consumo (até seis artigos), regras em Configuração (só o Admin), e «Os meus consumos» na app do colaborador.<br>• **Demo:** café e água com custo, uma refeição por turno, as refeições de ontem da Marta e do Rui e uma oferta da casa.<br>13 testes novos, 319 no total; `check` e `makemigrations --check` limpos; migração e `demo` aplicados ao `db.sqlite3` (cópia de segurança fora do repositório). CSS reconstruído e service worker para v10.<br>No browser, como `dono@tasca.pt` na Esquina: o mapa, a lista e o registo de uma refeição do Rui, que ficou acima do limite. Daí saíram dois acertos: o aviso passou a dizer porque passou o limite («não tinha turno nesse dia»), e um valor desconhecido deixou de aparecer como 0,00 €. | O consumo de pratos espera pela Fase 13. A app do colaborador só foi vista pelos testes, não num telemóvel. O contabilista tem de dizer como quer as refeições em espécie (secção 12). O consumo `CI-4` do teste ficou no `db.sqlite3`. Fase 12 por commitar. | Commitar a Fase 12. Depois, Fase 13 (fichas técnicas), que liga os pratos aos produtos do POS da Fase 10 e permite o consumo de pratos nesta fase. |
 | 2026-10-26 (4ª) | 10, 11 | **Fase 10 commitada e enviada** (`7d01623`). **Fase 11: fornecedores e compras**, app nova `purchasing`.<br>• **Modelos:** `Supplier` (do grupo), `SupplierItem` (um preferido por artigo), `PurchaseOrder` e linhas, `Receipt` e linhas, ligadas ao movimento que geraram. `StockMovement.Origin.COMPRA`. Migrações `inventory/0003` e `purchasing/0001`.<br>• **Serviços (`purchasing/services.py`):** lista de compras (repor o mínimo menos o já encomendado), criar, mudar, enviar e cancelar encomendas, texto da encomenda, receção numa transação (entrada de origem compra pelo `register_movement()`, custo de referência e último preço do fornecedor, estado da encomenda), mês por fornecedor.<br>• **Ecrãs:** Compras no rail para o Admin, o Gerente e o Resp. stock, com Lista de compras, Encomendas (rascunho editável, texto para copiar, folha para imprimir), Receber, Receções (mês por fornecedor e CSV), Fornecedores (artigos, preferido, arquivar) e Preços de cada artigo, a partir do stock. O histórico do stock assinala as compras.<br>• **Demo:** três fornecedores, os preferidos dos artigos da Esquina, alface e cebola abaixo do mínimo e uma receção da semana passada.<br>21 testes novos, 306 no total; `check` e `makemigrations --check` limpos; migrações e `demo` aplicados ao `db.sqlite3` (cópia de segurança fora do repositório). CSS reconstruído e service worker para v9.<br>No browser, como `dono@tasca.pt` na Esquina: o critério de aceitação de ponta a ponta (lista de compras → encomenda aos Frescos do Mercado → tomate acrescentado ao rascunho → enviada → recebida sem a cebola → «Recebida em parte», stock e custo mudados, entradas no histórico), mais Receções e a página do fornecedor. Daí saíram três acertos: a unidade partia para baixo do campo, o texto dizia «3 quilograma» e os preços apareciam como «0,9». | A AT tem de aprovar o âmbito. Sem «dar por fechada» uma encomenda recebida em parte (Notas de desvio). O fluxo foi feito no browser pelo Admin do grupo; o Resp. stock só pelos testes. A encomenda `ENC-1` e a receção `REC-2` ficaram no `db.sqlite3` de desenvolvimento. Fase 11 por commitar. | Commitar a Fase 11. Depois, Fase 12 (consumos internos): acrescenta a origem «consumo interno» e valoriza ao custo de referência, que as receções passaram a atualizar. |
@@ -1153,6 +1158,7 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 
 Alterações ao plano decididas durante a execução. Se algo aqui contradiz uma secção acima, **corrigir também a secção** — este registo é o histórico, não a fonte de verdade.
 
+- **2026-10-27 · Linguagem visual do EMBER.** O TM pediu o frontend do shot «Restaurant Dashboard» (EMBER). A direção «back of house» da secção 4 deixa de valer: entram o creme, a serifa e a terracota que ela recusava. A regra «uma só coisa laranja por ecrã» passa a «uma só ação principal laranja por ecrã»; os contadores e alertas também são laranja. Os números deixam a mono e ficam em Inter com figuras tabulares. O painel do planeador passa a flutuar por cima da grelha, como o do calendário (Fase 8), porque a coluna nova é mais larga. Service worker para v12.
 - **2026-10-26 · Linha da ficha pelo nome do artigo.** As fichas são do grupo e o catálogo de artigos continua por casa (decisão da secção 12 por tomar). Uma linha guarda o nome e a unidade, e em cada casa liga-se ao artigo com o mesmo nome e unidade. Assim a mesma ficha serve as duas casas, cada uma com o seu custo. Se o catálogo passar a ser do grupo, as linhas passam a apontar para o artigo do grupo, que se encontra pelo nome.
 - **2026-10-26 · Mudar o nome de um artigo acompanha as fichas.** Quando nenhuma outra casa do grupo tem um artigo com o nome antigo, as linhas de todas as versões passam ao nome novo. Não é uma mudança da receita, por isso não cria versão. Se outra casa ainda tem o nome antigo, a ficha fica assinalada «não há este artigo nesta casa» onde o nome mudou.
 - **2026-10-26 · Quantidades da receita inteira.** O plano dizia «a quantidade por dose». Ficou a quantidade da receita, que dá o número de doses: é como se escreve um molho ou uma massa, e num prato de uma dose é o mesmo. O custo por dose divide pelas doses.

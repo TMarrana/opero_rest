@@ -1,33 +1,34 @@
 {% extends "base_manage.html" %}
+{% load interface %}
 {% load vendas %}
 {% block title %}Consumos internos{% endblock %}
 {% block content %}
 {% comment %}Consumos internos (Fase 12): o mapa do mês por pessoa e os
 consumos registados. Um consumo não se apaga: anula-se, e o stock volta.{% endcomment %}
-<a href="{% url 'inventory:lista' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Stock</a>
+<a href="{% url 'inventory:lista' %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Stock</a>
 <div class="mt-2 flex flex-wrap items-end justify-between gap-4">
-  <h1 class="font-display text-2xl font-bold">Consumos internos</h1>
+  <h1 class="titulo-pagina">Consumos internos</h1>
   {% url 'inventory:consumo_novo' as url_novo %}
-  {% include "components/botao.html" with label="Registar consumo" href=url_novo %}
+  {% include "components/botao.html" with variante="acento" label="Registar consumo" href=url_novo %}
 </div>
 <p class="mt-1 text-sm text-ardosia">
   Refeições do pessoal, ofertas, provas e o que o dono leva. Cada consumo tira do stock, valorizado ao custo de referência do dia.
   {% if regras.meals_per_shift is not None %}Limite: <span class="font-dados">{{ regras.meals_per_shift }}</span> refeição por turno.{% endif %}
-  {% if request.role == "ADMIN" %}<a href="{% url 'inventory:consumo_regras' %}" class="underline underline-offset-2">Regras</a>{% endif %}
+  {% if request.role == "ADMIN" %}<a href="{% url 'inventory:consumo_regras' %}" class="link-texto">Regras</a>{% endif %}
 </p>
 
 <div class="mt-6 flex flex-wrap items-center justify-between gap-4">
   <div class="flex items-center gap-2">
-    <a href="?mes={{ mes_anterior|date:'Y-m' }}" class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-3 py-2 text-sm font-semibold hover:bg-carvao/5" aria-label="Mês anterior">&larr;</a>
+    <a href="?mes={{ mes_anterior|date:'Y-m' }}" class="btn btn-fantasma btn-sm" aria-label="Mês anterior">&larr;</a>
     <span class="font-dados text-sm font-semibold">{{ mes|date:"m/Y" }}</span>
-    {% if mes_seguinte %}<a href="?mes={{ mes_seguinte|date:'Y-m' }}" class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-3 py-2 text-sm font-semibold hover:bg-carvao/5" aria-label="Mês seguinte">&rarr;</a>{% endif %}
+    {% if mes_seguinte %}<a href="?mes={{ mes_seguinte|date:'Y-m' }}" class="btn btn-fantasma btn-sm" aria-label="Mês seguinte">&rarr;</a>{% endif %}
   </div>
-  {% if mapa %}<a href="?mes={{ mes|date:'Y-m' }}&amp;exportar=1" class="text-sm font-semibold underline underline-offset-2">Exportar o mapa do mês (CSV)</a>{% endif %}
+  {% if mapa %}<a href="?mes={{ mes|date:'Y-m' }}&amp;exportar=1" class="link-acao">Exportar o mapa do mês (CSV)</a>{% endif %}
 </div>
 
 {% if mapa %}
 <section class="mt-4 cartao">
-  <h2 class="border-b border-ardosia/15 px-4 py-3 font-display text-base font-bold">Mapa do mês</h2>
+  <h2 class="cartao-cabecalho cartao-titulo">Mapa do mês</h2>
   <div class="overflow-x-auto">
     <table class="tabela">
       <thead><tr><th>Pessoa</th><th class="th-dados">Refeições</th><th class="th-dados">Outros consumos</th><th class="th-dados">Valor ao custo</th></tr></thead>
@@ -47,8 +48,8 @@ consumos registados. Um consumo não se apaga: anula-se, e o stock volta.{% endc
 {% endif %}
 
 <section class="mt-6 cartao">
-  <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-ardosia/15 px-4 py-3">
-    <h2 class="font-display text-base font-bold">Consumos registados</h2>
+  <div class="cartao-cabecalho">
+    <h2 class="cartao-titulo">Consumos registados</h2>
     <form method="get" class="flex items-center gap-2 text-sm">
       <input type="hidden" name="mes" value="{{ mes|date:'Y-m' }}">
       <select name="pessoa" class="campo-input w-56" onchange="this.form.submit()" aria-label="Filtrar por pessoa">
@@ -56,7 +57,7 @@ consumos registados. Um consumo não se apaga: anula-se, e o stock volta.{% endc
         <option value="casa"{% if pessoa == "casa" %} selected{% endif %}>A casa</option>
         {% for w in trabalhadores %}<option value="{{ w.pk }}"{% if pessoa == w.pk|stringformat:"s" %} selected{% endif %}>{{ w.full_name }}</option>{% endfor %}
       </select>
-      <noscript><button type="submit" class="underline">Filtrar</button></noscript>
+      <noscript><button type="submit" class="link-texto">Filtrar</button></noscript>
     </form>
   </div>
   {% for c in consumos %}

@@ -1,12 +1,13 @@
 {% extends "base_manage.html" %}
+{% load interface %}
 {% block title %}Publicar semana{% endblock %}
 {% block content %}
-<a href="{% url 'shifts:planeador' %}?semana={{ semana|date:'Y-m-d' }}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Turnos</a>
-<h1 class="mt-2 font-display text-2xl font-bold">Publicar a semana de {{ semana|date:"d/m/Y" }}</h1>
+<a href="{% url 'shifts:planeador' %}?semana={{ semana|date:'Y-m-d' }}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Turnos</a>
+<h1 class="mt-2 titulo-pagina">Publicar a semana de {{ semana|date:"d/m/Y" }}</h1>
 <p class="mt-1 text-sm text-ardosia">Depois de publicar, cada colaborador vê os seus turnos na próxima vez que abrir a aplicação.</p>
 
 {% if com_conflito %}
-<section class="mt-6 max-w-2xl rounded-md border border-chama/40 bg-superficie p-5">
+<section class="mt-6 max-w-2xl rounded-xl border border-chama/40 bg-superficie p-5">
   <h2 class="font-display text-lg font-bold">{{ com_conflito|length }} turno{{ com_conflito|pluralize }} com conflito</h2>
   <p class="mt-1 text-sm text-ardosia">A semana só se publica depois de os resolver no planeador.</p>
   <ul class="mt-3 space-y-2 text-sm">

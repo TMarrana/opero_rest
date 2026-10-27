@@ -1,0 +1,8 @@
+{% load interface %}{# Uma entrada do rail. Parâmetros: url, chave (compara com `nav_secao`), simbolo, label, nav_pendentes. #}
+<li>
+  <a href="{{ url }}" class="nav-item {% if nav_secao == chave %}nav-item-ativo{% endif %}"{% if nav_secao == chave %} aria-current="page"{% endif %}>
+    {% icone simbolo "h-5 w-5 shrink-0" %}
+    <span class="flex-1 truncate">{{ label }}</span>
+    {% if nav_pendentes %}<span class="contador">{{ nav_pendentes }}<span class="sr-only"> por tratar</span></span>{% endif %}
+  </a>
+</li>

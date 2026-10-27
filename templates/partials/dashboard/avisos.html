@@ -1,26 +1,36 @@
+{% load interface %}
 {% comment %}Coisas por resolver na equipa. Cada aviso diz quantas são e
 leva até elas (secção 9).{% endcomment %}
 {% if pedidos_correcao or por_resolver or por_aprovar or vendas_atraso %}
-<ul class="mt-4 space-y-2">
-  {% if por_aprovar %}
-  <li><a href="{% url 'attendance:mes' %}?mes={{ mes_por_fechar|date:'Y-m' }}" class="flex justify-between rounded-md border border-ardosia/30 bg-superficie px-4 py-3 text-sm hover:bg-carvao/5">
-    <span>O mês de <span class="font-dados">{{ mes_por_fechar|date:"m/Y" }}</span> está por fechar: <span class="font-dados font-semibold">{{ por_aprovar }}</span> trabalhador{{ por_aprovar|pluralize:"es" }} por aprovar</span>
-    <span class="font-semibold underline underline-offset-2">Fechar</span></a></li>
-  {% endif %}
-  {% if vendas_atraso %}
-  <li><a href="{% url 'sales:importar' %}" class="flex justify-between rounded-md border border-ardosia/30 bg-superficie px-4 py-3 text-sm hover:bg-carvao/5">
-    <span>As vendas param a <span class="font-dados">{{ ultimo_dia_vendas|date:"d/m" }}</span>: há <span class="font-dados font-semibold">{{ vendas_atraso }}</span> dias sem importar o SAF-T</span>
-    <span class="font-semibold underline underline-offset-2">Importar</span></a></li>
-  {% endif %}
-  {% if pedidos_correcao %}
-  <li><a href="{% url 'attendance:pedidos' %}" class="flex justify-between rounded-md border border-ardosia/30 bg-superficie px-4 py-3 text-sm hover:bg-carvao/5">
-    <span><span class="font-dados font-semibold">{{ pedidos_correcao }}</span> pedido{{ pedidos_correcao|pluralize }} de correção de ponto por decidir</span>
-    <span class="font-semibold underline underline-offset-2">Decidir</span></a></li>
-  {% endif %}
-  {% if por_resolver %}
-  <li><a href="{% url 'attendance:pedidos' %}" class="flex justify-between rounded-md border border-chama/40 bg-superficie px-4 py-3 text-sm hover:bg-chama/5">
-    <span><span class="font-dados font-semibold text-chama">{{ por_resolver }}</span> registo{{ por_resolver|pluralize }} de ponto por resolver: entrada sem saída</span>
-    <span class="font-semibold underline underline-offset-2">Ver</span></a></li>
-  {% endif %}
-</ul>
+<section class="cartao mt-6" aria-labelledby="por-tratar">
+  <div class="cartao-cabecalho">
+    <h2 id="por-tratar" class="cartao-titulo">Por tratar</h2>
+  </div>
+  <ul class="divide-y divide-linha">
+    {% if por_aprovar %}
+    <li><a href="{% url 'attendance:mes' %}?mes={{ mes_por_fechar|date:'Y-m' }}" class="flex items-center gap-4 px-5 py-3.5 text-sm transition-colors hover:bg-creme/60">
+      <span class="mosaico h-10 w-10 bg-ambar/15 text-[#B5761A]">{% icone "cadeado" "h-[18px] w-[18px]" %}</span>
+      <span class="flex-1">O mês de <span class="font-dados">{{ mes_por_fechar|date:"m/Y" }}</span> está por fechar: <span class="font-dados font-semibold">{{ por_aprovar }}</span> trabalhador{{ por_aprovar|pluralize:"es" }} por aprovar</span>
+      <span class="link-acao">Fechar</span></a></li>
+    {% endif %}
+    {% if vendas_atraso %}
+    <li><a href="{% url 'sales:importar' %}" class="flex items-center gap-4 px-5 py-3.5 text-sm transition-colors hover:bg-creme/60">
+      <span class="mosaico h-10 w-10 bg-floresta/10 text-floresta">{% icone "carregar" "h-[18px] w-[18px]" %}</span>
+      <span class="flex-1">As vendas param a <span class="font-dados">{{ ultimo_dia_vendas|date:"d/m" }}</span>: há <span class="font-dados font-semibold">{{ vendas_atraso }}</span> dias sem importar o SAF-T</span>
+      <span class="link-acao">Importar</span></a></li>
+    {% endif %}
+    {% if pedidos_correcao %}
+    <li><a href="{% url 'attendance:pedidos' %}" class="flex items-center gap-4 px-5 py-3.5 text-sm transition-colors hover:bg-creme/60">
+      <span class="mosaico h-10 w-10 bg-ambar/15 text-[#B5761A]">{% icone "lapis" "h-[18px] w-[18px]" %}</span>
+      <span class="flex-1"><span class="font-dados font-semibold">{{ pedidos_correcao }}</span> pedido{{ pedidos_correcao|pluralize }} de correção de ponto por decidir</span>
+      <span class="link-acao">Decidir</span></a></li>
+    {% endif %}
+    {% if por_resolver %}
+    <li><a href="{% url 'attendance:pedidos' %}" class="flex items-center gap-4 px-5 py-3.5 text-sm transition-colors hover:bg-chama/5">
+      <span class="mosaico h-10 w-10 bg-chama/10 text-chama">{% icone "alerta" "h-[18px] w-[18px]" %}</span>
+      <span class="flex-1"><span class="font-dados font-semibold text-chama">{{ por_resolver }}</span> registo{{ por_resolver|pluralize }} de ponto por resolver: entrada sem saída</span>
+      <span class="link-acao">Ver</span></a></li>
+    {% endif %}
+  </ul>
+</section>
 {% endif %}

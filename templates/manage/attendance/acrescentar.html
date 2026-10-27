@@ -1,13 +1,13 @@
 {% extends "base_manage.html" %}
 {% block title %}Acrescentar registo{% endblock %}
 {% block content %}
-<h1 class="font-display text-2xl font-bold">Acrescentar registo de ponto</h1>
+<h1 class="titulo-pagina">Acrescentar registo de ponto</h1>
 <p class="mt-1 text-sm text-ardosia">{{ worker.full_name }}. Use quando alguém não marcou o ponto: o registo nasce auditado, com o seu nome e o motivo.</p>
 
 <form method="post" class="mt-6 max-w-md space-y-5">
   {% csrf_token %}
   {% for erro in form.non_field_errors %}
-  <p class="rounded-md bg-chama/10 px-4 py-3 text-sm font-medium text-chama">{{ erro }}</p>
+  <p class="aviso aviso-chama">{{ erro }}</p>
   {% endfor %}
   <div class="cartao space-y-5 p-6">
     <div class="grid grid-cols-2 gap-4">

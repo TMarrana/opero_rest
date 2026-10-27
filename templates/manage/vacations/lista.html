@@ -2,13 +2,10 @@
 {% block title %}Férias{% endblock %}
 {% block content %}
 <div class="flex flex-wrap items-end justify-between gap-4">
-  <h1 class="font-display text-2xl font-bold">Férias e ausências</h1>
-  <div class="flex items-center gap-4">
-    <a href="{% url 'vacations:calendario' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Calendário</a>
-    <a href="{% url 'vacations:saldos' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Saldos</a>
-    {% include "components/botao.html" with label="Registar ausência" href="/gestao/ferias/novo/" %}
-  </div>
+  <h1 class="titulo-pagina">Férias e ausências</h1>
+  {% include "components/botao.html" with variante="acento" label="Registar ausência" href="/gestao/ferias/novo/" %}
 </div>
+{% include "manage/vacations/_nav.html" %}
 
 <section class="mt-6">
   <h2 class="font-display text-lg font-bold">Pendentes
@@ -41,9 +38,9 @@
             </td>
             <td class="whitespace-nowrap text-right">
               <button type="button" x-data x-on:click="$dispatch('abrir-decisao', { id: {{ p.pk }}, acao: 'aprovar' })"
-                      class="text-sm font-semibold text-servico underline underline-offset-2">Aprovar</button>
+                      class="link-acao-servico">Aprovar</button>
               <button type="button" x-data x-on:click="$dispatch('abrir-decisao', { id: {{ p.pk }}, acao: 'recusar' })"
-                      class="ml-3 text-sm font-semibold text-chama underline underline-offset-2">Recusar</button>
+                      class="ml-1.5 link-acao-perigo">Recusar</button>
             </td>
           </tr>
           {% endfor %}

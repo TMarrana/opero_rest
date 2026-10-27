@@ -1,12 +1,15 @@
 {% comment %}
-Badge de estado. Parâmetros:
+Estado em pílula tingida (o «Delivered» do EMBER). Parâmetros:
   label    — texto (obrigatório)
-  variante — chama (alerta: stock baixo) | servico (em serviço/aprovado) | neutro (default)
+  variante — chama (alerta: stock baixo, recusado) | servico (em serviço, aprovado)
+             | ambar (à espera) | neutro (default)
 {% endcomment %}
 {% if variante == "chama" %}
-<span class="inline-flex items-center rounded-full bg-chama px-2.5 py-0.5 text-xs font-semibold text-superficie">{{ label }}</span>
+<span class="estado estado-chama">{{ label }}</span>
 {% elif variante == "servico" %}
-<span class="inline-flex items-center rounded-full bg-servico px-2.5 py-0.5 text-xs font-semibold text-carvao">{{ label }}</span>
+<span class="estado estado-servico">{{ label }}</span>
+{% elif variante == "ambar" %}
+<span class="estado estado-ambar">{{ label }}</span>
 {% else %}
-<span class="inline-flex items-center rounded-full bg-ardosia/15 px-2.5 py-0.5 text-xs font-semibold text-ardosia">{{ label }}</span>
+<span class="estado estado-neutro">{{ label }}</span>
 {% endif %}

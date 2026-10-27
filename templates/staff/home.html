@@ -1,58 +1,71 @@
 {% extends "base_staff.html" %}
+{% load static interface %}
 {% block title %}Início{% endblock %}
 {% block content %}
 {% comment %}App do colaborador (secção 5, Fase 7): sem botão de ponto. O
 estado do dia é só para leitura; o ponto pica-se no tablet.{% endcomment %}
-<header>
-  <p class="text-lg">Olá, <span class="font-semibold">{{ worker.full_name }}</span></p>
+<header class="flex items-center justify-between">
+  <img src="{% static 'img/logo-opero-escuro.png' %}" alt="Opero" class="block h-7 w-auto">
   <p class="font-dados text-sm text-ardosia">{% now "H:i · l" %}</p>
 </header>
 
-<div class="mt-8 flex flex-1 flex-col">
-  {% for r in por_resolver %}
-  <a href="{% url 'staff:correcao' r.pk %}" class="mb-4 block rounded-md border border-chama px-4 py-3 text-sm text-aco">
-    <span class="font-semibold text-chama">Saída por indicar.</span>
-    Entrada de <span class="font-dados">{{ r.check_in|date:"d/m" }} às {{ r.check_in|date:"H:i" }}</span> sem saída: diga a que horas saiu.
-  </a>
-  {% endfor %}
+<section class="cartao-perfil mt-5 p-5" aria-label="Estado de hoje">
+  <span class="avatar h-14 w-14 text-lg">{{ worker.full_name|iniciais }}</span>
+  <p class="mt-3 font-display text-2xl font-bold leading-tight">Olá, {{ worker.full_name }}</p>
+  <p class="mt-3 inline-flex max-w-full items-center gap-2 rounded-full border border-creme/10 bg-creme/10 px-3 py-1.5 text-sm font-semibold text-ambar">
+    {% icone "relogio" "h-4 w-4 shrink-0" %}
+    <span class="truncate">{% if pausa %}Em pausa · <span class="font-dados">{{ pausa.break_type.name }} desde {{ pausa.start|date:"H:i" }}</span>
+    {% elif entry %}Em turno <span class="font-dados">desde {{ entry.check_in|date:"H:i" }}</span>
+    {% else %}Fora de turno{% endif %}</span>
+  </p>
+</section>
 
-  <section class="rounded-lg border px-5 py-5 {% if pausa %}border-aco{% elif entry %}border-servico{% else %}border-ardosia/40{% endif %}" aria-label="Estado de hoje">
-    {% if pausa %}
-    <p class="text-sm font-semibold uppercase tracking-wide text-aco">Em pausa</p>
-    <p class="mt-1 font-dados text-xl">{{ pausa.break_type.name }} desde {{ pausa.start|date:"H:i" }}</p>
-    {% elif entry %}
-    <p class="text-sm font-semibold uppercase tracking-wide text-servico">Em turno</p>
-    <p class="mt-1 font-dados text-xl">desde {{ entry.check_in|date:"H:i" }}</p>
-    {% else %}
-    <p class="text-sm font-semibold uppercase tracking-wide text-ardosia">Fora de turno</p>
-    {% endif %}
+{% for r in por_resolver %}
+<a href="{% url 'staff:correcao' r.pk %}" class="aviso aviso-chama mt-4 flex items-start gap-3">
+  {% icone "alerta" "mt-0.5 h-5 w-5 shrink-0" %}
+  <span><span class="font-semibold">Saída por indicar.</span>
+  Entrada de <span class="font-dados">{{ r.check_in|date:"d/m" }} às {{ r.check_in|date:"H:i" }}</span> sem saída: diga a que horas saiu.</span>
+</a>
+{% endfor %}
 
-    <div class="mt-4 border-t border-ardosia/30 pt-3">
-      <p class="text-xs font-semibold uppercase tracking-wide text-ardosia">Turno de hoje</p>
-      {% for t in turnos_hoje %}
-      <p class="mt-1 font-dados text-base">{{ t.start_at|date:"H:i" }}&ndash;{{ t.end_at|date:"H:i" }} <span class="font-sans text-sm text-aco/70">{{ t.label }}{% if t.work_area %} · {{ t.work_area.name }}{% endif %}</span></p>
-      {% empty %}
-      <p class="mt-1 text-sm text-aco/70">Sem turno publicado para hoje.</p>
-      {% endfor %}
-    </div>
-    <p class="mt-4 text-xs text-ardosia">O ponto pica-se no tablet do restaurante.</p>
-  </section>
+<section class="cartao mt-4">
+  <div class="cartao-cabecalho"><h2 class="cartao-titulo">Turno de hoje</h2></div>
+  <ul class="divide-y divide-linha">
+    {% for t in turnos_hoje %}
+    <li class="flex items-center gap-4 px-5 py-3.5">
+      <span class="mosaico h-10 w-10 bg-floresta/10 text-floresta">{% icone "turnos" "h-[18px] w-[18px]" %}</span>
+      <span>
+        <span class="block font-dados text-base font-semibold">{{ t.start_at|date:"H:i" }}&ndash;{{ t.end_at|date:"H:i" }}</span>
+        <span class="block text-xs text-ardosia">{{ t.label }}{% if t.work_area %} · {{ t.work_area.name }}{% endif %}</span>
+      </span>
+    </li>
+    {% empty %}
+    <li class="px-5 py-4 text-sm text-ardosia">Sem turno publicado para hoje.</li>
+    {% endfor %}
+  </ul>
+  <p class="border-t border-linha bg-creme/60 px-5 py-3 text-xs text-ardosia">O ponto pica-se no tablet do restaurante.</p>
+</section>
 
-  <dl class="mt-6 space-y-2 font-dados text-base">
-    <div class="flex justify-between"><dt class="text-ardosia">Hoje</dt><dd>{{ totais.hoje }}</dd></div>
-    <div class="flex justify-between"><dt class="text-ardosia">Semana</dt><dd>{{ totais.semana }}</dd></div>
-  </dl>
-
-  <nav class="mt-8 grid gap-3 text-base font-semibold" aria-label="Secções">
-    <a href="{% url 'staff:turnos' %}" class="flex min-h-toque items-center justify-between rounded-md border border-ardosia/40 px-4 py-3 hover:bg-aco/10">Os meus turnos <span aria-hidden="true">&rarr;</span></a>
-    <a href="{% url 'staff:historico' %}" class="flex min-h-toque items-center justify-between rounded-md border border-ardosia/40 px-4 py-3 hover:bg-aco/10">Histórico e correções <span aria-hidden="true">&rarr;</span></a>
-    <a href="{% url 'staff:ferias' %}" class="flex min-h-toque items-center justify-between rounded-md border border-ardosia/40 px-4 py-3 hover:bg-aco/10">Férias e ausências <span aria-hidden="true">&rarr;</span></a>
-    <a href="{% url 'staff:consumos' %}" class="flex min-h-toque items-center justify-between rounded-md border border-ardosia/40 px-4 py-3 hover:bg-aco/10">Os meus consumos <span aria-hidden="true">&rarr;</span></a>
-  </nav>
+<div class="mt-4 grid grid-cols-2 gap-3">
+  <div class="cartao flex items-center gap-3 p-4">
+    <span class="mosaico mosaico-servico">{% icone "relogio" %}</span>
+    <dl><dt class="text-xs text-ardosia">Hoje</dt><dd class="font-dados text-xl font-bold">{{ totais.hoje }}</dd></dl>
+  </div>
+  <div class="cartao flex items-center gap-3 p-4">
+    <span class="mosaico mosaico-ambar">{% icone "calendario" %}</span>
+    <dl><dt class="text-xs text-ardosia">Semana</dt><dd class="font-dados text-xl font-bold">{{ totais.semana }}</dd></dl>
+  </div>
 </div>
 
-<form method="post" action="{% url 'accounts:logout' %}" class="mt-8 text-center">
+<nav class="cartao mt-4 p-2" aria-label="Secções">
+  <a href="{% url 'staff:turnos' %}" class="nav-item min-h-[3.25rem] font-medium">{% icone "turnos" "h-5 w-5 shrink-0 text-floresta" %}<span class="flex-1">Os meus turnos</span>{% icone "seguinte" "h-4 w-4 text-ardosia" %}</a>
+  <a href="{% url 'staff:historico' %}" class="nav-item min-h-[3.25rem] font-medium">{% icone "historico" "h-5 w-5 shrink-0 text-floresta" %}<span class="flex-1">Histórico e correções</span>{% icone "seguinte" "h-4 w-4 text-ardosia" %}</a>
+  <a href="{% url 'staff:ferias' %}" class="nav-item min-h-[3.25rem] font-medium">{% icone "calendario" "h-5 w-5 shrink-0 text-floresta" %}<span class="flex-1">Férias e ausências</span>{% icone "seguinte" "h-4 w-4 text-ardosia" %}</a>
+  <a href="{% url 'staff:consumos' %}" class="nav-item min-h-[3.25rem] font-medium">{% icone "talheres" "h-5 w-5 shrink-0 text-floresta" %}<span class="flex-1">Os meus consumos</span>{% icone "seguinte" "h-4 w-4 text-ardosia" %}</a>
+</nav>
+
+<form method="post" action="{% url 'accounts:logout' %}" class="mt-6">
   {% csrf_token %}
-  <button type="submit" class="min-h-toque text-xs text-ardosia underline underline-offset-2">Sair</button>
+  <button type="submit" class="flex min-h-toque w-full items-center justify-center gap-2 rounded-full text-sm font-semibold text-chama transition-colors hover:bg-chama/5">{% icone "sair" "h-5 w-5" %}Sair</button>
 </form>
 {% endblock %}

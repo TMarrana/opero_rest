@@ -2,14 +2,15 @@
 {% block title %}Saldos de férias{% endblock %}
 {% block content %}
 <div class="flex flex-wrap items-end justify-between gap-4">
-  <h1 class="font-display text-2xl font-bold">Saldos de férias</h1>
+  <h1 class="titulo-pagina">Saldos de férias</h1>
   <div class="flex items-center gap-2">
-    <a href="?ano={{ ano_anterior }}" class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-3 py-2 text-sm font-semibold hover:bg-carvao/5" aria-label="Ano anterior">&larr;</a>
+    <a href="?ano={{ ano_anterior }}" class="btn btn-fantasma btn-sm" aria-label="Ano anterior">&larr;</a>
     <span class="font-dados text-sm font-semibold">{{ ano }}</span>
-    <a href="?ano={{ ano_seguinte }}" class="inline-flex min-h-toque items-center rounded-md border border-ardosia/40 px-3 py-2 text-sm font-semibold hover:bg-carvao/5" aria-label="Ano seguinte">&rarr;</a>
+    <a href="?ano={{ ano_seguinte }}" class="btn btn-fantasma btn-sm" aria-label="Ano seguinte">&rarr;</a>
   </div>
 </div>
 <p class="mt-1 text-sm text-ardosia">Só as ausências aprovadas que descontam do saldo contam. Os dias transitados gastam-se primeiro e caducam na data indicada.</p>
+{% include "manage/vacations/_nav.html" %}
 
 <div class="mt-6 cartao">
   {% if linhas %}
@@ -30,7 +31,7 @@
           <td class="text-right">
             <input type="hidden" name="worker" value="{{ l.worker.pk }}" form="saldo-{{ l.worker.pk }}">
             <input type="hidden" name="ano" value="{{ ano }}" form="saldo-{{ l.worker.pk }}">
-            <button type="submit" form="saldo-{{ l.worker.pk }}" class="text-sm font-semibold underline underline-offset-2">Guardar</button>
+            <button type="submit" form="saldo-{{ l.worker.pk }}" class="link-acao">Guardar</button>
           </td>
         </tr>
         {% endfor %}

@@ -1,13 +1,13 @@
 {% extends "base_manage.html" %}
 {% block title %}Registar ausência{% endblock %}
 {% block content %}
-<h1 class="font-display text-2xl font-bold">Registar ausência</h1>
+<h1 class="titulo-pagina">Registar ausência</h1>
 <p class="mt-1 text-sm text-ardosia">Em nome do trabalhador. Fica aprovada logo, com o seu nome como decisor.</p>
 
 <form method="post" class="mt-6 max-w-md space-y-5">
   {% csrf_token %}
   {% for erro in form.non_field_errors %}
-  <p class="rounded-md bg-chama/10 px-4 py-3 text-sm font-medium text-chama">{{ erro }}</p>
+  <p class="aviso aviso-chama">{{ erro }}</p>
   {% endfor %}
   <div class="cartao space-y-5 p-6">
     {% include "components/campo.html" with field=form.worker %}

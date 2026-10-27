@@ -1,85 +1,93 @@
-{% load static %}<!doctype html>
+{% load static interface %}<!doctype html>
 <html lang="pt">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#FAF6EB">
   <title>{% block title %}Opero{% endblock %} · Opero</title>
+  <link rel="preload" href="{% static 'fonts/inter-v20-latin-variable.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{% static 'fonts/playfair-display-v40-latin-variable.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <script src="{% static 'js/htmx.min.js' %}" defer></script>
   <script src="{% static 'js/alpine.min.js' %}" defer></script>
   <script src="{% static 'js/casa.js' %}" defer></script>
 </head>
 {# A casa em que a página foi aberta vai em cada pedido (Fase 9, core/middleware.py). #}
-<body class="min-h-screen bg-aco text-carvao" data-casa="{{ request.restaurant.pk|default:'' }}"
-      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"{% if request.restaurant %}, "X-Opero-Casa": "{{ request.restaurant.pk }}"{% endif %}}'>
+<body class="min-h-screen bg-areia text-carvao" data-casa="{{ request.restaurant.pk|default:'' }}"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"{% if request.restaurant %}, "X-Opero-Casa": "{{ request.restaurant.pk }}"{% endif %}}'
+      x-data="{ menu: false }">
 
-  <div class="flex min-h-screen">
-    {# ---- Rail de navegação fixo: as seis áreas do docx (secção 5) ---- #}
-    <aside class="w-56 shrink-0 bg-carvao text-aco flex flex-col">
-      <div class="px-5 py-6">
-        <img src="{% static 'img/logo-opero.png' %}" alt="Opero" class="block h-7 w-auto">
+  {# A aplicação numa folha creme sobre fundo areia, como no EMBER (secção 4). #}
+  <div class="min-h-screen lg:p-4">
+    <div class="flex min-h-screen flex-col bg-creme lg:min-h-[calc(100vh-2rem)] lg:rounded-4xl lg:ring-1 lg:ring-linha">
+
+      <header class="flex h-[4.5rem] shrink-0 items-center gap-3 border-b border-linha px-4 sm:px-6 lg:px-10">
+        <button type="button" class="btn-icone lg:hidden" x-on:click="menu = true" aria-label="Abrir o menu">{% icone "menu" %}</button>
+        <a href="{% url 'dashboard:home' %}" class="shrink-0 rounded-lg">
+          <img src="{% static 'img/logo-opero-escuro.png' %}" alt="Opero" class="block h-7 w-auto">
+        </a>
+        <div class="flex-1"></div>
+
         {% if request.casas|length > 1 %}
-        <form method="post" action="{% url 'dashboard:mudar_casa' %}" class="mt-3">
+        <form method="post" action="{% url 'dashboard:mudar_casa' %}" class="relative min-w-0">
           {% csrf_token %}
-          <label for="casa-ativa" class="block text-[11px] uppercase tracking-wide text-ardosia">Casa</label>
+          <label for="casa-ativa" class="sr-only">Casa</label>
+          <span class="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-floresta">{% icone "loja" "h-4 w-4" %}</span>
           <select id="casa-ativa" name="casa" onchange="this.form.requestSubmit()"
-                  class="mt-1 w-full rounded border border-aco/20 bg-carvao px-2 py-1.5 text-sm font-semibold text-superficie">
+                  class="min-h-[2.75rem] max-w-[14rem] cursor-pointer appearance-none truncate rounded-full border border-linha bg-superficie py-2 pl-10 pr-10 text-sm font-semibold text-carvao transition-colors hover:bg-creme sm:max-w-none">
             {% for casa in request.casas %}
             <option value="{{ casa.pk }}"{% if casa == request.restaurant %} selected{% endif %}>{{ casa.name }}</option>
             {% endfor %}
           </select>
-          <noscript><button type="submit" class="mt-1 text-xs underline">Mudar</button></noscript>
+          <span class="pointer-events-none absolute inset-y-0 right-3.5 flex items-center text-ardosia">{% icone "abrir" "h-4 w-4" %}</span>
+          <noscript><button type="submit" class="ml-2 text-xs underline">Mudar</button></noscript>
         </form>
-        {% else %}
-        <span class="block text-xs text-ardosia mt-0.5">{{ request.restaurant|default:"—" }}</span>
+        {% elif request.restaurant %}
+        <span class="hidden min-h-[2.75rem] items-center gap-2 rounded-full border border-linha bg-superficie px-4 text-sm font-semibold sm:inline-flex">
+          {% icone "loja" "h-4 w-4 text-floresta" %}{{ request.restaurant }}
+        </span>
         {% endif %}
-      </div>
-      <nav class="flex-1 px-2 space-y-1 text-sm font-medium" aria-label="Navegação principal">
-        {% if request.user.is_group_admin %}
-        {% url 'grupo:painel' as url_grupo %}
-        <a href="{{ url_grupo }}" class="block rounded px-3 py-2.5 {% if '/gestao/grupo/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Grupo</a>
-        {% endif %}
-        {% url 'dashboard:home' as url_dash %}
-        <a href="{{ url_dash }}" class="block rounded px-3 py-2.5 {% if request.path == url_dash %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Dashboard</a>
-        {% url 'workers:lista' as url_workers %}
-        <a href="{{ url_workers }}" class="block rounded px-3 py-2.5 {% if '/gestao/trabalhadores/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Trabalhadores</a>
-        {% url 'attendance:dia' as url_ponto %}
-        <a href="{{ url_ponto }}" class="block rounded px-3 py-2.5 {% if '/gestao/ponto/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Ponto</a>
-        {% url 'vacations:calendario' as url_ferias %}
-        <a href="{{ url_ferias }}" class="block rounded px-3 py-2.5 {% if '/gestao/ferias/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Férias</a>
-        {% url 'shifts:planeador' as url_turnos %}
-        <a href="{{ url_turnos }}" class="block rounded px-3 py-2.5 {% if '/gestao/turnos/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Turnos</a>
-        {% url 'inventory:lista' as url_stock %}
-        <a href="{{ url_stock }}" class="block rounded px-3 py-2.5 {% if '/gestao/stock/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Stock</a>
-        {% url 'purchasing:lista' as url_compras %}
-        <a href="{{ url_compras }}" class="block rounded px-3 py-2.5 {% if '/gestao/compras/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Compras</a>
-        {% url 'recipes:lista' as url_fichas %}
-        <a href="{{ url_fichas }}" class="block rounded px-3 py-2.5 {% if '/gestao/fichas/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Fichas</a>
-        {% if request.role == "ADMIN" or request.role == "MANAGER" %}
-        {% url 'sales:vendas' as url_vendas %}
-        <a href="{{ url_vendas }}" class="block rounded px-3 py-2.5 {% if '/gestao/vendas/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Vendas</a>
-        {% endif %}
-        {% url 'accounts:dispositivo' as url_disp %}
-        <a href="{{ url_disp }}" class="block rounded px-3 py-2.5 {% if request.path == url_disp %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Dispositivo</a>
-        {% if request.role == "ADMIN" %}
-        {% url 'config:inicio' as url_config %}
-        <a href="{{ url_config }}" class="block rounded px-3 py-2.5 {% if '/gestao/configuracao/' in request.path %}bg-superficie/10 text-superficie{% else %}text-aco/70 hover:bg-superficie/5 hover:text-superficie{% endif %}">Configuração</a>
-        {% endif %}
-      </nav>
-      <div class="px-5 py-4 border-t border-aco/10 text-xs">
-        <p class="truncate text-aco/80">{{ request.user }}</p>
-        <p class="text-ardosia">{% if request.user.is_group_admin %}Admin do grupo{% else %}{{ perfil_ativo }}{% endif %}</p>
-        <form method="post" action="{% url 'accounts:logout' %}" class="mt-2">
-          {% csrf_token %}
-          <button type="submit" class="text-aco/60 hover:text-superficie underline underline-offset-2">Sair</button>
-        </form>
-      </div>
-    </aside>
 
-    <div class="flex-1 flex flex-col min-w-0">
-      <main class="flex-1 px-8 py-8 {% block largura %}max-w-6xl{% endblock %} w-full">
-        {% block content %}{% endblock %}
-      </main>
+        <div class="relative" x-data="{ aberto: false }" x-on:click.outside="aberto = false" x-on:keydown.escape="aberto = false">
+          <button type="button" class="avatar h-11 w-11 cursor-pointer bg-floresta text-sm text-creme transition-colors hover:bg-floresta/90"
+                  x-on:click="aberto = !aberto" x-bind:aria-expanded="aberto" aria-haspopup="true"
+                  aria-label="Conta de {{ request.user }}">{{ request.user|iniciais }}</button>
+          <div x-show="aberto" x-cloak x-transition.opacity.duration.150ms
+               class="absolute right-0 top-full z-30 mt-2 w-64 rounded-2xl border border-linha bg-superficie p-2 shadow-flutuante">
+            <div class="px-3 py-2">
+              <p class="truncate text-sm font-semibold">{{ request.user }}</p>
+              <p class="truncate text-xs text-ardosia">{{ request.user.email }}</p>
+              <p class="mt-1 text-xs text-ardosia">{% if request.user.is_group_admin %}Admin do grupo{% else %}{{ perfil_ativo }}{% endif %}{% if request.restaurant %} · {{ request.restaurant }}{% endif %}</p>
+            </div>
+            <form method="post" action="{% url 'accounts:logout' %}" class="border-t border-linha pt-1">
+              {% csrf_token %}
+              <button type="submit" class="nav-item w-full text-chama hover:bg-chama/5">{% icone "sair" "h-5 w-5" %}Sair</button>
+            </form>
+          </div>
+        </div>
+      </header>
+
+      <div class="flex flex-1 gap-8 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
+        <aside class="hidden w-64 shrink-0 lg:block">
+          {% include "partials/nav_manage.html" %}
+        </aside>
+        <main class="w-full min-w-0 flex-1 {% block largura %}max-w-6xl{% endblock %}">
+          {% block content %}{% endblock %}
+        </main>
+      </div>
+    </div>
+  </div>
+
+  {# Ecrãs estreitos (tablet ao alto): a mesma coluna numa gaveta. #}
+  <div x-show="menu" x-cloak class="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+    <div class="absolute inset-0 bg-floresta/40 backdrop-blur-[2px]" x-on:click="menu = false"></div>
+    <div class="absolute inset-y-0 left-0 w-80 max-w-[88vw] overflow-y-auto bg-creme p-4 shadow-flutuante"
+         x-on:keydown.escape.window="menu = false">
+      <div class="mb-4 flex items-center justify-between">
+        <img src="{% static 'img/logo-opero-escuro.png' %}" alt="Opero" class="block h-7 w-auto">
+        <button type="button" class="btn-icone" x-on:click="menu = false" aria-label="Fechar o menu">{% icone "fechar" %}</button>
+      </div>
+      {% include "partials/nav_manage.html" %}
     </div>
   </div>
 

@@ -1,8 +1,9 @@
 {% extends "base_manage.html" %}
+{% load interface %}
 {% block title %}Regras dos consumos{% endblock %}
 {% block content %}
-<a href="{% url 'inventory:consumos' %}" class="text-sm text-ardosia underline underline-offset-2 hover:text-carvao">Consumos internos</a>
-<h1 class="mt-2 font-display text-2xl font-bold">Regras dos consumos internos</h1>
+<a href="{% url 'inventory:consumos' %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Consumos internos</a>
+<h1 class="mt-2 titulo-pagina">Regras dos consumos internos</h1>
 <p class="mt-1 text-sm text-ardosia">Valem para {{ request.restaurant }}. Os turnos do dia são os registos de ponto ou, sem ponto, os turnos publicados.</p>
 
 <form method="post" class="mt-6 max-w-lg space-y-5">

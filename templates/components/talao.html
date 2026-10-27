@@ -1,16 +1,15 @@
 {% comment %}
-Talão de serviço — elemento de assinatura (secção 4). Parâmetros:
-  timestamp — string já formatada (em cima, mono)
-  titulo    — a linha principal (ex.: "ENTRADA · Tomate chucha")
+Linha de histórico — o «talão» da secção 4. Parâmetros:
+  timestamp — string já formatada (em cima, pequena)
+  titulo    — a linha principal (ex.: "Entrada · Tomate chucha")
   detalhe   — linha secundária opcional (ex.: "+12,500 KG → 34,200 KG")
   autor     — quem registou (em baixo)
-  escuro    — se truthy, variante para o shell staff
-Usar sempre dentro de um contentor .rail-taloes. Um talão acrescenta-se
-ao rail; não se rasga.
+Usar sempre dentro de um contentor .rail-taloes. Uma linha acrescenta-se ao
+cartão; nenhuma se apaga.
 {% endcomment %}
-<article class="talao {% if escuro %}talao-escuro{% endif %}">
-  <time class="block text-xs {% if escuro %}text-ardosia{% else %}text-ardosia{% endif %}">{{ timestamp }}</time>
-  <p class="mt-1 font-semibold uppercase tracking-wide">{{ titulo }}</p>
+<article class="talao">
+  <time class="block text-xs text-ardosia">{{ timestamp }}</time>
+  <p class="mt-1 font-semibold">{{ titulo }}</p>
   {% if detalhe %}<p class="mt-0.5">{{ detalhe }}</p>{% endif %}
-  {% if autor %}<p class="mt-1 text-xs {% if escuro %}text-aco/50{% else %}text-ardosia{% endif %}">{{ autor }}</p>{% endif %}
+  {% if autor %}<p class="mt-1 text-xs text-ardosia">{{ autor }}</p>{% endif %}
 </article>

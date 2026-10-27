@@ -75,7 +75,7 @@ class TestRegisto:
         client.force_login(staff_user)
         html = client.get(reverse("staff:consumos")).content.decode()
         assert "0,43 €" in html and "Café" in html
-        assert html.count("talao-escuro") == 1
+        assert html.count("data-consumo") == 1
         # O mapa do mês tem o valor por pessoa.
         mapa = servico.month_map(restaurant, timezone.localdate().replace(day=1))
         assert [(p["quem"], p["refeicoes"], p["valor"]) for p in mapa] == [

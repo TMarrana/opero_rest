@@ -1,13 +1,13 @@
 {% extends "base_manage.html" %}
 {% block title %}Corrigir registo{% endblock %}
 {% block content %}
-<h1 class="font-display text-2xl font-bold">Corrigir registo de ponto</h1>
+<h1 class="titulo-pagina">Corrigir registo de ponto</h1>
 <p class="mt-1 text-sm text-ardosia">{{ entry.worker.full_name }} · registo de {{ entry.work_date|date:"d M Y" }}. A correção fica auditada: o seu nome, o motivo, a hora e o valor anterior ficam no histórico.</p>
 
 <form method="post" class="mt-6 max-w-md space-y-5">
   {% csrf_token %}
   {% for erro in form.non_field_errors %}
-  <p class="rounded-md bg-chama/10 px-4 py-3 text-sm font-medium text-chama">{{ erro }}</p>
+  <p class="aviso aviso-chama">{{ erro }}</p>
   {% endfor %}
   <div class="cartao space-y-5 p-6">
     <div class="grid grid-cols-2 gap-4">
@@ -28,8 +28,8 @@
   <div class="mt-4 rail-taloes">
     {% for c in correcoes %}
     <article class="talao">
-      <time class="block text-xs text-ardosia">{{ c.corrected_at|date:"d M Y · H:i"|upper }}</time>
-      <p class="mt-1 font-semibold uppercase tracking-wide">{{ c.get_kind_display }}</p>
+      <time class="block text-xs text-ardosia">{{ c.corrected_at|date:"d M Y · H:i" }}</time>
+      <p class="mt-1 font-semibold">{{ c.get_kind_display }}</p>
       {% if c.kind == "ALTERAR" %}
       {% if c.previous_known %}
       <p class="mt-0.5">antes {{ c.old_check_in|date:"d/m H:i" }} &rarr; {% if c.old_check_out %}{{ c.old_check_out|date:"d/m H:i" }}{% else %}sem saída{% endif %}</p>
