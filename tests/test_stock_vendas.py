@@ -219,7 +219,7 @@ class TestAplicacao:
         client.force_login(admin_user)
         r = client.post(
             reverse("sales:regras"),
-            {"day_cutoff_hour": 5, "series": "", "hourly_cost": "", "stock_enabled": "on",
+            {"day_cutoff_hour": 5, "service_change_hour": 17, "series": "", "hourly_cost": "", "stock_enabled": "on",
              "stock_from": (HOJE() - datetime.timedelta(days=7)).isoformat()},
         )
         assert r.status_code == 302
@@ -227,7 +227,7 @@ class TestAplicacao:
         # Guardar outra vez sem mudar nada não volta a tirar.
         client.post(
             reverse("sales:regras"),
-            {"day_cutoff_hour": 5, "series": "", "hourly_cost": "", "stock_enabled": "on",
+            {"day_cutoff_hour": 5, "service_change_hour": 17, "series": "", "hourly_cost": "", "stock_enabled": "on",
              "stock_from": (HOJE() - datetime.timedelta(days=7)).isoformat()},
         )
         assert _stock(artigos["bife"]) == Decimal("8.2")

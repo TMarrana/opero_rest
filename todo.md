@@ -13,9 +13,9 @@ Bloqueiam fases ou o piloto. A proposta de cada uma está na secção 12 do plan
 - [x] **Âmbito das Fases 5 e 6** (saldo anual e planeamento de turnos, que o docx deixava fora do MVP). Decidido a 2026-10-27: entram no piloto, ligadas. Falta dar conhecimento à AT.
 - [x] **Aprovar as fases já feitas:** 7 (quiosque e app), 9, 11 (compras) e 13 (fichas). Aprovadas pelo TM a 2026-10-27, tal como estão construídas. Falta dar conhecimento à AT, que dá o visto funcional nos testes dela.
 - [x] **O gerente pode criar artigos e registar movimentos?** Decidido a 2026-10-27: pode, como estava, incluindo as compras. Falta dar conhecimento à AT.
-- [ ] **Código de ponto só no tablet partilhado.** Já está feito; falta a AT validar.
-- [ ] **Hora de corte do dia de serviço nas vendas.** Está nas 5h; falta confirmar.
-- [ ] **Serviço (almoço e jantar) nas vendas por hora trabalhada:** pelos turnos guardados ou por uma hora de mudança. Sem isto, as vendas por serviço da Fase 10 ficam por fazer.
+- [x] **Código de ponto só no tablet partilhado.** Confirmado a 2026-10-27: fica como está. Falta dar conhecimento à AT.
+- [x] **Hora de corte do dia de serviço nas vendas.** Confirmado a 2026-10-27: 5h, configurável por casa. Falta dar conhecimento à AT.
+- [x] **Serviço (almoço e jantar) nas vendas por hora trabalhada.** Decidido a 2026-10-27: por uma hora de mudança por casa, 17h por omissão. Já está construído. Falta dar conhecimento à AT.
 - [x] **Stock negativo causado pelas vendas** (Fase 14). Decidido a 2026-10-27: só os movimentos de origem venda o deixam negativo, e o artigo fica assinalado para contar. Já está construído. Falta dar conhecimento à AT.
 - [ ] **Pergunta na saída tardia (R-012):** se entra ou não.
 - [ ] **Nome da marca e domínio.**
@@ -64,6 +64,7 @@ Ecrãs que só foram verificados pelos testes ou pelo texto da página, sem ning
 - [ ] Calendário de ausências (Fase 8) com dados reais.
 - [ ] **Trabalhador em várias casas (Fase 9)** com o `demo`: a Inês no tablet da Esquina, o planeador da Esquina e a ficha dela na Ribeira.
 - [ ] **Stock pelas vendas (Fase 14)** com o `demo` na Esquina: Vendas → Stock, a lista do stock com o bife negativo, uma contagem na folha e Stock → Contagens.
+- [ ] **Vendas por serviço (Fase 10)** com o `demo`: o cartão «Por serviço» no ecrã Vendas, e a hora de mudança nas Regras.
 - [ ] **Análise (Fase 15)** com o `demo`: Resumo, Stock, Pessoas e Compras, como dono com as duas casas e como Resp. stock; abrir um Excel exportado no Excel ou no LibreOffice.
 - [ ] «Os meus turnos» na vista do colaborador: é um quarto elemento além dos três previstos (secção 5).
 - [ ] Percurso completo dos quatro perfis com o `demo`. As compras foram feitas pelo Admin do grupo; o Resp. stock só pelos testes.

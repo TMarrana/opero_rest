@@ -76,6 +76,48 @@ anulados, com as notas de crédito a abater. Os valores são sem IVA.{% endcomme
   {% if not regras.hourly_cost and request.role == "ADMIN" %}Para ver o custo de pessoal estimado, indique o custo médio por hora nas <a href="{% url 'sales:regras' %}" class="link-texto">regras de vendas</a>.{% endif %}
 </p>
 
+{# ---- Por serviço: almoço e jantar, pela hora de mudança da casa ---- #}
+<section class="mt-6 cartao">
+  <div class="cartao-cabecalho">
+    <h2 class="cartao-titulo">Por serviço</h2>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="tabela">
+      <thead>
+        <tr>
+          <th>Serviço</th>
+          <th class="w-1/4"><span class="sr-only">Peso no total</span></th>
+          <th class="th-dados">Vendas</th>
+          <th class="th-dados">Docs</th>
+          <th class="th-dados">Ticket</th>
+          <th class="th-dados">Horas</th>
+          <th class="th-dados">Vendas / hora</th>
+          {% if regras.hourly_cost %}<th class="th-dados">Pessoal</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in servicos %}
+        <tr>
+          <td class="font-medium">{{ s.nome }}</td>
+          <td>{% if s.peso %}<div class="flex items-center gap-2"><div class="h-2 rounded bg-floresta" style="width: {{ s.peso|stringformat:'.1f' }}%"></div><span class="font-dados text-xs text-ardosia">{{ s.peso }} %</span></div>{% endif %}</td>
+          <td class="td-dados">{% if s.total %}{{ s.total|euros }}{% else %}<span class="text-ardosia">—</span>{% endif %}</td>
+          <td class="td-dados">{{ s.vendas|default:"" }}</td>
+          <td class="td-dados">{% if s.ticket %}{{ s.ticket|euros }}{% endif %}</td>
+          <td class="td-dados">{% if s.horas %}{{ s.horas|horas }}{% if s.previstas %} <span class="text-xs text-ardosia" title="Inclui dias sem ponto, com as horas dos turnos publicados">prev.</span>{% endif %}{% endif %}</td>
+          <td class="td-dados">{% if s.por_hora %}{{ s.por_hora|euros }}{% endif %}</td>
+          {% if regras.hourly_cost %}<td class="td-dados">{% if s.custo_pessoal %}{{ s.custo_pessoal }} %{% endif %}</td>{% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="border-t border-linha px-6 py-3.5 text-xs text-ardosia">
+    O almoço vai até às <span class="font-dados">{{ regras.service_change_hour|stringformat:"02d" }}:00</span>; o jantar, daí até ao fim do dia de serviço.
+    As horas trabalhadas cortam-se na mesma hora.
+    {% if request.role == "ADMIN" %}A hora muda-se nas <a href="{% url 'sales:regras' %}" class="link-texto">regras de vendas</a>.{% endif %}
+  </p>
+</section>
+
 {# ---- Por dia, com as horas do ponto ---- #}
 <section class="mt-6 cartao">
   <div class="cartao-cabecalho">

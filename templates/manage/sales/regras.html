@@ -10,6 +10,7 @@
   {% csrf_token %}
   <div class="cartao space-y-5 p-6">
     {% include "components/campo.html" with field=form.day_cutoff_hour %}
+    {% include "components/campo.html" with field=form.service_change_hour %}
     {% include "components/campo.html" with field=form.series %}
     {% include "components/campo.html" with field=form.hourly_cost %}
   </div>

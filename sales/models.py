@@ -25,6 +25,13 @@ class SalesSettings(TimeStampedModel):
         default=5,
         help_text="As vendas antes desta hora contam no dia anterior. Entre 0 e 11.",
     )
+    # Decidido a 2026-10-27 (secção 12): o almoço vai da hora de corte até
+    # esta hora; o jantar, daí até à hora de corte do dia seguinte.
+    service_change_hour = models.PositiveSmallIntegerField(
+        "hora de mudança para o jantar",
+        default=17,
+        help_text="As vendas e as horas trabalhadas antes desta hora são do almoço; as depois, do jantar. Entre 12 e 23.",
+    )
     series = models.CharField(
         "séries desta casa",
         max_length=200,

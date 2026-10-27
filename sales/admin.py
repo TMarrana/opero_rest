@@ -5,7 +5,7 @@ from .models import PosProduct, SaleStockMovement, SalesDocument, SalesImport, S
 
 @admin.register(SalesSettings)
 class SalesSettingsAdmin(admin.ModelAdmin):
-    list_display = ("restaurant", "day_cutoff_hour", "series", "hourly_cost")
+    list_display = ("restaurant", "day_cutoff_hour", "service_change_hour", "series", "hourly_cost")
 
 
 @admin.register(SalesImport)

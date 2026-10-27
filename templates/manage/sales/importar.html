@@ -23,6 +23,7 @@ no ecrã, junto ao formulário, porque diz o que fazer a seguir.{% endcomment %}
       <dl class="space-y-1 text-sm">
         <div class="flex justify-between gap-4"><dt class="text-ardosia">NIF da casa</dt><dd class="font-dados">{{ request.restaurant.nif|default:"por preencher" }}</dd></div>
         <div class="flex justify-between gap-4"><dt class="text-ardosia">Dia de serviço até às</dt><dd class="font-dados">{{ regras.day_cutoff_hour|stringformat:"02d" }}:00</dd></div>
+        <div class="flex justify-between gap-4"><dt class="text-ardosia">Jantar a partir das</dt><dd class="font-dados">{{ regras.service_change_hour|stringformat:"02d" }}:00</dd></div>
         {% if regras.series %}<div class="flex justify-between gap-4"><dt class="text-ardosia">Séries desta casa</dt><dd class="font-dados">{{ regras.series }}</dd></div>{% endif %}
         <div class="flex justify-between gap-4"><dt class="text-ardosia">Stock pelas vendas</dt><dd>{% if regras.stock_enabled %}<a href="{% url 'sales:stock' %}" class="link-texto">ligado</a>{% else %}desligado{% endif %}</dd></div>
       </dl>

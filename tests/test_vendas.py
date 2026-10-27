@@ -5,13 +5,14 @@ import io
 import zipfile
 from decimal import Decimal
 
+import openpyxl
 import pytest
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
 
-from attendance.models import TimeEntry
+from attendance.models import Break, BreakType, TimeEntry
 from core.models import Restaurant
 from sales import reports, sintetico
 from sales.models import PosProduct, SalesDocument, SalesImport, SalesLine, SalesSettings
@@ -253,6 +254,81 @@ class TestHorasTrabalhadas:
         assert totais["horas"] == datetime.timedelta(hours=6)
 
 
+
+class TestServicos:
+    """Almoço e jantar pela hora de mudança da casa (decidido a 2026-10-27)."""
+
+    def _servicos(self, casa):
+        return {s["nome"]: s for s in reports.por_servico(casa, INICIO, FIM)}
+
+    def test_vendas_divididas_pela_hora_de_mudanca(self, casa, manager):
+        # 13h e 13h são almoço; 20h e 1h da madrugada (ainda dia 10) são jantar.
+        _importar(casa, manager, docs=_docs() + [Doc("FS 2026A/3", _hora(11, 1), [IMPERIAL])])
+        s = self._servicos(casa)
+        assert s["Almoço"]["total"] == 2 * Decimal("8.94") + Decimal("2.92")
+        assert s["Almoço"]["vendas"] == 2
+        assert s["Jantar"]["total"] == Decimal("8.94") + Decimal("2.92")
+        assert s["Jantar"]["vendas"] == 2
+        assert s["Almoço"]["peso"] + s["Jantar"]["peso"] == Decimal("100.0")
+
+    def test_hora_de_mudanca_por_casa(self, casa, manager):
+        regras = SalesSettings.for_restaurant(casa)
+        regras.service_change_hour = 21
+        regras.save()
+        _importar(casa, manager)
+        s = self._servicos(casa)
+        assert s["Jantar"]["total"] == 0 and s["Jantar"]["vendas"] == 0
+        assert s["Almoço"]["vendas"] == 3
+
+    def test_horas_cortadas_na_mudanca_sem_pausas_nao_pagas(self, casa, manager):
+        _importar(casa, manager)
+        w = Worker.objects.create(restaurant=casa, full_name="Marta Silva")
+        tz = timezone.get_current_timezone()
+        # Das 15h às 23h no dia 10, com meia hora de refeição às 19h: 2h de
+        # almoço e 5h30 de jantar.
+        e = TimeEntry.objects.create(
+            worker=w,
+            check_in=datetime.datetime(2026, 9, 10, 15, 0, tzinfo=tz),
+            check_out=datetime.datetime(2026, 9, 10, 23, 0, tzinfo=tz),
+        )
+        Break.objects.create(
+            entry=e, break_type=BreakType.objects.get(restaurant=casa, name="Refeição"),
+            start=datetime.datetime(2026, 9, 10, 19, 0, tzinfo=tz),
+            end=datetime.datetime(2026, 9, 10, 19, 30, tzinfo=tz),
+        )
+        # Dia 11 sem ponto: o turno publicado das 12h às 18h dá 5h + 1h, previstas.
+        Shift.objects.create(
+            restaurant=casa, worker=w, state=Shift.State.PUBLICADO,
+            start_at=datetime.datetime(2026, 9, 11, 12, 0, tzinfo=tz),
+            end_at=datetime.datetime(2026, 9, 11, 18, 0, tzinfo=tz),
+        )
+        s = self._servicos(casa)
+        assert s["Almoço"]["horas"] == datetime.timedelta(hours=7)
+        assert s["Jantar"]["horas"] == datetime.timedelta(hours=6, minutes=30)
+        assert s["Almoço"]["previstas"] and s["Jantar"]["previstas"]
+        assert s["Jantar"]["por_hora"] == (Decimal("8.94") / Decimal("6.5")).quantize(Decimal("0.01"))
+        # Os totais por dia não mudam com o corte.
+        linhas, totais = reports.por_dia(casa, INICIO, FIM)
+        assert totais["horas"] == datetime.timedelta(hours=13, minutes=30)
+
+    def test_regras_recusam_uma_hora_de_madrugada(self, client, casa, admin_user):
+        client.force_login(admin_user)
+        r = client.post(reverse("sales:regras"), {"day_cutoff_hour": 5, "service_change_hour": 4})
+        assert r.status_code == 400
+        assert SalesSettings.for_restaurant(casa).service_change_hour == 17
+
+    def test_ecra_e_excel_com_os_servicos(self, client, casa, manager):
+        _importar(casa, manager)
+        client.force_login(manager)
+        html = client.get(reverse("sales:vendas"), {"mes": "2026-09"}).content.decode()
+        assert "Por serviço" in html and "Almoço" in html and "Jantar" in html
+        resp = client.get(reverse("sales:vendas"), {"mes": "2026-09", "exportar": "dias", "formato": "xlsx"})
+        livro = openpyxl.load_workbook(io.BytesIO(resp.content))
+        assert len(livro.sheetnames) == 2
+        folha = livro[livro.sheetnames[1]]
+        assert [c.value for c in folha["A"]][:3] == ["Serviço", "Almoço", "Jantar"]
+
+
 class TestEcras:
     def test_so_admin_e_gerente(self, client, stock_user, staff_user):
         for user in (stock_user, staff_user):
@@ -324,11 +400,13 @@ class TestEcras:
         client.force_login(manager)
         assert client.get(reverse("sales:regras")).status_code == 403
         client.force_login(admin_user)
-        resp = client.post(reverse("sales:regras"), {"day_cutoff_hour": 4, "series": " A , B ", "hourly_cost": "12.50"})
+        resp = client.post(reverse("sales:regras"), {"day_cutoff_hour": 4, "service_change_hour": 18, "series": " A , B ", "hourly_cost": "12.50"})
         assert resp.status_code == 302
         regras = SalesSettings.objects.get(restaurant=casa)
-        assert (regras.day_cutoff_hour, regras.series, regras.hourly_cost) == (4, "A, B", Decimal("12.50"))
-        resp = client.post(reverse("sales:regras"), {"day_cutoff_hour": 14, "series": ""})
+        assert (regras.day_cutoff_hour, regras.service_change_hour, regras.series, regras.hourly_cost) == (
+            4, 18, "A, B", Decimal("12.50")
+        )
+        resp = client.post(reverse("sales:regras"), {"day_cutoff_hour": 14, "service_change_hour": 17, "series": ""})
         assert resp.status_code == 400
 
     def test_dashboard_avisa_vendas_atrasadas(self, client, casa, manager):

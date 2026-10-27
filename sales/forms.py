@@ -25,9 +25,12 @@ class ImportForm(forms.Form):
 class SalesSettingsForm(forms.ModelForm):
     class Meta:
         model = SalesSettings
-        fields = ["day_cutoff_hour", "series", "hourly_cost", "stock_enabled", "stock_from"]
+        fields = ["day_cutoff_hour", "service_change_hour", "series", "hourly_cost", "stock_enabled", "stock_from"]
         widgets = {
             "day_cutoff_hour": forms.NumberInput(attrs={"class": "campo-input font-dados w-24", "min": 0, "max": 11}),
+            "service_change_hour": forms.NumberInput(
+                attrs={"class": "campo-input font-dados w-24", "min": 12, "max": 23}
+            ),
             "series": forms.TextInput(attrs={**_INPUT, "class": "campo-input font-dados"}),
             "hourly_cost": forms.NumberInput(attrs={"class": "campo-input font-dados w-32", "step": "0.01", "min": 0}),
             "stock_from": forms.DateInput(attrs={"class": "campo-input font-dados w-44", "type": "date"}, format="%Y-%m-%d"),
@@ -37,6 +40,12 @@ class SalesSettingsForm(forms.ModelForm):
         hora = self.cleaned_data["day_cutoff_hour"]
         if hora > 11:
             raise forms.ValidationError("A hora de corte é de madrugada: entre 0 e 11.")
+        return hora
+
+    def clean_service_change_hour(self):
+        hora = self.cleaned_data["service_change_hour"]
+        if not 12 <= hora <= 23:
+            raise forms.ValidationError("A mudança para o jantar é à tarde ou à noite: entre 12 e 23.")
         return hora
 
     def clean(self):

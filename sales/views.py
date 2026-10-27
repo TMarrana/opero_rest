@@ -99,6 +99,20 @@ def _tabela_dias(casa, inicio, fim):
     )
 
 
+def _tabela_servicos(casa, inicio, fim):
+    return exports.Tabela(
+        titulo="Vendas por serviço",
+        colunas=["Serviço", "Vendas sem IVA", "Peso (%)", "Documentos", "Ticket médio", "Horas trabalhadas",
+                 "Vendas por hora", "Custo de pessoal (%)"],
+        linhas=[
+            [s["nome"], s["total"], s["peso"], s["vendas"], s["ticket"], s["horas"], s["por_hora"], s["custo_pessoal"]]
+            for s in reports.por_servico(casa, inicio, fim)
+        ],
+        formatos=[exports.TEXTO, exports.EUROS, exports.PERCENTAGEM, exports.NUMERO, exports.EUROS, exports.HORAS,
+                  exports.EUROS, exports.PERCENTAGEM],
+    )
+
+
 def _tabela_produtos(casa, inicio, fim):
     return exports.Tabela(
         titulo="Vendas por produto",
@@ -118,8 +132,11 @@ class SalesView(ManagerRequiredMixin, View):
         exportar = request.GET.get("exportar")
         if exportar in ("dias", "produtos") and request.GET.get("formato") == "xlsx":
             nome = f"vendas-por-{'dia' if exportar == 'dias' else 'produto'}-{inicio:%Y%m%d}-{fim:%Y%m%d}"
-            tabela = _tabela_dias(casa, inicio, fim) if exportar == "dias" else _tabela_produtos(casa, inicio, fim)
-            return exports.xlsx_response([tabela], nome)
+            if exportar == "dias":
+                tabelas = [_tabela_dias(casa, inicio, fim), _tabela_servicos(casa, inicio, fim)]
+            else:
+                tabelas = [_tabela_produtos(casa, inicio, fim)]
+            return exports.xlsx_response(tabelas, nome)
         if exportar == "dias":
             linhas, totais = reports.por_dia(casa, inicio, fim)
             return _csv(
@@ -163,6 +180,7 @@ class SalesView(ManagerRequiredMixin, View):
             "var_ticket": reports.variacao(atual.ticket, anterior.ticket),
             "dias": linhas,
             "totais": totais,
+            "servicos": reports.por_servico(casa, inicio, fim),
             "mapa": reports.mapa_semana(casa, inicio, fim),
             "produtos": reports.por_produto(casa, inicio, fim)[:20],
             "familias": reports.por_familia(casa, inicio, fim),

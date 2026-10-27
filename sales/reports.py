@@ -4,6 +4,9 @@ só com os documentos que contam (sem anulados; notas de crédito a abater).
 
 As horas trabalhadas vêm do ponto. Num dia sem registos de ponto mas com
 turnos publicados, usam-se as horas previstas, e o dia fica assinalado.
+
+Os serviços (almoço e jantar) dividem-se pela hora de mudança da casa: as
+vendas pela hora do documento, as horas trabalhadas cortadas nessa hora.
 """
 import datetime
 from dataclasses import dataclass
@@ -18,6 +21,7 @@ ZERO = Decimal(0)
 CENT = Decimal("0.01")
 MILESIMA = Decimal("0.001")
 DIAS_SEMANA = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+SERVICOS = ("Almoço", "Jantar")
 
 
 @dataclass
@@ -65,30 +69,66 @@ def _dias(inicio, fim):
         dia += datetime.timedelta(days=1)
 
 
-def horas_trabalhadas(restaurant, inicio, fim):
-    """{dia: (horas, previstas)}. As horas do ponto, sem pausas não pagas e
-    sem registos por resolver; sem ponto, as dos turnos publicados."""
+def _cortar(inicio, fim, mudanca):
+    """[antes, depois] da mudança, do intervalo de `inicio` a `fim`."""
+    zero = datetime.timedelta()
+    return [max(min(fim, mudanca) - inicio, zero), max(fim - max(inicio, mudanca), zero)]
+
+
+def _mudanca(dia, hora):
+    return timezone.make_aware(datetime.datetime.combine(dia, datetime.time(hora)))
+
+
+def horas_por_servico(restaurant, inicio, fim, hora_mudanca=None):
+    """{dia: ([almoço, jantar], previstas)}. As horas do ponto, sem pausas
+    não pagas e sem registos por resolver; sem ponto, as dos turnos
+    publicados. Sem hora de mudança, conta tudo no almoço."""
     from attendance.models import TimeEntry
     from shifts.models import Shift
 
+    def somar(acumulado, dia, partes):
+        atual = acumulado.setdefault(dia, [datetime.timedelta(), datetime.timedelta()])
+        for i, parte in enumerate(partes):
+            atual[i] += parte
+
+    def partes(dia, a, b):
+        if hora_mudanca is None:
+            return [b - a, datetime.timedelta()]
+        return _cortar(a, b, _mudanca(dia, hora_mudanca))
+
+    agora = timezone.now()
     reais = {}
     entradas = (
         TimeEntry.objects.filter(restaurant=restaurant, work_date__range=(inicio, fim))
-        .resolved()
+        .resolved(agora)
         .prefetch_related("breaks__break_type")
     )
     for e in entradas:
-        reais[e.work_date] = reais.get(e.work_date, datetime.timedelta()) + e.worked()
+        saida = e.check_out or agora
+        trabalhadas = partes(e.work_date, e.check_in, saida)
+        for b in e.breaks.all():
+            if not b.break_type.paid:
+                pausa = partes(e.work_date, b.start, b.end or saida)
+                trabalhadas = [t - p for t, p in zip(trabalhadas, pausa)]
+        somar(reais, e.work_date, [max(t, datetime.timedelta()) for t in trabalhadas])
     previstas = {}
     for s in Shift.objects.filter(restaurant=restaurant, work_date__range=(inicio, fim), state=Shift.State.PUBLICADO):
-        previstas[s.work_date] = previstas.get(s.work_date, datetime.timedelta()) + s.duration
+        somar(previstas, s.work_date, partes(s.work_date, s.start_at, s.end_at))
     horas = {}
     for dia in _dias(inicio, fim):
-        if reais.get(dia):
+        if dia in reais and sum(reais[dia], datetime.timedelta()):
             horas[dia] = (reais[dia], False)
-        elif previstas.get(dia):
+        elif dia in previstas and sum(previstas[dia], datetime.timedelta()):
             horas[dia] = (previstas[dia], True)
     return horas
+
+
+def horas_trabalhadas(restaurant, inicio, fim):
+    """{dia: (horas, previstas)}, com os dois serviços juntos."""
+    return {
+        dia: (sum(partes, datetime.timedelta()), previstas)
+        for dia, (partes, previstas) in horas_por_servico(restaurant, inicio, fim).items()
+    }
 
 
 def _em_horas(delta):
@@ -142,6 +182,39 @@ def _linha(dia, total, vendas, horas, previstas, custo_hora):
         "por_hora": por_hora,
         "custo_pessoal": custo,
     }
+
+
+def servico_da_hora(hora, regras):
+    """0 (almoço) ou 1 (jantar), pela hora local de uma venda. Depois da
+    meia-noite, até à hora de corte, ainda é jantar."""
+    return 0 if regras.day_cutoff_hour <= hora < regras.service_change_hour else 1
+
+
+def por_servico(restaurant, inicio, fim):
+    """Uma linha por serviço, com as vendas, as horas e o peso no total."""
+    regras = SalesSettings.for_restaurant(restaurant)
+    totais = [ZERO, ZERO]
+    vendas = [0, 0]
+    for hora, tipo, total in documentos(restaurant, inicio, fim).values_list("system_entry", "doc_type", "net_total"):
+        i = servico_da_hora(timezone.localtime(hora).hour, regras)
+        totais[i] += total
+        if tipo in SalesDocument.SALE_TYPES:
+            vendas[i] += 1
+    horas = [datetime.timedelta(), datetime.timedelta()]
+    previstas = [False, False]
+    for partes, prev in horas_por_servico(restaurant, inicio, fim, regras.service_change_hour).values():
+        for i, parte in enumerate(partes):
+            horas[i] += parte
+            previstas[i] = previstas[i] or (prev and parte > datetime.timedelta())
+    soma = sum(totais, ZERO)
+    linhas = []
+    for i, nome in enumerate(SERVICOS):
+        total = _euros(totais[i])
+        linha = _linha(None, total, vendas[i], horas[i] or None, previstas[i], regras.hourly_cost)
+        linha["nome"] = nome
+        linha["peso"] = (total / soma * 100).quantize(Decimal("0.1")) if soma > 0 else None
+        linhas.append(linha)
+    return linhas
 
 
 def mapa_semana(restaurant, inicio, fim):

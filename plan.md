@@ -43,7 +43,7 @@ Ao concluir qualquer trabalho descrito na secção 8:
 | 7 — Quiosque e app do colaborador separados | 🟡 Código completo; âmbito aprovado pelo TM; falta testar num tablet e num telemóvel reais |
 | 8 — Calendário mensal de ausências | 🟡 Código completo e visto no browser; falta a revisão do TM com dados reais |
 | 9 — Vários restaurantes | 🟡 Código completo; o trabalhador em várias casas só foi testado pelos testes, não no browser. Âmbito aprovado pelo TM. Falta a confirmação do contabilista sobre a casa principal |
-| 10 — Vendas a partir do SAF-T | 🟡 Código completo e visto no browser com dados sintéticos; falta validar com o ficheiro real do cliente de teste e as vendas por serviço |
+| 10 — Vendas a partir do SAF-T | 🟡 Código completo e visto no browser com dados sintéticos; falta validar com o ficheiro real do cliente de teste e ver as vendas por serviço no browser |
 | 11 — Fornecedores e compras | 🟡 Código completo, testado e visto no browser; âmbito aprovado pelo TM; falta o uso real com um fornecedor |
 | 12 — Consumos internos | 🟡 Código completo, testado e visto no browser; falta o consumo de pratos (Fase 13) e a resposta do contabilista sobre o mapa |
 | 13 — Fichas técnicas | 🟡 Código completo, testado e visto no browser (só pelo texto das páginas); âmbito aprovado pelo TM; falta a revisão visual |
@@ -98,7 +98,7 @@ O docx trata a interface como mínima ("navegação simples", dashboard sem grá
 | Sistema de design próprio (secção 4) | Decidido |
 | App do colaborador no telemóvel, separada do backoffice, só para consultar e pedir | Decidido |
 | PWA instalável | Decidido |
-| Ponto picado só no tablet partilhado, com nome e código (Fase 7) | Decidido pelo TM; **a validar com AT** (secção 7) |
+| Ponto picado só no tablet partilhado, com nome e código (Fase 7) | Decidido pelo TM e confirmado a 2026-10-27. Falta dar conhecimento à AT (secção 7) |
 | Fases 5 e 6: pausas, fecho do mês, saldo de férias, planeador de turnos | Decidido pelo TM a 2026-10-27: entram no piloto, ligadas. Falta dar conhecimento à AT (secção 12) |
 | Fases 9 a 15: vários restaurantes, vendas pelo SAF-T, compras, consumos internos, fichas técnicas, stock pelas vendas, análise de dados | Pedido do TM. Decidido pelo TM a 2026-10-27: as Fases 9 a 13 entram no piloto, a 14 faz-se já e fica desligada no piloto (secção 12) |
 
@@ -475,7 +475,7 @@ Fronteira de segurança explícita: **um código de ponto nunca abre uma sessão
 
 O gerente só cria e gere contas com os perfis Colaborador e Responsável de stock. Contas de Gerente e de Admin só o admin as gere, porque o número de administradores deve ser reduzido. Ninguém muda o próprio perfil nem repõe a própria password neste ecrã.
 
-⚠ **Decisão a validar com AT.** O docx exclui geolocalização, QR code, biometria e relógio físico, mas não se pronuncia sobre um código de marcação. Racional: obrigar pessoal de cozinha a escrever email e password em serviço torna o registo de ponto inutilizável. Picar só no tablet do restaurante dá credibilidade ao registo, porque ninguém marca a entrada a caminho do trabalho, e o código só dá acesso a uma marcação.
+**Decidido pelo TM, confirmado a 2026-10-27; falta a AT tomar conhecimento.** O docx exclui geolocalização, QR code, biometria e relógio físico, mas não se pronuncia sobre um código de marcação. Racional: obrigar pessoal de cozinha a escrever email e password em serviço torna o registo de ponto inutilizável. Picar só no tablet do restaurante dá credibilidade ao registo, porque ninguém marca a entrada a caminho do trabalho, e o código só dá acesso a uma marcação.
 
 ---
 
@@ -761,7 +761,7 @@ O mesmo cliente gere várias casas na mesma conta. Cada pessoa vê só as casas 
 
 ### Fase 10 — Vendas a partir do SAF-T
 *Depende de: Fase 9 (NIF e séries da casa).*
-**Estado:** 🟡 Código completo, testado (`tests/test_vendas.py`, 28 testes) e visto no browser com o `demo`, que importa um SAF-T sintético em cada casa. Faltam o ficheiro real do cliente de teste e as vendas por serviço.
+**Estado:** 🟡 Código completo, testado (`tests/test_vendas.py`, 28 testes) e visto no browser com o `demo`, que importa um SAF-T sintético em cada casa. Faltam o ficheiro real do cliente de teste e ver as vendas por serviço no browser.
 
 O gerente carrega o ficheiro SAF-T (PT) de faturação que o POS exporta, e o Opero Rest passa a saber o que se vendeu, quando e por quanto.
 - **Só leitura:** não mexe no stock (isso é a Fase 14) e não emite nem altera documentos fiscais.
@@ -804,10 +804,10 @@ O gerente carrega o ficheiro SAF-T (PT) de faturação que o POS exporta, e o Op
   - total sem IVA, número de documentos e ticket médio;
   - comparação com o período anterior. Um período que ainda não está todo importado, como o mês corrente, compara-se só com os mesmos dias do anterior;
   - por mês, com setas, ou por um intervalo de datas.
-- [~] Vendas ao lado do ponto: vendas por hora trabalhada, por dia e por serviço. Na semana em planeamento, usam-se as horas previstas nos turnos.
+- [x] Vendas ao lado do ponto: vendas por hora trabalhada, por dia e por serviço. Na semana em planeamento, usam-se as horas previstas nos turnos.
   - Feito: por dia e no total do período. As horas são as do ponto, sem pausas não pagas nem registos por resolver; num dia sem ponto, as dos turnos publicados, assinaladas «prev.».
   - Feito: o custo médio por hora opcional dá o custo de pessoal estimado em percentagem das vendas. Não há salários, porque o docx exclui o cálculo salarial.
-  - Por fazer: por serviço (almoço e jantar). Falta decidir como se define um serviço: pelas horas, ou pelos turnos guardados.
+  - Feito: por serviço (almoço e jantar), pela hora de mudança de cada casa (`SalesSettings.service_change_hour`, 17h por omissão, entre 12 e 23; decidido a 2026-10-27). As vendas contam pela hora do documento: da hora de corte à de mudança é almoço, o resto é jantar, incluindo depois da meia-noite. As horas do ponto e dos turnos cortam-se na mesma hora, e as pausas não pagas também. Cartão «Por serviço» no ecrã Vendas e uma segunda folha no Excel das vendas por dia.
 - [x] O dashboard avisa quando o último dia importado tem mais de 7 dias, e leva a Importar. O painel do grupo tem as vendas do mês de cada casa e o último dia importado.
 - [x] Exportação CSV das vendas por dia (com as horas) e por produto, com `;`, BOM e vírgula decimal, como a do mês.
 - [ ] Validar com um ficheiro real do cliente de teste, sem o pôr no repositório. Nos testes e no `demo` usa-se um SAF-T sintético (`sales/sintetico.py`). Confirmar com o cliente:
@@ -1145,7 +1145,7 @@ Bloqueiam a Fase 4, não a Fase 0. O desenvolvimento começa sem elas.
 | RGPD e tratamento de dados de trabalhadores | AT | retenção, exportação, consentimento, política de privacidade; DPA com o restaurante e lista de subcontratantes (BR-006) |
 | Política de backups e recuperação | TM | frequência, retenção, teste de restauro |
 | Permissões do gerente sobre stock (secção 7) | AT | **Decidido pelo TM a 2026-10-27: pode**, como estava: artigos, movimentos e compras. Restringir depois é uma linha nos mixins. Falta a AT tomar conhecimento |
-| Código de ponto só no tablet partilhado (⚠ secção 7) | AT | Fase 7; o TM já decidiu e implementou |
+| Código de ponto só no tablet partilhado (secção 7) | AT | **Confirmado pelo TM a 2026-10-27:** fica como está construído na Fase 7. A validação jurídica do registo de tempos pode ainda pedir mais. Falta a AT tomar conhecimento |
 | Cliente piloto e disponibilidade semanal AT/TM | AT | calendário das sprints |
 | Âmbito das Fases 5 e 6 (saldo anual e planeamento, que o docx exclui do MVP) | AT | **Decidido pelo TM a 2026-10-27:** as duas entram no piloto e ficam ligadas. Os valores por omissão (14 h por resolver, 22 dias de férias, 11 h de descanso, formato do CSV) continuam à espera do contabilista e do jurista. Falta a AT tomar conhecimento |
 | Validação jurídica do registo de tempos, férias e descansos (Código do Trabalho; Q-001 e Q-010 do estudo) | AT, com contabilista ou jurista | pode bloquear o piloto; define os valores por defeito da Fase 5 |
@@ -1157,8 +1157,8 @@ Bloqueiam a Fase 4, não a Fase 0. O desenvolvimento começa sem elas.
 | Catálogo de artigos do grupo ou de cada casa | AT + TM | **Decidido a 2026-10-27: de cada casa.** O modelo do stock não muda. As fichas (Fase 13) e os fornecedores (Fase 11) continuam ligados aos artigos de cada casa pelo nome e pela unidade, e a transferência cria o artigo no destino se faltar |
 | Trabalhador que trabalha em mais de uma casa | AT, com o contabilista | **Decidido a 2026-10-27: uma casa principal** (o empregador), com a ficha, o saldo de férias e o fecho do mês; pica e tem turnos nas outras. Feito (Fase 9). Falta o contabilista confirmar que o fecho e a exportação na casa principal, com as horas de todas, lhe servem |
 | Várias casas com o mesmo NIF | TM, com o cliente de teste | distinguem-se pela série dos documentos no SAF-T; confirmar como o POS numera as séries (Fase 10). Já está feito: cada casa indica as suas séries nas regras de vendas, e sem elas a importação é recusada |
-| Hora de corte do dia de serviço nas vendas | AT + TM | proposta: 5h, configurável por casa (Fase 10). Feito com as 5h por omissão; falta a AT confirmar |
-| Serviço (almoço, jantar) nas vendas por hora trabalhada | AT + TM | proposta: pelos turnos guardados, ou por uma hora de mudança configurável (Fase 10) |
+| Hora de corte do dia de serviço nas vendas | AT + TM | **Decidido pelo TM a 2026-10-27: 5h por omissão**, configurável por casa entre as 0h e as 11h nas Regras de vendas (Fase 10), como já estava. Falta a AT tomar conhecimento |
+| Serviço (almoço, jantar) nas vendas por hora trabalhada | AT + TM | **Decidido pelo TM a 2026-10-27: por uma hora de mudança por casa**, 17h por omissão, nas Regras de vendas. Os turnos guardados não serviam: sobrepõem-se (turnos corridos, áreas diferentes) ou faltam. Feito (Fase 10). Falta a AT tomar conhecimento |
 | Operador do POS (`SourceID`) ligado ao trabalhador, para vendas por empregado | AT, com jurista | toca em RGPD e na relação laboral; fica desligado até haver decisão (Fase 10) |
 | Stock negativo causado pelas vendas | AT + TM | **Decidido pelo TM a 2026-10-27:** só os movimentos de origem venda deixam o stock negativo; o artigo fica assinalado «Stock negativo, contar» até a contagem seguinte o acertar (Fase 14). Falta a AT tomar conhecimento |
 | Refeições do pessoal e consumos internos no processamento salarial | AT, com o contabilista | formato e conteúdo do mapa mensal da Fase 12 |
@@ -1179,6 +1179,7 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 
 | Data | Fase | O que foi feito | Por fechar | Próximo passo |
 |---|---|---|---|---|
+| 2026-10-27 (12ª) | 7, 10 | Decisões anteriores commitadas (`1610638`). **Decisões do TM: o código de ponto fica só no tablet partilhado, a hora de corte das vendas fica nas 5h, e o almoço e o jantar separam-se por uma hora de mudança por casa.** As duas primeiras não mudam código. **Vendas por serviço feitas:**<br>• **Dados:** `SalesSettings.service_change_hour` (17h, entre 12 e 23; migração `sales/0003`), nas Regras de vendas e no resumo de Importar.<br>• **Contas (`sales/reports.py`):** `horas_por_servico()` corta as horas do ponto e dos turnos publicados na hora de mudança, sem as pausas não pagas; `horas_trabalhadas()` passa a ser a soma das duas partes. `por_servico()` com as vendas, os documentos, o ticket, as horas, as vendas por hora, o custo de pessoal e o peso de cada serviço.<br>• **Ecrã:** cartão «Por serviço» no ecrã Vendas, antes do «Por dia»; folha «Vendas por serviço» no Excel das vendas por dia.<br>5 testes novos (`TestServicos` em `tests/test_vendas.py`) e três POST antigos das regras com o campo novo; 437 no total; `check` e `makemigrations --check` limpos. Migração aplicada ao `db.sqlite3` (cópia de segurança fora do repositório). As classes já estavam no CSS, por isso o CSS e o service worker não mudaram. | O cartão não foi visto no browser. A Análise não mostra os serviços. A AT tem de tomar conhecimento das decisões. | Próximo item do `todo.md`: pergunta na saída tardia (R-012), se entra ou não. |
 | 2026-10-27 (11ª) | 1, 11 | **Decisão do TM: o gerente pode criar artigos, registar movimentos e tratar das compras**, como já estava. Secções 7 e 12 e Notas de desvio atualizadas; `todo.md` marcado. Nenhum código alterado. | A AT tomar conhecimento. | Próximo item do `todo.md`: código de ponto só no tablet partilhado (validar com a AT). |
 | 2026-10-27 (10ª) | 7, 9, 11, 13 | **Decisão do TM: o âmbito das Fases 7, 9, 11 e 13 fica aprovado tal como está construído.** Estados das fases, secção 1 e Notas de desvio atualizados; tirada da Fase 13 a decisão do catálogo, que já estava tomada. `todo.md` marcado. Nenhum código alterado. | A AT tomar conhecimento e fazer os testes funcionais. | Próximo item do `todo.md`: o gerente pode criar artigos e registar movimentos? |
 | 2026-10-27 (9ª) | 5, 6 | **Decisão do TM: as Fases 5 e 6 entram no piloto, ligadas.** Secções 1, 6, 8 e 12 e Notas de desvio atualizadas; `todo.md` marcado. Nenhum código alterado. | A AT tomar conhecimento. Os valores por omissão continuam à espera do contabilista e do jurista. | Próximo item do `todo.md`: aprovar as fases já feitas (7, 9, 11 e 13). |
@@ -1217,6 +1218,9 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 
 Alterações ao plano decididas durante a execução. Se algo aqui contradiz uma secção acima, **corrigir também a secção** — este registo é o histórico, não a fonte de verdade.
 
+- **2026-10-27 · Serviços pela hora de mudança.** Decisão do TM, entre as duas propostas. Uma venda depois da meia-noite, antes da hora de corte, conta no jantar. As horas cortam-se no dia de trabalho do registo: quem pica a entrada depois da meia-noite fica com o dia seguinte e conta no almoço desse dia, um caso raro que se deixou como está. A Análise (Fase 15) ainda não mostra os serviços.
+- **2026-10-27 · Hora de corte às 5h, confirmada.** Decisão do TM: fica a proposta, configurável por casa. O código não muda.
+- **2026-10-27 · Código de ponto só no tablet, confirmado.** Decisão do TM: picar continua a fazer-se só no tablet partilhado, com nome e código; a app do telemóvel não pica. O código não muda.
 - **2026-10-27 · O gerente gere o stock.** Decisão do TM: o pressuposto passa a decisão. O gerente cria e edita artigos, regista movimentos e trata das compras. O código não muda.
 - **2026-10-27 · Fases 7, 9, 11 e 13 aprovadas pelo TM.** O âmbito fica como está construído. A AT fica a saber e dá o visto funcional nos testes dela; os bugs P0 e P1 que encontrar corrigem-se antes do piloto. Os testes em aparelhos reais, com o cliente e no browser continuam no `todo.md`.
 - **2026-10-27 · Fases 5 e 6 no piloto.** Decisão do TM. O saldo anual de férias e o planeador de turnos, que o docx deixava fora do MVP, entram no piloto e ficam ligados. Fecha a nota de 2026-10-24 sobre o arranque da Fase 5 sem a aprovação da AT; a AT fica a saber.
