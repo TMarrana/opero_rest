@@ -165,7 +165,7 @@ class Command(BaseCommand):
             "dono@tasca.pt (Admin do grupo)"
         )
         self.stdout.write(
-            "Codigos de ponto: Marta 2468, Rui 1122, Gustavo 1357, Ines 4321 na Ribeira "
+            "Codigos de ponto: Marta 2468, Rui 1122, Gustavo 1357, Ines 4321 na Ribeira e na Esquina "
             "(ativar o tablet em Dispositivo e abrir /quiosque/)"
         )
 
@@ -191,6 +191,8 @@ class Command(BaseCommand):
         ines, _ = Worker.objects.get_or_create(restaurant=ribeira, full_name="Inês Rocha", defaults={"job_title": "sala"})
         if not ines.has_code:
             ines.set_kiosk_code("4321")
+        # A Inês é da Ribeira e faz jantares na Esquina (Fase 9).
+        ines.other_restaurants.add(esquina)
         Worker.objects.get_or_create(restaurant=ribeira, full_name="Paulo Freitas", defaults={"job_title": "cozinha"})
 
         categorias = {c.name: c for c in Category.objects.filter(restaurant=ribeira)}

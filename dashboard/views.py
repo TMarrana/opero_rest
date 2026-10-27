@@ -62,7 +62,7 @@ class DashboardView(RoleRequiredMixin, TemplateView):
             )
             ctx["ferias_pendentes"] = pendentes[:6]
             ctx["ferias_pendentes_total"] = pendentes.count()
-            entradas = restaurant_scope(request, TimeEntry.objects.all(), field="worker__restaurant")
+            entradas = restaurant_scope(request, TimeEntry.objects.all())
             ctx["em_turno"] = (
                 entradas.filter(check_out__isnull=True).resolved().select_related("worker").order_by("check_in")
             )
@@ -90,9 +90,7 @@ class DashboardView(RoleRequiredMixin, TemplateView):
                 atraso = (timezone.localdate() - ctx["ultimo_dia_vendas"]).days
                 ctx["vendas_atraso"] = atraso if atraso > VENDAS_ATRASO_DIAS else 0
             ctx["pedidos_correcao"] = restaurant_scope(
-                request,
-                CorrectionRequest.objects.filter(status=CorrectionRequest.Status.PENDENTE),
-                field="worker__restaurant",
+                request, CorrectionRequest.objects.filter(status=CorrectionRequest.Status.PENDENTE)
             ).count()
         return ctx
 
@@ -118,7 +116,7 @@ def _sinais(restaurant):
     from attendance.month import previous_month
     from workers.models import Worker
 
-    entradas = TimeEntry.objects.filter(worker__restaurant=restaurant)
+    entradas = TimeEntry.objects.filter(restaurant=restaurant)
     ativos = Worker.objects.filter(restaurant=restaurant, is_active=True)
     anterior = previous_month(timezone.localdate())
     aprovados = MonthClose.objects.filter(worker__in=ativos, month=anterior, reopened_at__isnull=True).count()
@@ -135,7 +133,7 @@ def _sinais(restaurant):
             worker__restaurant=restaurant, status=VacationRequest.Status.PENDENTE
         ).count(),
         "correcoes_pendentes": CorrectionRequest.objects.filter(
-            worker__restaurant=restaurant, status=CorrectionRequest.Status.PENDENTE
+            restaurant=restaurant, status=CorrectionRequest.Status.PENDENTE
         ).count(),
         "por_aprovar": ativos.count() - aprovados,
         "vendas_mes": vendas_mes,

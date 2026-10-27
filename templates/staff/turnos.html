@@ -11,7 +11,7 @@
     <span class="text-right">
       {% for t in d.turnos %}
       <span class="block font-dados text-base font-semibold">{{ t.start_at|date:"H:i" }}&ndash;{{ t.end_at|date:"H:i" }}</span>
-      <span class="block text-xs text-ardosia">{{ t.label }}{% if t.work_area %} · {{ t.work_area.name }}{% endif %}</span>
+      <span class="block text-xs text-ardosia">{{ t.label }}{% if t.work_area %} · {{ t.work_area.name }}{% endif %}{% if varias_casas %} · {{ t.restaurant.name }}{% endif %}</span>
       {% empty %}
       {% if d.folga %}{% include "components/badge.html" with label="Folga" variante="servico" %}{% else %}<span class="text-sm text-ardosia">—</span>{% endif %}
       {% endfor %}

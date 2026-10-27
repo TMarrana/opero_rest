@@ -24,15 +24,16 @@ from .services import register_movement
 CENT = Decimal("0.01")
 
 
-def meals_check(*, worker, day, extra=0):
+def meals_check(*, worker, day, extra=0, restaurant=None):
     """(refeições no dia, limite) para um trabalhador, contando `extra`
-    refeições ainda por registar. O limite é o da casa por turno, vezes os
-    turnos do dia: os registos de ponto, ou, sem ponto, os turnos
+    refeições ainda por registar. O limite é o da casa onde comeu (por
+    omissão, a principal) por turno, vezes os turnos do dia em qualquer
+    casa do grupo: os registos de ponto, ou, sem ponto, os turnos
     publicados. Sem limite configurado, devolve None no limite."""
     from attendance.models import TimeEntry
     from shifts.models import Shift
 
-    por_turno = ConsumptionSettings.for_restaurant(worker.restaurant).meals_per_shift
+    por_turno = ConsumptionSettings.for_restaurant(restaurant or worker.restaurant).meals_per_shift
     refeicoes = (
         InternalConsumption.objects.filter(
             worker=worker, consumed_on=day, reason=InternalConsumption.Reason.REFEICAO, cancelled_at__isnull=True
@@ -53,8 +54,8 @@ def register_consumption(*, restaurant, worker, reason, day, lines, user, note="
     consumo; `over_limit` diz se passou o limite de refeições (não bloqueia)."""
     if reason not in InternalConsumption.Reason.values:
         raise ValidationError("Escolha o motivo do consumo.")
-    if worker is not None and worker.restaurant_id != restaurant.pk:
-        raise ValidationError(f"{worker} não é desta casa.")
+    if worker is not None and not worker.works_in(restaurant):
+        raise ValidationError(f"{worker} não trabalha nesta casa.")
     if reason == InternalConsumption.Reason.REFEICAO and worker is None:
         raise ValidationError("Uma refeição do pessoal é de um trabalhador. Escolha quem comeu.")
     if day is None:
@@ -76,7 +77,7 @@ def register_consumption(*, restaurant, worker, reason, day, lines, user, note="
 
     acima = False
     if reason == InternalConsumption.Reason.REFEICAO:
-        refeicoes, limite = meals_check(worker=worker, day=day, extra=1)
+        refeicoes, limite = meals_check(worker=worker, day=day, extra=1, restaurant=restaurant)
         acima = limite is not None and refeicoes > limite
 
     with transaction.atomic():

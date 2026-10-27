@@ -21,6 +21,9 @@ minuto. As pausas aparecem ao lado da Saída, sem passo extra.{% endcomment %}
   </div>
   <a href="{% url 'kiosk:inicio' %}" class="btn shrink-0 border border-creme/25 text-base text-creme hover:bg-creme/10">Cancelar</a>
 </header>
+{% if noutra_casa %}
+<p class="aviso aviso-alerta mt-4 flex items-start gap-3 text-base">{% icone "alerta" "mt-0.5 h-5 w-5 shrink-0" %}<span>Tem a entrada aberta em {{ noutra_casa.restaurant.name }} desde {% if noutra_casa.work_date != hoje %}{{ noutra_casa.check_in|date:"d/m" }} às {% endif %}{{ noutra_casa.check_in|date:"H:i" }}. Se picar a entrada aqui, esse registo fica sem saída e {% if worker.user_id %}tem de pedir na app{% else %}tem de pedir ao gerente{% endif %} a correção da hora a que saiu.</span></p>
+{% endif %}
 {% if saida_esquecida %}
 <p class="aviso aviso-alerta mt-4 flex items-start gap-3 text-base">{% icone "alerta" "mt-0.5 h-5 w-5 shrink-0" %}<span>Já passou da hora prevista de saída. Se acabou de chegar para outro turno, pique primeiro a saída e depois a entrada, e {% if worker.user_id %}peça na app{% else %}peça ao gerente{% endif %} a correção da hora de saída.</span></p>
 {% endif %}

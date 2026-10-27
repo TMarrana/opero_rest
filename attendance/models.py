@@ -70,6 +70,11 @@ class TimeEntry(TimeStampedModel):
     worker = models.ForeignKey(
         "workers.Worker", verbose_name="trabalhador", on_delete=models.CASCADE, related_name="time_entries"
     )
+    # A casa onde picou, que pode não ser a principal (Fase 9). Por omissão,
+    # a casa principal do trabalhador.
+    restaurant = models.ForeignKey(
+        "core.Restaurant", verbose_name="casa", on_delete=models.CASCADE, related_name="time_entries"
+    )
     check_in = models.DateTimeField("entrada")
     check_out = models.DateTimeField("saída", null=True, blank=True)
     work_date = models.DateField("dia de trabalho", db_index=True)
@@ -122,6 +127,8 @@ class TimeEntry(TimeStampedModel):
         return f"{self.worker} @ {self.check_in:%Y-%m-%d %H:%M}"
 
     def save(self, *args, **kwargs):
+        if self.restaurant_id is None:
+            self.restaurant_id = self.worker.restaurant_id
         self.work_date = work_date_for(self.check_in)
         update_fields = kwargs.get("update_fields")
         if update_fields is not None and "check_in" in update_fields:
@@ -310,6 +317,11 @@ class CorrectionRequest(TimeStampedModel):
         blank=True,
         related_name="correction_requests",
     )
+    # Quem decide é o gerente desta casa: a do registo, ou, num registo
+    # que falta, a casa onde o colaborador diz que trabalhou (Fase 9).
+    restaurant = models.ForeignKey(
+        "core.Restaurant", verbose_name="casa", on_delete=models.CASCADE, related_name="correction_requests"
+    )
     kind = models.CharField("tipo", max_length=10, choices=Kind.choices)
     old_check_in = models.DateTimeField("entrada registada", null=True, blank=True)
     old_check_out = models.DateTimeField("saída registada", null=True, blank=True)
@@ -346,6 +358,11 @@ class CorrectionRequest(TimeStampedModel):
 
     def __str__(self):
         return f"{self.get_kind_display()} · {self.worker} · {self.get_status_display()}"
+
+    def save(self, *args, **kwargs):
+        if self.restaurant_id is None:
+            self.restaurant_id = self.entry.restaurant_id if self.entry_id else self.worker.restaurant_id
+        super().save(*args, **kwargs)
 
 
 class MonthClose(TimeStampedModel):

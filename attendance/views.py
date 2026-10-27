@@ -14,7 +14,7 @@ from django.views.generic import TemplateView
 
 from core.mixins import ManagerRequiredMixin
 from shifts.models import Shift
-from core.utils import restaurant_scope
+from core.utils import restaurant_scope, workers_scope
 from workers.models import Worker
 
 from .forms import CorrectionDecisionForm, EntryCorrectionForm
@@ -27,16 +27,19 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
     """Ponto da equipa num dia de trabalho: quem esteve, quem está em turno
     e o que falta. Um turno que passa a meia-noite aparece só no dia da
     entrada (Fase 5); um turno de um dia anterior ainda aberto aparece
-    também, assinalado como saída em falta."""
+    também, assinalado como saída em falta. Só contam os registos e os
+    turnos desta casa; quem vem de outra casa aparece nos dias em que cá
+    picou ou tinha turno (Fase 9)."""
 
     template_name = "manage/attendance/dia.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         dia = parse_date(self.request.GET.get("dia", "") or "") or timezone.localdate()
-        workers = restaurant_scope(self.request, Worker.objects.filter(is_active=True))
+        restaurant = self.request.restaurant
+        workers = workers_scope(self.request, Worker.objects.filter(is_active=True))
         entries = (
-            TimeEntry.objects.filter(worker__in=workers)
+            TimeEntry.objects.filter(restaurant=restaurant, worker__in=workers)
             .filter(Q(work_date=dia) | Q(work_date__lt=dia, check_out__isnull=True))
             .select_related("worker", "corrected_by", "work_area")
             .prefetch_related("breaks__break_type")
@@ -48,7 +51,7 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
         agora = timezone.now()
         previstos = {}
         for t in Shift.objects.filter(
-            worker__in=workers, work_date=dia, state=Shift.State.PUBLICADO
+            restaurant=restaurant, worker__in=workers, work_date=dia, state=Shift.State.PUBLICADO
         ).select_related("template"):
             previstos.setdefault(t.worker_id, []).append(t)
         linhas = []
@@ -56,9 +59,13 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
             registos = por_worker.get(w.pk, [])
             do_dia = [r for r in registos if r.work_date == dia]
             turnos = previstos.get(w.pk, [])
+            visita = w.restaurant_id != restaurant.pk
+            if visita and not registos and not turnos:
+                continue
             linhas.append(
                 {
                     "worker": w,
+                    "visita": visita,
                     "registos": registos,
                     "previstos": turnos,
                     "desvios": _desvios(turnos, do_dia, agora),
@@ -76,7 +83,7 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
             status=CorrectionRequest.Status.PENDENTE
         ).count()
         ctx["total_por_resolver"] = (
-            TimeEntry.objects.filter(worker__in=workers).unresolved(now=agora).count()
+            TimeEntry.objects.filter(restaurant=restaurant).unresolved(now=agora).count()
         )
         return ctx
 
@@ -87,9 +94,7 @@ class EntryCorrectionView(ManagerRequiredMixin, View):
 
     def _get_entry(self, request, pk):
         return get_object_or_404(
-            restaurant_scope(
-                request, TimeEntry.objects.select_related("worker"), field="worker__restaurant"
-            ),
+            restaurant_scope(request, TimeEntry.objects.select_related("worker")),
             pk=pk,
         )
 
@@ -133,10 +138,11 @@ class EntryCorrectionView(ManagerRequiredMixin, View):
 
 
 class EntryAddView(ManagerRequiredMixin, View):
-    """Acrescentar um registo em falta — nasce já como correção auditada."""
+    """Acrescentar um registo em falta — nasce já como correção auditada,
+    na casa ativa."""
 
     def _get_worker(self, request, pk):
-        return get_object_or_404(restaurant_scope(request, Worker.objects.all()), pk=pk)
+        return get_object_or_404(workers_scope(request, Worker.objects.all()), pk=pk)
 
     def get(self, request, pk):
         worker = self._get_worker(request, pk)
@@ -155,6 +161,7 @@ class EntryAddView(ManagerRequiredMixin, View):
                     reason=form.cleaned_data["reason"],
                     check_in=form.cleaned_data["check_in"],
                     check_out=form.cleaned_data["check_out"],
+                    restaurant=request.restaurant,
                 )
                 messages.success(request, "Registo acrescentado")
                 dia = entry.work_date.isoformat()
@@ -192,7 +199,6 @@ def _scoped_requests(request):
     return restaurant_scope(
         request,
         CorrectionRequest.objects.select_related("worker", "entry", "decided_by"),
-        field="worker__restaurant",
     )
 
 
@@ -207,9 +213,8 @@ class CorrectionRequestListView(ManagerRequiredMixin, TemplateView):
         qs = _scoped_requests(self.request)
         ctx["pendentes"] = qs.filter(status=CorrectionRequest.Status.PENDENTE).order_by("created_at")
         ctx["decididos"] = qs.exclude(status=CorrectionRequest.Status.PENDENTE).order_by("-decided_at")[:30]
-        workers = restaurant_scope(self.request, Worker.objects.all())
         ctx["por_resolver"] = (
-            TimeEntry.objects.filter(worker__in=workers)
+            restaurant_scope(self.request, TimeEntry.objects.all())
             .unresolved()
             .exclude(correction_requests__status=CorrectionRequest.Status.PENDENTE)
             .select_related("worker")

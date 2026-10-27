@@ -15,7 +15,7 @@ from django.views import View
 
 from attendance.month import month_start, next_month, previous_month
 from core.mixins import AdminRequiredMixin, StockRequiredMixin
-from core.utils import parse_decimal, restaurant_scope
+from core.utils import parse_decimal, restaurant_scope, workers_scope
 from workers.models import Worker
 
 from . import consumption as servico
@@ -62,7 +62,7 @@ class ConsumptionListView(StockRequiredMixin, View):
                 "mapa": servico.month_map(request.restaurant, mes),
                 "consumos": consumos,
                 "pessoa": pessoa,
-                "trabalhadores": restaurant_scope(request, Worker.objects.all()).order_by("full_name"),
+                "trabalhadores": workers_scope(request, Worker.objects.all()).order_by("full_name"),
                 "regras": ConsumptionSettings.for_restaurant(request.restaurant),
             },
         )
@@ -85,7 +85,7 @@ class ConsumptionCreateView(StockRequiredMixin, View):
                 "hoje": timezone.localdate(),
                 "dia": dados.get("dia") or timezone.localdate().isoformat(),
                 "motivos": InternalConsumption.Reason.choices,
-                "trabalhadores": restaurant_scope(request, Worker.objects.filter(is_active=True)).order_by("full_name"),
+                "trabalhadores": workers_scope(request, Worker.objects.filter(is_active=True)).order_by("full_name"),
                 "artigos": restaurant_scope(request, Item.objects.filter(is_active=True)).order_by("name"),
                 "regras": ConsumptionSettings.for_restaurant(request.restaurant),
             },
@@ -111,7 +111,7 @@ class ConsumptionCreateView(StockRequiredMixin, View):
             return self._render(request, dados, erro=" ".join(exc.messages), status=400)
         messages.success(request, f"Consumo {consumo.reference} registado")
         if consumo.over_limit:
-            _, limite = servico.meals_check(worker=consumo.worker, day=consumo.consumed_on)
+            _, limite = servico.meals_check(worker=consumo.worker, day=consumo.consumed_on, restaurant=consumo.restaurant)
             motivo = "não tinha turno nesse dia" if not limite else f"o limite é {limite} para os turnos desse dia"
             messages.warning(
                 request,
@@ -125,7 +125,7 @@ class ConsumptionCreateView(StockRequiredMixin, View):
             return None
         if not valor.isdigit():
             raise ValidationError("Escolha quem consumiu: um trabalhador, ou a casa.")
-        return get_object_or_404(restaurant_scope(request, Worker.objects.all()), pk=int(valor))
+        return get_object_or_404(workers_scope(request, Worker.objects.all()), pk=int(valor))
 
     def _dia(self, valor):
         try:

@@ -11,7 +11,7 @@ from django.views import View
 
 from core.mixins import ManagerRequiredMixin
 from core.models import WorkArea
-from core.utils import restaurant_scope
+from core.utils import workers_scope
 from vacations.models import VacationRequest
 from workers.models import Worker
 
@@ -67,7 +67,7 @@ class BulkForm(forms.Form):
     def __init__(self, *args, restaurant=None, semana=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["template"].queryset = _templates(restaurant)
-        self.fields["workers"].queryset = Worker.objects.filter(restaurant=restaurant, is_active=True)
+        self.fields["workers"].queryset = Worker.objects.filter(is_active=True).in_restaurant(restaurant)
         self.fields["days"].choices = [
             (d.isoformat(), d.strftime("%a %d/%m")) for d in services.week_days(semana)
         ]
@@ -83,19 +83,30 @@ class PlannerView(ManagerRequiredMixin, View):
         semana = _semana(request)
         dias = services.week_days(semana)
         area = request.GET.get("area", "")
-        workers = restaurant_scope(request, Worker.objects.filter(is_active=True))
+        workers = workers_scope(request, Worker.objects.filter(is_active=True))
         turnos = Shift.objects.filter(restaurant=restaurant, work_date__range=(dias[0], dias[-1])).select_related(
             "template", "work_area"
         )
+        # Os turnos de quem também trabalha noutra casa, só para consulta
+        # (Fase 9). Os rascunhos de lá não aparecem.
+        fora = {}
+        for s in (
+            Shift.objects.filter(
+                worker__in=workers, work_date__range=(dias[0], dias[-1]), state=Shift.State.PUBLICADO
+            )
+            .exclude(restaurant=restaurant)
+            .select_related("restaurant")
+        ):
+            fora.setdefault((s.worker_id, s.work_date), []).append(s)
         if area:
             turnos_area = turnos.filter(work_area_id=area)
             workers = workers.filter(pk__in=turnos_area.values("worker"))
         folgas = {
             (f.worker_id, f.date): f
-            for f in RestDay.objects.filter(restaurant=restaurant, date__range=(dias[0], dias[-1]))
+            for f in RestDay.objects.filter(worker__in=workers, date__range=(dias[0], dias[-1]))
         }
         ausencias = VacationRequest.objects.filter(
-            worker__restaurant=restaurant,
+            worker__in=workers,
             status__in=[VacationRequest.Status.APROVADO, VacationRequest.Status.PENDENTE],
             start_date__lte=dias[-1],
             end_date__gte=dias[0],
@@ -113,6 +124,7 @@ class PlannerView(ManagerRequiredMixin, View):
                     {
                         "dia": d,
                         "turnos": por_celula.get((w.pk, d), []),
+                        "fora": fora.get((w.pk, d), []),
                         "folga": folgas.get((w.pk, d)),
                         "ausencias": [a for a in ausencias if a.worker_id == w.pk and a.start_date <= d <= a.end_date],
                     }
@@ -121,7 +133,9 @@ class PlannerView(ManagerRequiredMixin, View):
                 (s.duration for c in celulas for s in c["turnos"] if s.state != Shift.State.RESERVA and not s.pending_removal),
                 datetime.timedelta(),
             )
-            linhas.append({"worker": w, "celulas": celulas, "total": total})
+            linhas.append(
+                {"worker": w, "celulas": celulas, "total": total, "visita": w.restaurant_id != restaurant.pk}
+            )
         mudancas = services.changes(restaurant, semana)
         return render(
             request,
@@ -152,14 +166,19 @@ class CellView(ManagerRequiredMixin, View):
         return {
             "worker": worker,
             "dia": dia,
-            "turnos": Shift.objects.filter(worker=worker, work_date=dia).select_related("template"),
-            "folga": RestDay.objects.filter(worker=worker, date=dia).first(),
+            "turnos": Shift.objects.filter(worker=worker, work_date=dia, restaurant=restaurant).select_related(
+                "template"
+            ),
+            "fora": Shift.objects.filter(worker=worker, work_date=dia, state=Shift.State.PUBLICADO)
+            .exclude(restaurant=restaurant)
+            .select_related("restaurant"),
+            "folga": RestDay.objects.filter(worker=worker, date=dia).select_related("restaurant").first(),
             "form": form or ShiftForm(restaurant=restaurant),
             "semana": services.week_start(dia),
         }
 
     def _worker(self, request, pk):
-        return get_object_or_404(restaurant_scope(request, Worker.objects.all()), pk=pk)
+        return get_object_or_404(workers_scope(request, Worker.objects.all()), pk=pk)
 
     def get(self, request, worker, dia):
         dia = parse_date(dia)
@@ -185,11 +204,11 @@ class CellView(ManagerRequiredMixin, View):
                 services.set_rest_day(restaurant=restaurant, worker=worker, day=dia)
                 messages.success(request, "Folga marcada")
             elif acao == "tirar_folga":
-                folga = get_object_or_404(RestDay, worker=worker, date=dia)
+                folga = get_object_or_404(RestDay, worker=worker, date=dia, restaurant=restaurant)
                 services.remove_rest_day(rest_day=folga)
                 messages.success(request, "Folga retirada")
             elif acao in ("apagar", "despublicar"):
-                turno = get_object_or_404(Shift, pk=request.POST.get("turno"), worker=worker)
+                turno = get_object_or_404(Shift, pk=request.POST.get("turno"), worker=worker, restaurant=restaurant)
                 if acao == "apagar":
                     services.remove_shift(shift=turno)
                     messages.success(request, "Turno apagado")

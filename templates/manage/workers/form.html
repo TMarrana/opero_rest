@@ -15,6 +15,16 @@
       {% include "components/campo.html" with field=form.user %}
     </div>
     {% include "components/campo.html" with field=form.notes %}
+    {% if form.other_restaurants %}
+    <fieldset class="space-y-2">
+      <legend class="text-sm font-medium">{{ form.other_restaurants.label }}</legend>
+      {% for opcao in form.other_restaurants %}
+      <label class="flex min-h-toque cursor-pointer items-center gap-2 text-sm">{{ opcao.tag }} {{ opcao.choice_label }}</label>
+      {% endfor %}
+      <p class="text-xs text-ardosia">{{ form.other_restaurants.help_text }}</p>
+      {% for erro in form.other_restaurants.errors %}<p class="text-sm font-medium text-perigo">{{ erro }}</p>{% endfor %}
+    </fieldset>
+    {% endif %}
     <label class="flex min-h-toque cursor-pointer items-center gap-2 text-sm font-medium">
       {{ form.is_active }} {{ form.is_active.label }}
     </label>

@@ -19,6 +19,7 @@ from django.views import View
 from accounts.views import device_info, device_work_area
 from attendance.models import BreakType, CorrectionRequest, TimeEntry
 from attendance.services import close_shift, end_break, open_shift, start_break
+from core.models import Restaurant
 from workers.models import Worker
 
 from . import throttle
@@ -51,7 +52,9 @@ class KioskMixin:
         return super().dispatch(request, *args, **kwargs)
 
     def workers(self):
-        qs = Worker.objects.filter(is_active=True, kiosk_code__isnull=False, restaurant_id=self.device["restaurante"])
+        """A equipa da casa do tablet, com quem vem de outra casa do grupo
+        (Fase 9)."""
+        qs = Worker.objects.filter(is_active=True, kiosk_code__isnull=False).in_restaurant(self.device["restaurante"])
         return qs.order_by("full_name")
 
 
@@ -61,14 +64,21 @@ def _saida_esquecida(entry, agora):
     return agora > fim + FOLGA_SAIDA
 
 
-def _estado(worker):
+def _estado(worker, restaurant_id):
+    """Uma entrada aberta noutra casa do grupo não se fecha neste tablet:
+    o ecrã mostra-a e oferece a entrada aqui, que a deixa por resolver
+    (Fase 9)."""
     entry = worker.open_entry
+    noutra_casa = None
+    if entry is not None and entry.restaurant_id != restaurant_id:
+        noutra_casa, entry = entry, None
     pausa = entry.open_break if entry else None
     return {
         "entry": entry,
+        "noutra_casa": noutra_casa,
         "pausa": pausa,
         "saida_esquecida": entry is not None and pausa is None and _saida_esquecida(entry, timezone.now()),
-        "tipos_pausa": BreakType.objects.filter(restaurant=worker.restaurant, archived_at__isnull=True)
+        "tipos_pausa": BreakType.objects.filter(restaurant_id=restaurant_id, archived_at__isnull=True)
         if entry and not pausa
         else [],
         "hoje": timezone.localdate(),
@@ -90,6 +100,11 @@ def _turno_previsto(entry):
         .order_by("start_at")
         .first()
     )
+
+
+def _aberta_noutra_casa(worker, restaurant_id):
+    entry = worker.open_entry
+    return entry is not None and entry.restaurant_id != restaurant_id
 
 
 class NamesView(KioskMixin, View):
@@ -119,7 +134,7 @@ class CodeView(KioskMixin, View):
             # segundo; sem ele, a segunda marcação passava por repetida.
             "token": signing.dumps({"w": worker.pk, "n": secrets.token_hex(8)}, salt=TOKEN_SALT),
             "espera": ESPERA_CODIGO,
-            **_estado(worker),
+            **_estado(worker, self.device["restaurante"]),
         }
         return render(request, "kiosk/acoes.html", contexto)
 
@@ -155,7 +170,11 @@ class MarkView(KioskMixin, View):
             if acao == "entrada":
                 anterior = worker.time_entries.filter(check_out__isnull=True, missing_exit=False).first()
                 entry = open_shift(
-                    worker=worker, at=agora, work_area=device_work_area(request), source=TimeEntry.Source.QUIOSQUE
+                    worker=worker,
+                    at=agora,
+                    work_area=device_work_area(request),
+                    source=TimeEntry.Source.QUIOSQUE,
+                    restaurant=Restaurant.objects.get(pk=self.device["restaurante"]),
                 )
                 esquecida = None
                 if anterior is not None:
@@ -173,11 +192,13 @@ class MarkView(KioskMixin, View):
                     por_resolver=por_resolver.count(),
                     espera=ESPERA_ENTRADA,
                 )
+            elif acao in ("saida", "pausa", "fim_pausa") and _aberta_noutra_casa(worker, self.device["restaurante"]):
+                raise ValidationError("A entrada aberta é de outra casa. Marque lá a saída.")
             elif acao == "saida":
                 close_shift(worker=worker, at=agora)
             elif acao == "pausa":
                 tipo = BreakType.objects.filter(
-                    restaurant=worker.restaurant, archived_at__isnull=True, pk=request.POST.get("tipo_pausa") or None
+                    restaurant_id=self.device["restaurante"], archived_at__isnull=True, pk=request.POST.get("tipo_pausa") or None
                 ).first()
                 if tipo is None:
                     raise ValidationError("Escolha o tipo de pausa.")

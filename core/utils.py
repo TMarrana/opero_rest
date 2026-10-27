@@ -14,6 +14,15 @@ def restaurant_scope(request, qs, field="restaurant"):
     return qs.filter(**{field: request.restaurant.pk})
 
 
+def workers_scope(request, qs):
+    """Os trabalhadores da casa ativa: os da casa principal e os que vêm de
+    outra casa do grupo (Fase 9). Para a ficha, as férias e o fecho do mês,
+    que são da casa principal, usar `restaurant_scope`."""
+    if request.restaurant is None:
+        return qs.none()
+    return qs.in_restaurant(request.restaurant)
+
+
 def parse_decimal(texto, campo="O valor"):
     """Um número escrito à portuguesa (vírgula decimal) ou com ponto. Vazio
     dá None."""

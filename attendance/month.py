@@ -131,7 +131,7 @@ def month_rows(worker, month):
     entradas = (
         TimeEntry.objects.filter(worker=worker, work_date__range=(inicio, fim))
         .resolved()
-        .select_related("work_area")
+        .select_related("work_area", "restaurant")
         .prefetch_related("breaks__break_type")
         .order_by("check_in")
     )
@@ -166,12 +166,13 @@ def month_rows(worker, month):
 
 def export_csv(workers, month):
     """CSV do mês aprovado, para o contabilista. Só os trabalhadores com o
-    mês aprovado entram. Separador ';' e decimais com vírgula, como o
+    mês aprovado entram, com as horas de todas as casas onde trabalharam:
+    o mês fecha-se na casa principal (Fase 9). Separador ';' e decimais com vírgula, como o
     Excel em português espera."""
     saida = io.StringIO()
     escrita = csv.writer(saida, delimiter=";")
     escrita.writerow(
-        ["Trabalhador", "Dia", "Entrada", "Saída", "Pausas não pagas", "Horas trabalhadas", "Área", "Ausência"]
+        ["Trabalhador", "Dia", "Entrada", "Saída", "Pausas não pagas", "Horas trabalhadas", "Área", "Ausência", "Casa"]
     )
     totais = []
     for w in workers:
@@ -190,6 +191,7 @@ def export_csv(workers, month):
                     _horas(l["trabalhado"]) if entradas else "",
                     " | ".join(sorted({e.work_area.name for e in entradas if e.work_area})),
                     l["ausencia"].absence_type.name if l["ausencia"] else "",
+                    " | ".join(sorted({e.restaurant.name for e in entradas})),
                 ]
             )
         totais.append((w, total))

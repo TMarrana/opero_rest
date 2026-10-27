@@ -9,16 +9,20 @@
       <tbody>
         {% for w in workers %}
         <tr {% if not w.is_active %}class="opacity-50"{% endif %}>
-          <td><span class="flex items-center gap-3"><span class="avatar h-9 w-9 text-xs">{{ w.full_name|iniciais }}</span><span class="font-semibold">{{ w.full_name }}</span></span></td>
+          <td><span class="flex items-center gap-3"><span class="avatar h-9 w-9 text-xs">{{ w.full_name|iniciais }}</span><span><span class="block font-semibold">{{ w.full_name }}</span>{% if w.restaurant_id != request.restaurant.pk %}<span class="block text-xs text-ardosia">Casa principal: {{ w.restaurant.name }}</span>{% endif %}</span></span></td>
           <td class="text-ardosia">{{ w.job_title|default:"—" }}</td>
           <td class="text-ardosia">{{ w.contact|default:"—" }}</td>
           <td>{% if w.has_code %}{% include "components/badge.html" with label="Definido" variante="neutro" %}{% else %}<span class="text-sm text-ardosia">—</span>{% endif %}</td>
           <td>{% if w.user %}{% include "components/badge.html" with label="Com conta" variante="neutro" %}{% else %}<span class="text-sm text-ardosia">—</span>{% endif %}</td>
           <td>{% if w.is_active %}{% include "components/badge.html" with label="Ativo" variante="servico" %}{% else %}{% include "components/badge.html" with label="Inativo" %}{% endif %}</td>
           <td class="whitespace-nowrap text-right">
+            {% if w.restaurant_id != request.restaurant.pk %}
+            <span class="text-sm text-ardosia">A ficha é de {{ w.restaurant.name }}</span>
+            {% else %}
             <a href="{% url 'workers:codigo' w.pk %}" class="link-acao">{% if w.has_code %}Repor código{% else %}Definir código{% endif %}</a>
             <a href="{% url 'workers:conta' w.pk %}" class="ml-1.5 link-acao">{% if w.user %}Conta da app{% else %}Dar acesso à app{% endif %}</a>
             <a href="{% url 'workers:editar' w.pk %}" class="ml-1.5 link-acao">Editar</a>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}

@@ -23,23 +23,39 @@ def _open_entry_for_update(worker):
     )
 
 
-def open_shift(*, worker, at=None, work_area=None, source=""):
-    """Marca a entrada. Uma entrada antiga sem saída, que já passou do
-    limite, fica por resolver (R-013) e não impede a entrada nova: o
-    colaborador indica depois a hora de saída com um pedido de correção."""
+def _casa(worker, restaurant):
+    """A casa do registo: a indicada, se a pessoa lá trabalha, ou a casa
+    principal (Fase 9)."""
+    if restaurant is None:
+        return worker.restaurant
+    if not worker.works_in(restaurant):
+        raise ValidationError(f"{worker.full_name} não trabalha em {restaurant}.")
+    return restaurant
+
+
+def open_shift(*, worker, at=None, work_area=None, source="", restaurant=None):
+    """Marca a entrada, na casa onde a pessoa pica. Uma entrada antiga sem
+    saída, que já passou do limite, fica por resolver (R-013) e não impede
+    a entrada nova: o colaborador indica depois a hora de saída com um
+    pedido de correção. O mesmo acontece a uma entrada aberta noutra casa."""
     at = at or timezone.now()
+    restaurant = _casa(worker, restaurant)
     ensure_open(worker, work_date_for(at))
     with transaction.atomic():
         aberto = _open_entry_for_update(worker)
         if aberto is not None:
-            if aberto.is_unresolved(now=at):
+            # Uma entrada aberta noutra casa conta como saída esquecida: a
+            # pessoa já está aqui (Fase 9).
+            if aberto.is_unresolved(now=at) or aberto.restaurant_id != restaurant.pk:
                 aberto.missing_exit = True
                 aberto.save(update_fields=["missing_exit", "updated_at"])
             else:
                 raise ValidationError(
                     f"{worker.full_name} já tem um turno aberto. Marque a saída antes de nova entrada."
                 )
-        return TimeEntry.objects.create(worker=worker, check_in=at, work_area=work_area, source=source)
+        return TimeEntry.objects.create(
+            worker=worker, restaurant=restaurant, check_in=at, work_area=work_area, source=source
+        )
 
 
 def close_shift(*, worker, at=None):
@@ -166,9 +182,10 @@ def correct_entry(*, entry, user, reason, check_in=None, check_out=None):
     return entry
 
 
-def add_manual_entry(*, worker, user, reason, check_in, check_out=None, work_area=None):
+def add_manual_entry(*, worker, user, reason, check_in, check_out=None, work_area=None, restaurant=None):
     """Registo em falta acrescentado pelo gerente — nasce como correção
-    auditada, com autor e motivo."""
+    auditada, com autor e motivo. Fica na casa indicada, ou na principal."""
+    restaurant = _casa(worker, restaurant)
     if not reason or not reason.strip():
         raise ValidationError("O motivo é obrigatório num registo manual.")
     if check_out is not None and check_out <= check_in:
@@ -179,6 +196,7 @@ def add_manual_entry(*, worker, user, reason, check_in, check_out=None, work_are
             raise ValidationError(f"{worker.full_name} já tem um turno aberto.")
         entry = TimeEntry.objects.create(
             worker=worker,
+            restaurant=restaurant,
             check_in=check_in,
             check_out=check_out,
             work_area=work_area,
@@ -188,9 +206,10 @@ def add_manual_entry(*, worker, user, reason, check_in, check_out=None, work_are
         return entry
 
 
-def request_correction(*, worker, note, check_in, check_out, entry=None):
+def request_correction(*, worker, note, check_in, check_out, entry=None, restaurant=None):
     """Pedido de correção do colaborador: alterar um registo seu, ou
-    acrescentar um que falta. Fica pendente até o gerente decidir."""
+    acrescentar um que falta, na casa onde trabalhou. Fica pendente até o
+    gerente dessa casa decidir."""
     if not note or not note.strip():
         raise ValidationError("Diga porquê: o motivo vai para o gerente.")
     if check_out <= check_in:
@@ -206,6 +225,7 @@ def request_correction(*, worker, note, check_in, check_out, entry=None):
     return CorrectionRequest.objects.create(
         worker=worker,
         entry=entry,
+        restaurant=entry.restaurant if entry is not None else _casa(worker, restaurant),
         kind=CorrectionRequest.Kind.ALTERAR if entry else CorrectionRequest.Kind.CRIAR,
         old_check_in=entry.check_in if entry else None,
         old_check_out=entry.check_out if entry else None,
@@ -232,7 +252,7 @@ def decide_correction(*, request_obj, user, approve, note=""):
                 )
             else:
                 pedido.entry = add_manual_entry(
-                    worker=pedido.worker, user=user, reason=motivo,
+                    worker=pedido.worker, user=user, reason=motivo, restaurant=pedido.restaurant,
                     check_in=pedido.new_check_in, check_out=pedido.new_check_out,
                 )
         pedido.status = CorrectionRequest.Status.APROVADO if approve else CorrectionRequest.Status.RECUSADO

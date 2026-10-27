@@ -70,7 +70,7 @@
         <tbody>
           {% for linha in linhas %}
           <tr>
-            <td class="font-medium">{{ linha.worker.full_name }}<span class="block text-xs text-ardosia">{{ linha.worker.job_title }}</span></td>
+            <td class="font-medium">{{ linha.worker.full_name }}<span class="block text-xs text-ardosia">{{ linha.worker.job_title }}{% if linha.visita %}{% if linha.worker.job_title %} · {% endif %}de {{ linha.worker.restaurant.name }}{% endif %}</span></td>
             {% for c in linha.celulas %}
             <td class="align-top p-1">
               <button type="button"
@@ -92,6 +92,12 @@
                   title="{{ s.conflitos|join:'; ' }}">
                   {{ s.start_at|date:"H:i" }}&ndash;{{ s.end_at|date:"H:i" }}
                   <span class="block font-sans">{{ s.label }}{% if s.state == 'RESERVA' %} · reserva{% endif %}</span>
+                </span>
+                {% endfor %}
+                {% for s in c.fora %}
+                <span class="mb-1 block rounded-xl border border-linha px-1.5 py-0.5 font-dados text-xs text-ardosia" title="Turno publicado em {{ s.restaurant.name }}">
+                  {{ s.start_at|date:"H:i" }}&ndash;{{ s.end_at|date:"H:i" }}
+                  <span class="block font-sans">em {{ s.restaurant.name }}</span>
                 </span>
                 {% endfor %}
               </button>

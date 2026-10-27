@@ -93,7 +93,7 @@ class StaffHistoryView(StaffViewMixin, TemplateView):
         if worker is None:
             return render(request, "staff/sem_ficha.html")
         entries = (
-            worker.time_entries.select_related("corrected_by", "work_area")
+            worker.time_entries.select_related("corrected_by", "work_area", "restaurant")
             .prefetch_related("breaks__break_type")[:30]
         )
         pendentes = set(
@@ -110,6 +110,7 @@ class StaffHistoryView(StaffViewMixin, TemplateView):
                 "totais": _totais(worker),
                 "com_pedido": pendentes,
                 "pedidos": worker.correction_requests.select_related("decided_by")[:10],
+                "varias_casas": worker.other_restaurants.exists(),
             },
         )
 
@@ -198,6 +199,10 @@ class StaffCorrectionView(StaffViewMixin, View):
             return None
         return get_object_or_404(worker.time_entries, pk=pk)
 
+    def _casas(self, worker, entry):
+        """Num registo que falta, a casa onde trabalhou (Fase 9)."""
+        return [] if entry is not None else worker.restaurants()
+
     def _render(self, request, worker, entry, form):
         return render(request, "staff/correcao.html", {"worker": worker, "entry": entry, "form": form})
 
@@ -211,19 +216,22 @@ class StaffCorrectionView(StaffViewMixin, View):
             inicial["check_in"] = timezone.localtime(entry.check_in).strftime("%Y-%m-%dT%H:%M")
             if entry.check_out:
                 inicial["check_out"] = timezone.localtime(entry.check_out).strftime("%Y-%m-%dT%H:%M")
-        return self._render(request, worker, entry, CorrectionRequestForm(initial=inicial))
+        return self._render(request, worker, entry, CorrectionRequestForm(initial=inicial, casas=self._casas(worker, entry)))
 
     def post(self, request, pk=None):
         worker = _worker_for(request.user)
         if worker is None:
             return render(request, "staff/sem_ficha.html")
         entry = self._entry(worker, pk)
-        form = CorrectionRequestForm(request.POST)
+        casas = self._casas(worker, entry)
+        form = CorrectionRequestForm(request.POST, casas=casas)
         if form.is_valid():
+            escolhida = form.cleaned_data.get("restaurant")
             try:
                 request_correction(
                     worker=worker,
                     entry=entry,
+                    restaurant=next((c for c in casas if c.pk == escolhida), None),
                     note=form.cleaned_data["note"],
                     check_in=form.cleaned_data["check_in"],
                     check_out=form.cleaned_data["check_out"],
@@ -251,7 +259,7 @@ class StaffShiftsView(StaffViewMixin, TemplateView):
         fim = hoje + datetime.timedelta(days=13)
         turnos = Shift.objects.filter(
             worker=worker, state=Shift.State.PUBLICADO, work_date__range=(hoje, fim)
-        ).select_related("template", "work_area")
+        ).select_related("template", "work_area", "restaurant")
         folgas = set(
             RestDay.objects.filter(
                 worker=worker, state=RestDay.State.PUBLICADO, date__range=(hoje, fim)
@@ -261,7 +269,11 @@ class StaffShiftsView(StaffViewMixin, TemplateView):
         for i in range(14):
             dia = hoje + datetime.timedelta(days=i)
             dias.append({"dia": dia, "turnos": [t for t in turnos if t.work_date == dia], "folga": dia in folgas})
-        return render(request, self.template_name, {"worker": worker, "dias": dias, "hoje": hoje})
+        return render(
+            request,
+            self.template_name,
+            {"worker": worker, "dias": dias, "hoje": hoje, "varias_casas": worker.other_restaurants.exists()},
+        )
 
 
 class StaffConsumptionView(StaffViewMixin, TemplateView):

@@ -42,7 +42,7 @@
   <div class="rail-taloes mt-2">
     {% for e in entries %}
     <article class="talao">
-      <time class="block text-xs text-ardosia">{{ e.work_date|date:"d M Y" }}{% if e.work_area %} · {{ e.work_area.name }}{% endif %}</time>
+      <time class="block text-xs text-ardosia">{{ e.work_date|date:"d M Y" }}{% if e.work_area %} · {{ e.work_area.name }}{% endif %}{% if varias_casas %} · {{ e.restaurant.name }}{% endif %}</time>
       <p class="mt-1 text-base font-semibold">
         {{ e.check_in|date:"H:i" }} &rarr;
         {% if e.check_out %}{{ e.check_out|date:"H:i" }}{% else %}em turno{% endif %}

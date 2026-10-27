@@ -27,8 +27,8 @@ def week_days(start):
 
 
 def _check_worker(restaurant, worker):
-    if worker.restaurant_id != restaurant.pk:
-        raise ValidationError("Este trabalhador não é deste restaurante.")
+    if not worker.works_in(restaurant):
+        raise ValidationError("Este trabalhador não trabalha nesta casa.")
 
 
 def create_shift(*, restaurant, worker, day, template=None, start=None, end=None, work_area=None):
@@ -100,6 +100,9 @@ def unpublish_shift(*, shift):
 
 def set_rest_day(*, restaurant, worker, day):
     _check_worker(restaurant, worker)
+    outra = RestDay.objects.filter(worker=worker, date=day).exclude(restaurant=restaurant).select_related("restaurant").first()
+    if outra is not None:
+        raise ValidationError(f"{worker.full_name} já tem folga neste dia, marcada em {outra.restaurant.name}.")
     folga, _ = RestDay.objects.get_or_create(restaurant=restaurant, worker=worker, date=day)
     return folga
 
@@ -149,15 +152,32 @@ def _active_shifts(restaurant, inicio, fim):
 def conflicts(restaurant, week):
     """Conflitos que impedem a publicação (R-032): turnos sobrepostos da
     mesma pessoa, turno em dia de ausência aprovada ou de folga, e
-    descanso abaixo do mínimo entre turnos. Devolve {turno.pk: [motivos]}."""
+    descanso abaixo do mínimo entre turnos. Devolve {turno.pk: [motivos]}.
+
+    Quem trabalha em mais de uma casa é uma só pessoa: os turnos e as
+    folgas das outras casas do grupo contam para os conflitos, mas só os
+    turnos desta casa ficam assinalados (Fase 9)."""
     from vacations.models import VacationRequest
 
     dias = week_days(week)
     descanso = datetime.timedelta(hours=settings.SHIFT_MIN_REST_HOURS)
     # Um dia para cada lado, para o descanso entre semanas.
-    turnos = list(_active_shifts(restaurant, dias[0] - DIA, dias[-1] + DIA))
-    da_semana = {s.pk for s in turnos if dias[0] <= s.work_date <= dias[-1]}
+    desta_casa = list(_active_shifts(restaurant, dias[0] - DIA, dias[-1] + DIA))
+    pessoas = {s.worker_id for s in desta_casa}
+    de_outras = (
+        Shift.objects.filter(
+            worker_id__in=pessoas, work_date__range=(dias[0] - DIA, dias[-1] + DIA), pending_removal=False
+        )
+        .exclude(restaurant=restaurant)
+        .exclude(state=Shift.State.RESERVA)
+        .select_related("restaurant")
+    )
+    turnos = sorted([*desta_casa, *de_outras], key=lambda s: (s.worker_id, s.start_at))
+    da_semana = {s.pk for s in desta_casa if dias[0] <= s.work_date <= dias[-1]}
     motivos = {}
+
+    def onde(shift):
+        return "" if shift.restaurant_id == restaurant.pk else f" em {shift.restaurant.name}"
 
     def acrescentar(shift, texto):
         if shift.pk in da_semana:
@@ -169,20 +189,26 @@ def conflicts(restaurant, week):
     for lista in por_worker.values():
         for anterior, seguinte in zip(lista, lista[1:]):
             if seguinte.start_at < anterior.end_at:
-                acrescentar(seguinte, "Sobrepõe outro turno da mesma pessoa")
-                acrescentar(anterior, "Sobrepõe outro turno da mesma pessoa")
+                acrescentar(seguinte, f"Sobrepõe outro turno da mesma pessoa{onde(anterior)}")
+                acrescentar(anterior, f"Sobrepõe outro turno da mesma pessoa{onde(seguinte)}")
             elif seguinte.start_at - anterior.end_at < descanso:
                 horas = (seguinte.start_at - anterior.end_at).total_seconds() / 3600
+                minimo = settings.SHIFT_MIN_REST_HOURS
                 acrescentar(
                     seguinte,
-                    f"Só {horas:.0f}h de descanso desde o turno anterior (mínimo {settings.SHIFT_MIN_REST_HOURS}h)",
+                    f"Só {horas:.0f}h de descanso desde o turno anterior{onde(anterior)} (mínimo {minimo}h)",
                 )
+                if seguinte.restaurant_id != restaurant.pk:
+                    acrescentar(
+                        anterior,
+                        f"Só {horas:.0f}h de descanso até ao turno seguinte{onde(seguinte)} (mínimo {minimo}h)",
+                    )
 
     folgas = set(
-        RestDay.objects.filter(restaurant=restaurant, date__range=(dias[0], dias[-1])).values_list("worker_id", "date")
+        RestDay.objects.filter(worker_id__in=pessoas, date__range=(dias[0], dias[-1])).values_list("worker_id", "date")
     )
     ausencias = VacationRequest.objects.filter(
-        worker__restaurant=restaurant,
+        worker_id__in=pessoas,
         status=VacationRequest.Status.APROVADO,
         half_day=False,
         start_date__lte=dias[-1],

@@ -40,6 +40,20 @@ class CorrectionRequestForm(forms.Form):
         error_messages={"required": "Diga porquê: o motivo vai para o gerente."},
     )
 
+    def __init__(self, *args, casas=None, **kwargs):
+        """`casas`: num registo que falta, as casas onde o colaborador
+        trabalha, quando são mais de uma (Fase 9)."""
+        super().__init__(*args, **kwargs)
+        if casas and len(casas) > 1:
+            self.fields["restaurant"] = forms.TypedChoiceField(
+                label="Casa",
+                choices=[(c.pk, c.name) for c in casas],
+                coerce=int,
+                initial=casas[0].pk,
+                widget=forms.Select(attrs={"class": "campo-input"}),
+            )
+            self.order_fields(["restaurant", "check_in", "check_out", "note"])
+
 
 class CorrectionDecisionForm(forms.Form):
     decision_note = forms.CharField(

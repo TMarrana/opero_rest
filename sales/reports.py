@@ -73,7 +73,7 @@ def horas_trabalhadas(restaurant, inicio, fim):
 
     reais = {}
     entradas = (
-        TimeEntry.objects.filter(worker__restaurant=restaurant, work_date__range=(inicio, fim))
+        TimeEntry.objects.filter(restaurant=restaurant, work_date__range=(inicio, fim))
         .resolved()
         .prefetch_related("breaks__break_type")
     )

@@ -52,11 +52,9 @@ def _contadores(request):
     }
     if request.role in ("ADMIN", "MANAGER"):
         pedidos = restaurant_scope(
-            request,
-            CorrectionRequest.objects.filter(status=CorrectionRequest.Status.PENDENTE),
-            field="worker__restaurant",
+            request, CorrectionRequest.objects.filter(status=CorrectionRequest.Status.PENDENTE)
         ).count()
-        por_resolver = restaurant_scope(request, TimeEntry.objects.all(), field="worker__restaurant").unresolved().count()
+        por_resolver = restaurant_scope(request, TimeEntry.objects.all()).unresolved().count()
         contadores["ponto"] = pedidos + por_resolver
         contadores["ferias"] = restaurant_scope(
             request,

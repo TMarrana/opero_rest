@@ -8,7 +8,7 @@ from django.views import View
 from django.views.generic import TemplateView
 
 from core.mixins import ManagerRequiredMixin
-from core.utils import restaurant_scope
+from core.utils import restaurant_scope, workers_scope
 
 from accounts.services import dar_acesso, perfil_na_casa
 
@@ -25,7 +25,7 @@ class WorkerListView(ManagerRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        qs = restaurant_scope(self.request, Worker.objects.select_related("user"))
+        qs = workers_scope(self.request, Worker.objects.select_related("user", "restaurant"))
         q = self.request.GET.get("q", "").strip()
         if q:
             qs = qs.filter(Q(full_name__icontains=q) | Q(job_title__icontains=q))
@@ -65,6 +65,7 @@ class WorkerFormView(ManagerRequiredMixin, View):
         novo = form.save(commit=False)
         novo.restaurant = restaurant
         novo.save()
+        form.save_m2m()
         messages.success(request, "Trabalhador guardado" if worker else "Trabalhador criado")
         return redirect("workers:lista")
 
