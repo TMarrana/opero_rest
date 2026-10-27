@@ -1,6 +1,8 @@
+from django.conf import settings
 from django.db import models
+from django.utils.text import slugify
 
-from .validators import validate_nif
+from .validators import validate_nif, validate_subdomain
 
 
 class TimeStampedModel(models.Model):
@@ -18,6 +20,16 @@ class Organization(TimeStampedModel):
     gere na mesma conta. O Admin do grupo vê e configura todas."""
 
     name = models.CharField("nome", max_length=120)
+    # Isolamento entre clientes (decidido a 2026-10-27, secção 12): o grupo
+    # entra em <subdomain>.OPERO_BASE_DOMAIN (`core.middleware`).
+    subdomain = models.CharField(
+        "endereço",
+        max_length=40,
+        unique=True,
+        validators=[validate_subdomain],
+        help_text="O grupo entra em <endereço>.opero.pt. Letras minúsculas, números e hífenes. "
+        "Mudá-lo obriga a ativar de novo os tablets e a instalar de novo a app.",
+    )
     is_active = models.BooleanField("ativo", default=True)
 
     class Meta:
@@ -25,6 +37,31 @@ class Organization(TimeStampedModel):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.subdomain:
+            self.subdomain = unique_subdomain(self.name, exclude_pk=self.pk)
+        super().save(*args, **kwargs)
+
+    @property
+    def address(self):
+        """O endereço do grupo, ou "" sem domínio base (desenvolvimento)."""
+        base = settings.OPERO_BASE_DOMAIN
+        return f"{self.subdomain}.{base}" if base else ""
+
+
+def unique_subdomain(name, exclude_pk=None):
+    """Um endereço livre a partir do nome: «Tasca do Zé» dá tasca-do-ze, e
+    tasca-do-ze-2 se já existir."""
+    from .validators import RESERVED_SUBDOMAINS
+
+    base = slugify(name).replace("_", "-")[:30].strip("-") or "grupo"
+    if base in RESERVED_SUBDOMAINS:
+        base = f"{base}-grupo"
+    candidato, n = base, 2
+    while Organization.objects.filter(subdomain=candidato).exclude(pk=exclude_pk).exists():
+        candidato, n = f"{base}-{n}", n + 1
+    return candidato
 
 
 class Restaurant(TimeStampedModel):

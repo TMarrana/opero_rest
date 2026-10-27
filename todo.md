@@ -18,8 +18,8 @@ Bloqueiam fases ou o piloto. A proposta de cada uma está na secção 12 do plan
 - [x] **Serviço (almoço e jantar) nas vendas por hora trabalhada.** Decidido a 2026-10-27: por uma hora de mudança por casa, 17h por omissão. Já está construído. Falta dar conhecimento à AT.
 - [x] **Stock negativo causado pelas vendas** (Fase 14). Decidido a 2026-10-27: só os movimentos de origem venda o deixam negativo, e o artigo fica assinalado para contar. Já está construído. Falta dar conhecimento à AT.
 - [x] **Pergunta na saída tardia (R-012).** Decidido a 2026-10-27: entra, como pedido de correção ao gerente. Já está construído. Falta dar conhecimento à AT.
-- [ ] **Nome da marca e domínio.**
-- [ ] **Isolamento entre clientes:** domínio, subdomínio ou área partilhada.
+- [x] **Nome da marca e domínio.** Decidido a 2026-10-27: Opero. O domínio escolhe-se com o hosting (secção 6). Falta dar conhecimento à AT.
+- [x] **Isolamento entre clientes.** Decidido a 2026-10-27: subdomínio por grupo (`<endereço>.opero.pt`), desde o piloto. Já está construído. Falta dar conhecimento à AT.
 - [ ] **Cliente piloto e disponibilidade semanal AT/TM.**
 
 ## 2. Contabilista e jurista (com a AT)
@@ -72,7 +72,7 @@ Ecrãs que só foram verificados pelos testes ou pelo texto da página, sem ning
 
 ## 6. Infraestrutura e produção
 
-- [ ] **Escolher o hosting e montar o ambiente de demonstração:** domínio, HTTPS, utilizadores de teste. Bloqueia a Fase 4.
+- [ ] **Escolher o hosting e montar o ambiente de demonstração:** domínio (a marca é Opero) com DNS wildcard e certificado `*.opero.pt`, `OPERO_BASE_DOMAIN` e `DJANGO_ALLOWED_HOSTS=.opero.pt`, HTTPS, utilizadores de teste. Bloqueia a Fase 4.
 - [ ] **Política de backups:** frequência, retenção, e um restauro testado pelo menos uma vez.
 - [ ] **Envio de emails** (recuperação de password, avisos, encomendas aos fornecedores). Até lá, a password esquecida resolve-se com uma provisória gerada pelo gerente.
 - [ ] Cache partilhada em produção (a cache em base de dados do Django chega) para o bloqueio do código de ponto e os tokens do quiosque, com vários processos.

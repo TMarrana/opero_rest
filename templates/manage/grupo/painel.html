@@ -5,6 +5,7 @@
 {% comment %}Painel do grupo (Fase 9): uma linha por casa, com os sinais do
 dashboard de cada uma. Para agir, abre-se a casa, que passa a ser a ativa.{% endcomment %}
 <h1 class="titulo-pagina">{{ request.user.organization }}</h1>
+{% if request.user.organization.address %}<p class="mt-1 text-sm text-ardosia">Endereço: <span class="font-dados">{{ request.user.organization.address }}</span>. É aqui que entram as contas do grupo e que se ativam os tablets.</p>{% endif %}
 {% include "manage/grupo/_nav.html" %}
 
 <div class="mt-6 cartao">

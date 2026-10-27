@@ -55,9 +55,15 @@ class KioskMixin:
         self.device = device_info(request)
         # Um tablet sem casa mostraria a equipa de todas (Fase 9): tem de
         # ser ativado de novo.
-        if self.device is None or not self.device["restaurante"]:
+        if self.device is None or not self.device["restaurante"] or not self._do_grupo(request):
             return render(request, "kiosk/nao_ativado.html", status=403)
         return super().dispatch(request, *args, **kwargs)
+
+    def _do_grupo(self, request):
+        """No subdomínio de um grupo, o tablet tem de ser de uma casa dele."""
+        if request.organization is None:
+            return True
+        return Restaurant.objects.filter(pk=self.device["restaurante"], organization=request.organization).exists()
 
     def workers(self):
         """A equipa da casa do tablet, com quem vem de outra casa do grupo

@@ -51,11 +51,20 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "core.middleware.OrganizationHostMiddleware",
     "accounts.middleware.ForcePasswordChangeMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "core.middleware.ActiveRestaurantMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+# Isolamento entre clientes (decidido a 2026-10-27): cada grupo entra em
+# <endereço>.OPERO_BASE_DOMAIN, por exemplo tasca.opero.pt. Vazio, não há
+# subdomínios e tudo funciona num só endereço (desenvolvimento e testes).
+OPERO_BASE_DOMAIN = env("OPERO_BASE_DOMAIN", default="").lower().strip(".")
+
+# No subdomínio de um grupo só entram as contas desse grupo.
+AUTHENTICATION_BACKENDS = ["accounts.backends.GroupHostBackend"]
 
 ROOT_URLCONF = "config.urls"
 

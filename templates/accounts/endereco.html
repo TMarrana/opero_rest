@@ -1,0 +1,30 @@
+{% extends "base_staff.html" %}
+{% load static interface %}
+{% block title %}Entrar{% endblock %}
+{% block content %}
+{% comment %}Domínio sem grupo: cada restaurante entra no seu endereço
+(decidido a 2026-10-27). Pede-se o endereço, nunca o email.{% endcomment %}
+<div class="flex flex-1 flex-col justify-center">
+  <img src="{% static 'img/logo-opero-escuro.png' %}" alt="Opero" class="mx-auto block h-10 w-auto">
+
+  <form method="post" class="cartao mt-8 space-y-5 p-6 sm:p-7">
+    {% csrf_token %}
+    <div>
+      <h1 class="font-display text-2xl font-bold">Entrar</h1>
+      <p class="mt-1 text-sm text-ardosia">Cada restaurante tem o seu endereço. Escreva-o para continuar.</p>
+    </div>
+    {% if erro %}
+      <p class="aviso aviso-perigo flex items-center gap-2">{% icone "alerta" "h-4 w-4 shrink-0" %}{{ erro }}</p>
+    {% endif %}
+    <div class="space-y-1.5">
+      <label for="endereco" class="block text-sm font-medium">Endereço do restaurante</label>
+      <div class="flex items-center gap-2">
+        <input id="endereco" name="endereco" value="{{ valor|default:'' }}" class="campo-input font-dados" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="tasca" required>
+        <span class="shrink-0 font-dados text-sm text-ardosia">.{{ base }}</span>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primario w-full">Continuar</button>
+  </form>
+  <p class="mt-6 text-center text-xs text-ardosia">Não sabe o endereço? Peça-o ao gerente do restaurante.</p>
+</div>
+{% endblock %}

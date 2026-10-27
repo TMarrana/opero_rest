@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth import views as auth_views
@@ -7,9 +8,9 @@ from django.core import signing
 from django.shortcuts import redirect, render
 from django.views import View
 
-from core.middleware import SESSION_KEY
+from core.middleware import SESSION_KEY, group_url
 from core.mixins import ManagerRequiredMixin
-from core.models import WorkArea
+from core.models import Organization, WorkArea
 from core.utils import restaurant_scope
 
 from .forms import LoginForm
@@ -27,6 +28,33 @@ class LoginView(auth_views.LoginView):
 
 class LogoutView(auth_views.LogoutView):
     pass
+
+
+class AddressView(View):
+    """No domínio sem grupo (opero.pt): leva ao endereço do restaurante.
+    Pede o endereço e não o email, para não dizer que contas existem."""
+
+    template_name = "accounts/endereco.html"
+
+    def get(self, request):
+        if not settings.OPERO_BASE_DOMAIN:
+            return redirect("accounts:login")
+        return render(request, self.template_name, {"base": settings.OPERO_BASE_DOMAIN})
+
+    def post(self, request):
+        if not settings.OPERO_BASE_DOMAIN:
+            return redirect("accounts:login")
+        valor = request.POST.get("endereco", "").strip().lower()
+        valor = valor.removesuffix("." + settings.OPERO_BASE_DOMAIN).split("//")[-1]
+        grupo = Organization.objects.filter(subdomain=valor, is_active=True).first() if valor else None
+        if grupo is None:
+            contexto = {
+                "base": settings.OPERO_BASE_DOMAIN,
+                "valor": valor,
+                "erro": "Não há nenhum restaurante neste endereço. Confirme com o gerente.",
+            }
+            return render(request, self.template_name, contexto, status=400)
+        return redirect(group_url(request, grupo, "/conta/entrar/"))
 
 
 class PostLoginRedirectView(LoginRequiredMixin, View):

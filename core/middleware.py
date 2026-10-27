@@ -1,4 +1,11 @@
 """
+Grupo do endereço e casa ativa do pedido.
+
+Isolamento entre clientes (decidido a 2026-10-27): com OPERO_BASE_DOMAIN,
+cada grupo entra em <endereço>.<domínio>. `OrganizationHostMiddleware`
+põe o grupo em `request.organization` e põe fora uma sessão de outro
+grupo. É uma segunda barreira: as views continuam a filtrar pela casa.
+
 Casa ativa do pedido (Fase 9).
 
 Cada pedido do backoffice trabalha numa só casa: `request.restaurant` é a
@@ -12,14 +19,70 @@ isso cada página do backoffice manda a casa em que foi aberta
 `base_manage.html`): um POST de uma página aberta noutra casa é recusado
 antes de gravar o que quer que seja.
 """
+from django.conf import settings
 from django.contrib import messages
-from django.http import HttpResponse
+from django.contrib.auth import logout
+from django.http import Http404, HttpResponse
 from django.shortcuts import redirect
 from django.urls import reverse
+
+from .models import Organization
 
 SESSION_KEY = "opero_casa"
 HEADER = "X-Opero-Casa"
 FIELD = "_casa"
+
+
+# O endereço do domínio base sem grupo: o site e a página para encontrar o
+# endereço do restaurante.
+SEM_GRUPO = ("www", "app")
+
+
+def subdomain_of(host, base):
+    """O subdomínio de `host` debaixo de `base`, ou None no próprio domínio,
+    em www e app, e fora dele."""
+    host = host.split(":")[0].lower().rstrip(".")
+    if not host.endswith("." + base):
+        return None
+    sub = host[: -len(base) - 1]
+    return None if sub in SEM_GRUPO else sub
+
+
+def group_url(request, grupo, path="/"):
+    """O endereço completo de um caminho no subdomínio do grupo."""
+    porta = request.get_port()
+    porta = "" if porta in ("80", "443") else f":{porta}"
+    return f"{request.scheme}://{grupo.subdomain}.{settings.OPERO_BASE_DOMAIN}{porta}{path}"
+
+
+class OrganizationHostMiddleware:
+    # No domínio sem grupo só há a página do endereço, o admin da
+    # plataforma e os estáticos.
+    LIVRES_SEM_GRUPO = ("/admin/", "/static/")
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        request.organization = None
+        base = settings.OPERO_BASE_DOMAIN
+        if not base:
+            return self.get_response(request)
+        sub = subdomain_of(request.get_host(), base)
+        if sub is None:
+            endereco = reverse("accounts:endereco")
+            if request.path != endereco and not request.path.startswith(self.LIVRES_SEM_GRUPO):
+                return redirect(endereco)
+            return self.get_response(request)
+        grupo = Organization.objects.filter(subdomain=sub, is_active=True).first()
+        if grupo is None:
+            raise Http404("Não há nenhum restaurante neste endereço.")
+        request.organization = grupo
+        user = request.user
+        if user.is_authenticated and not user.is_superuser and user.organization_id != grupo.pk:
+            logout(request)
+            return redirect("accounts:login")
+        return self.get_response(request)
 
 
 def casa_ativa(user, session):

@@ -9,7 +9,7 @@
     {% csrf_token %}
     <div>
       <h1 class="font-display text-2xl font-bold">Entrar</h1>
-      <p class="mt-1 text-sm text-ardosia">Entre com o email e a palavra-passe da sua conta.</p>
+      <p class="mt-1 text-sm text-ardosia">{% if request.organization %}{{ request.organization.name }} · {% endif %}Entre com o email e a palavra-passe da sua conta.</p>
     </div>
     {% for erro in form.non_field_errors %}
       <p class="aviso aviso-perigo flex items-center gap-2">{% icone "alerta" "h-4 w-4 shrink-0" %}{{ erro }}</p>

@@ -5,7 +5,7 @@ from .models import Organization, Restaurant, WorkArea
 
 @admin.register(Organization)
 class OrganizationAdmin(admin.ModelAdmin):
-    list_display = ("name", "is_active")
+    list_display = ("name", "subdomain", "is_active")
 
 
 @admin.register(Restaurant)

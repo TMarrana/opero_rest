@@ -10,4 +10,5 @@ urlpatterns = [
     path("pos-login/", views.PostLoginRedirectView.as_view(), name="pos_login"),
     path("password/", views.SetPasswordView.as_view(), name="definir_password"),
     path("dispositivo/", views.DeviceActivateView.as_view(), name="dispositivo"),
+    path("endereco/", views.AddressView.as_view(), name="endereco"),
 ]
