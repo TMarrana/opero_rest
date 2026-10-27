@@ -40,13 +40,13 @@ Ao concluir qualquer trabalho descrito na secção 8:
 | 4 — Dashboard, estabilização e piloto | 🟡 Em curso |
 | 5 — Ponto e ausências, segunda iteração | 🟡 Código completo; falta revisão visual, teste no telemóvel e aprovação do âmbito pela AT |
 | 6 — Planeador de turnos | 🟡 Código completo; falta revisão visual do planeador e aprovação do âmbito pela AT |
-| 7 — Quiosque e app do colaborador separados | 🟡 Código completo; falta testar num tablet e num telemóvel reais e a aprovação da AT |
+| 7 — Quiosque e app do colaborador separados | 🟡 Código completo; âmbito aprovado pelo TM; falta testar num tablet e num telemóvel reais |
 | 8 — Calendário mensal de ausências | 🟡 Código completo e visto no browser; falta a revisão do TM com dados reais |
-| 9 — Vários restaurantes | 🟡 Código completo; o trabalhador em várias casas só foi testado pelos testes, não no browser. Falta a aprovação da AT e a confirmação do contabilista sobre a casa principal |
+| 9 — Vários restaurantes | 🟡 Código completo; o trabalhador em várias casas só foi testado pelos testes, não no browser. Âmbito aprovado pelo TM. Falta a confirmação do contabilista sobre a casa principal |
 | 10 — Vendas a partir do SAF-T | 🟡 Código completo e visto no browser com dados sintéticos; falta validar com o ficheiro real do cliente de teste e as vendas por serviço |
-| 11 — Fornecedores e compras | 🟡 Código completo, testado e visto no browser; falta a aprovação da AT e o uso real com um fornecedor |
+| 11 — Fornecedores e compras | 🟡 Código completo, testado e visto no browser; âmbito aprovado pelo TM; falta o uso real com um fornecedor |
 | 12 — Consumos internos | 🟡 Código completo, testado e visto no browser; falta o consumo de pratos (Fase 13) e a resposta do contabilista sobre o mapa |
-| 13 — Fichas técnicas | 🟡 Código completo, testado e visto no browser (só pelo texto das páginas); falta a revisão visual, a decisão do catálogo de artigos e a aprovação da AT |
+| 13 — Fichas técnicas | 🟡 Código completo, testado e visto no browser (só pelo texto das páginas); âmbito aprovado pelo TM; falta a revisão visual |
 | 14 — Stock atualizado pelas vendas | 🟡 Código completo e testado; falta vê-la no browser e validá-la com dados reais. Desligada no piloto |
 | 15 — Extração e análise de dados | 🟡 Código completo e testado (Análise com resumo, stock, pessoas e compras; exportação das listas). Falta decidir os agregados diários com o SAF-T real e rever no browser |
 
@@ -99,7 +99,7 @@ O docx trata a interface como mínima ("navegação simples", dashboard sem grá
 | App do colaborador no telemóvel, separada do backoffice, só para consultar e pedir | Decidido |
 | PWA instalável | Decidido |
 | Ponto picado só no tablet partilhado, com nome e código (Fase 7) | Decidido pelo TM; **a validar com AT** (secção 7) |
-| Fases 5 e 6: pausas, fecho do mês, saldo de férias, planeador de turnos | **A validar com AT** (secção 12) |
+| Fases 5 e 6: pausas, fecho do mês, saldo de férias, planeador de turnos | Decidido pelo TM a 2026-10-27: entram no piloto, ligadas. Falta dar conhecimento à AT (secção 12) |
 | Fases 9 a 15: vários restaurantes, vendas pelo SAF-T, compras, consumos internos, fichas técnicas, stock pelas vendas, análise de dados | Pedido do TM. Decidido pelo TM a 2026-10-27: as Fases 9 a 13 entram no piloto, a 14 faz-se já e fica desligada no piloto (secção 12) |
 
 Tudo o resto neste documento deriva do docx, exceto as Fases 5 e 6 e as Fases 9 a 15. As Fases 5 e 6 vêm do estudo da Factorial (`re-factorial/clone/prd.md`) e incluem duas coisas que o docx deixou fora do MVP: o saldo anual de férias e o planeamento visual de equipa. As Fases 9 a 15 trazem para o plano o que o docx deixava para a V1.1 ou para o futuro (secção 10).
@@ -383,7 +383,7 @@ Fora do MVP, por decisão do docx: lotes, datas de validade, múltiplos armazén
 
 **`VacationRequest`** — `worker` (FK), `start_date`, `end_date`, `status` (`PENDENTE`, `APROVADO`, `RECUSADO`, `CANCELADO`), `request_note`, `decided_by` (FK User, nullable), `decided_at`, `decision_note`.
 
-Fora do MVP: contagem automática de saldo anual, integração com payroll, regras laborais, substituições, planeamento visual de equipa. As Fases 5 e 6 propõem trazer o saldo anual e o planeamento para depois do MVP, e as alterações ao modelo de dados estão descritas nessas fases.
+Fora do MVP: contagem automática de saldo anual, integração com payroll, regras laborais, substituições, planeamento visual de equipa. As Fases 5 e 6 trazem o saldo anual e o planeamento para o piloto (decidido pelo TM a 2026-10-27), e as alterações ao modelo de dados estão descritas nessas fases.
 
 ### Depois do MVP
 
@@ -421,8 +421,8 @@ Estas regras são o núcleo do sistema. Cada uma tem um teste dedicado na secç�
 | Consultar ponto da equipa | ✓ | ✓ | | |
 | Corrigir registo de ponto (auditado) | ✓ | ✓ | | |
 | Aprovar / recusar férias | ✓ | ✓ | | |
-| Criar e editar artigos | ✓ | ✓ ⚠ | ✓ | |
-| Registar movimentos de stock | ✓ | ✓ ⚠ | ✓ | |
+| Criar e editar artigos | ✓ | ✓ | ✓ | |
+| Registar movimentos de stock | ✓ | ✓ | ✓ | |
 | Consultar stock, alertas e histórico | ✓ | ✓ | ✓ | |
 | Marcar o próprio ponto (só no tablet, desde a Fase 7) | ✓ | ✓ | ✓ | ✓ |
 | Ver o próprio histórico | ✓ | ✓ | ✓ | ✓ |
@@ -438,7 +438,7 @@ Estas regras são o núcleo do sistema. Cada uma tem um teste dedicado na secç�
 | Criar e editar casas, dar e tirar acessos, painel do grupo | só o Admin do grupo | | | |
 | Transferir stock entre casas | ✓ | ✓ | ✓ | |
 | Importar o SAF-T e ver as vendas | ✓ | ✓ | | |
-| Fornecedores, encomendas e receções | ✓ | ✓ ⚠ | ✓ | |
+| Fornecedores, encomendas e receções | ✓ | ✓ | ✓ | |
 | Registar consumos internos | ✓ | ✓ | ✓ | |
 | Ver os próprios consumos | ✓ | ✓ | ✓ | ✓ |
 | Criar e editar fichas técnicas | ✓ | ✓ | ✓ | |
@@ -457,7 +457,7 @@ Regras que decorrem do docx:
 
 Regra do estudo da Factorial: os perfis continuam fixos. Não há grupos de permissões configuráveis nem interruptores por funcionalidade, porque num restaurante quem decide é o gerente e um único nível de aprovação chega (secção 10, «Não fazer»).
 
-⚠ **Decisão a validar com AT** (sinalizada no próprio docx): se o gerente também pode criar artigos e registar movimentos, ou se isso é exclusivo do responsável de stock. **Pressuposto atual: pode.** É mais permissivo, e restringir depois é uma linha de código; alargar depois obriga a repensar fluxos.
+**Decidido pelo TM a 2026-10-27** (a dúvida vinha do próprio docx): o gerente também pode criar artigos, registar movimentos e tratar das compras, como o responsável de stock. Num restaurante pequeno é muitas vezes ele quem recebe a mercadoria e acerta o stock. Falta a AT tomar conhecimento. É mais permissivo, e restringir depois é uma linha de código; alargar depois obriga a repensar fluxos.
 
 ### Autenticação e código de ponto (desde a Fase 7)
 
@@ -566,8 +566,8 @@ Alertas são visuais. Sem email, SMS ou notificações nesta fase.
 ---
 
 ### Fase 5 — Ponto e ausências, segunda iteração
-*Fora do docx. Vem do estudo da Factorial (`re-factorial/clone/prd.md`, prioridade P1). Depende de: Fases 2 e 3, de a AT aprovar o âmbito e da validação jurídica do registo de tempos (secção 12).*
-**Estado:** 🟡 Código completo e testado, incluindo o critério de aceitação (`tests/test_fecho_mes.py::test_aceitacao_fase_5`). O TM arrancou-a a 2026-10-24 sem esperar pela aprovação da AT (ver Notas de desvio). Falta a revisão visual e o teste no telemóvel.
+*Fora do docx. Vem do estudo da Factorial (`re-factorial/clone/prd.md`, prioridade P1). Depende de: Fases 2 e 3 e da validação jurídica do registo de tempos (secção 12).*
+**Estado:** 🟡 Código completo e testado, incluindo o critério de aceitação (`tests/test_fecho_mes.py::test_aceitacao_fase_5`). O TM arrancou-a a 2026-10-24 sem esperar pela aprovação da AT (ver Notas de desvio); a 2026-10-27 decidiu que entra no piloto. Falta a revisão visual e o teste no telemóvel.
 
 O MVP regista entradas e saídas. Esta fase dá ao gerente o que precisa para fechar o mês e prová-lo ao contabilista ou a uma inspeção. A ordem dos blocos é a de construção: cada um assenta no anterior.
 
@@ -615,7 +615,7 @@ O MVP regista entradas e saídas. Esta fase dá ao gerente o que precisa para fe
 ---
 
 ### Fase 6 — Planeador de turnos
-*Fora do docx. Vem do estudo da Factorial (prioridade P1). Depende de: Fase 5 (áreas de trabalho, tipos de ausência) e de a AT aprovar o âmbito.*
+*Fora do docx. Vem do estudo da Factorial (prioridade P1). Depende de: Fase 5 (áreas de trabalho, tipos de ausência). Âmbito decidido pelo TM a 2026-10-27: entra no piloto, ligada.*
 **Estado:** 🟡 Código completo e testado, incluindo o critério de aceitação (`tests/test_turnos.py::test_aceitacao_fase_6`). Falta ver o planeador num browser: ainda ninguém o viu.
 
 Módulo novo, numa app `shifts`. É o primeiro passo do ciclo semanal do gerente: planear e publicar a semana, e depois comparar o planeado com o realizado.
@@ -646,7 +646,7 @@ Módulo novo, numa app `shifts`. É o primeiro passo do ciclo semanal do gerente
 
 ### Fase 7 — Quiosque e app do colaborador separados
 *Decisão do TM a 2026-10-25. Substitui o login por PIN, o botão de ponto no telemóvel, a fila offline e o modo quiosque da Fase 3. Depende de: Fases 3, 5 e 6.*
-**Estado:** 🟡 Código completo e testado, incluindo a aceitação passo a passo nos testes de `tests/test_staff.py` e `tests/test_contas.py`. O quiosque foi visto num browser de secretária. Falta um tablet real, a app num telemóvel real e a aprovação da AT.
+**Estado:** 🟡 Código completo e testado, incluindo a aceitação passo a passo nos testes de `tests/test_staff.py` e `tests/test_contas.py`. O quiosque foi visto num browser de secretária. Âmbito aprovado pelo TM a 2026-10-27. Falta um tablet real e a app num telemóvel real.
 
 O ponto passa a ser picado só no tablet partilhado, com nome e código, e a vista do colaborador passa a ser uma app de consulta e pedidos, com email e password (secções 5 e 7).
 
@@ -715,7 +715,7 @@ Cada fase traz a sua exportação em CSV. A Fase 15 junta as análises que cruza
 
 ### Fase 9 — Vários restaurantes
 *Depende de: Fases 0 a 8.*
-**Estado:** 🟡 Código completo e testado (`tests/test_varias_casas.py`, `tests/test_trabalhador_varias_casas.py`). O primeiro bloco foi visto no browser com o `demo`; o trabalhador em várias casas ainda não. Falta a aprovação da AT.
+**Estado:** 🟡 Código completo e testado (`tests/test_varias_casas.py`, `tests/test_trabalhador_varias_casas.py`). O primeiro bloco foi visto no browser com o `demo`; o trabalhador em várias casas ainda não. Âmbito aprovado pelo TM a 2026-10-27.
 
 O mesmo cliente gere várias casas na mesma conta. Cada pessoa vê só as casas a que tem acesso. O Admin do grupo vê todas.
 
@@ -823,7 +823,7 @@ O gerente carrega o ficheiro SAF-T (PT) de faturação que o POS exporta, e o Op
 
 ### Fase 11 — Fornecedores e compras
 *Estava na V1.1. Depende de: Fase 9 (os fornecedores são do grupo).*
-**Estado:** 🟡 Código completo, testado (`tests/test_compras.py`, 21 testes, com o critério de aceitação) e visto no browser com o `demo`. Falta a aprovação da AT e o uso com um fornecedor real.
+**Estado:** 🟡 Código completo, testado (`tests/test_compras.py`, 21 testes, com o critério de aceitação) e visto no browser com o `demo`. Âmbito aprovado pelo TM a 2026-10-27. Falta o uso com um fornecedor real.
 
 App `purchasing`, em Compras no rail, para o Admin, o Gerente e o Responsável de stock. Tem quatro separadores: Lista de compras, Encomendas, Receções e Fornecedores.
 
@@ -873,7 +873,7 @@ Em `inventory` (`models.py`, `consumption.py`, `consumption_views.py`), em Stock
 
 ### Fase 13 — Fichas técnicas
 *Estava no Futuro. Depende de: Fase 9 (as fichas são do grupo). A ligação ao POS depende da Fase 10.*
-**Estado:** 🟡 Código completo, testado (`tests/test_fichas.py`, 28 testes, com o critério de aceitação) e visto no browser com o `demo`, só pelo texto das páginas: as capturas de ecrã falharam. Faltam a revisão visual, a decisão do catálogo de artigos (secção 12) e a aprovação da AT.
+**Estado:** 🟡 Código completo, testado (`tests/test_fichas.py`, 28 testes, com o critério de aceitação) e visto no browser com o `demo`, só pelo texto das páginas: as capturas de ecrã falharam. Âmbito aprovado pelo TM a 2026-10-27, e o catálogo de artigos ficou por casa (secção 12). Falta a revisão visual.
 
 App `recipes`, em Fichas no rail, para o Admin, o Gerente e o Responsável de stock. Dois separadores: Fichas e Produtos do POS sem ficha.
 
@@ -1144,10 +1144,10 @@ Bloqueiam a Fase 4, não a Fase 0. O desenvolvimento começa sem elas.
 | Isolamento por cliente: domínio, subdomínio ou área partilhada | AT + TM | middleware de tenant; o modelo já está preparado. A Fase 9 resolve as casas dentro do mesmo cliente; esta decisão continua a valer entre clientes diferentes |
 | RGPD e tratamento de dados de trabalhadores | AT | retenção, exportação, consentimento, política de privacidade; DPA com o restaurante e lista de subcontratantes (BR-006) |
 | Política de backups e recuperação | TM | frequência, retenção, teste de restauro |
-| Permissões do gerente sobre stock (⚠ secção 7) | AT | uma linha nos mixins |
+| Permissões do gerente sobre stock (secção 7) | AT | **Decidido pelo TM a 2026-10-27: pode**, como estava: artigos, movimentos e compras. Restringir depois é uma linha nos mixins. Falta a AT tomar conhecimento |
 | Código de ponto só no tablet partilhado (⚠ secção 7) | AT | Fase 7; o TM já decidiu e implementou |
 | Cliente piloto e disponibilidade semanal AT/TM | AT | calendário das sprints |
-| Âmbito das Fases 5 e 6 (saldo anual e planeamento, que o docx exclui do MVP) | AT | se as fases arrancam e em que ordem face ao piloto |
+| Âmbito das Fases 5 e 6 (saldo anual e planeamento, que o docx exclui do MVP) | AT | **Decidido pelo TM a 2026-10-27:** as duas entram no piloto e ficam ligadas. Os valores por omissão (14 h por resolver, 22 dias de férias, 11 h de descanso, formato do CSV) continuam à espera do contabilista e do jurista. Falta a AT tomar conhecimento |
 | Validação jurídica do registo de tempos, férias e descansos (Código do Trabalho; Q-001 e Q-010 do estudo) | AT, com contabilista ou jurista | pode bloquear o piloto; define os valores por defeito da Fase 5 |
 | Formato da exportação mensal | AT, com o contabilista | formato do ficheiro na Fase 5 |
 | Contrato coletivo da restauração (Q-010) e dias de férias extra (Q-008) | AT, com contabilista | turnos, folgas, trabalho noturno e saldo por defeito |
@@ -1179,6 +1179,9 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 
 | Data | Fase | O que foi feito | Por fechar | Próximo passo |
 |---|---|---|---|---|
+| 2026-10-27 (11ª) | 1, 11 | **Decisão do TM: o gerente pode criar artigos, registar movimentos e tratar das compras**, como já estava. Secções 7 e 12 e Notas de desvio atualizadas; `todo.md` marcado. Nenhum código alterado. | A AT tomar conhecimento. | Próximo item do `todo.md`: código de ponto só no tablet partilhado (validar com a AT). |
+| 2026-10-27 (10ª) | 7, 9, 11, 13 | **Decisão do TM: o âmbito das Fases 7, 9, 11 e 13 fica aprovado tal como está construído.** Estados das fases, secção 1 e Notas de desvio atualizados; tirada da Fase 13 a decisão do catálogo, que já estava tomada. `todo.md` marcado. Nenhum código alterado. | A AT tomar conhecimento e fazer os testes funcionais. | Próximo item do `todo.md`: o gerente pode criar artigos e registar movimentos? |
+| 2026-10-27 (9ª) | 5, 6 | **Decisão do TM: as Fases 5 e 6 entram no piloto, ligadas.** Secções 1, 6, 8 e 12 e Notas de desvio atualizadas; `todo.md` marcado. Nenhum código alterado. | A AT tomar conhecimento. Os valores por omissão continuam à espera do contabilista e do jurista. | Próximo item do `todo.md`: aprovar as fases já feitas (7, 9, 11 e 13). |
 | 2026-10-27 (8ª) | 15 | **Relatórios de stock e de compras commitados e enviados** (`ef87b1a`). **Relatórios de pessoas: a Fase 15 fica completa em código.**<br>• **Contas (`analytics/people_reports.py`):** por trabalhador (dias, horas, previstas, diferença, atrasos, saídas antes da hora, faltas de marcação, por resolver, ausências), horas por área, ausências por tipo, presenças por mês e a lista dos desvios.<br>• **Ecrã:** Análise → Pessoas, só o Admin e o Gerente, com os filtros e as exportações das outras; Excel com cinco folhas por casa. Filtro `horas_sinal` em `ponto`.<br>6 testes novos (`tests/test_analise_pessoas.py`), 432 no total; `check` limpo. Visto numa captura do Chrome headless com o `demo`: daí saiu a tabela compacta, porque a coluna das ausências ficava cortada. CSS reconstruído e service worker para v17. | Agregados diários das vendas por decidir com o SAF-T real. Os ecrãs da Fase 15 só foram vistos em capturas. Nada commitado. | Rever a Análise no browser (resumo, stock, pessoas e compras) com o `demo`. Depois, voltar ao `todo.md`: os testes em aparelhos reais e as conversas com a AT e o contabilista. |
 | 2026-10-27 (7ª) | 15 | **Exportação das listas commitada e enviada** (`756d680`). **Relatórios de stock e de compras.**<br>• **Contas (`analytics/stock_reports.py`):** o valor do stock por categoria e por casa; os mais movimentados por origem; os ajustes com faltas e sobras; as compras por fornecedor e por casa, por artigo (as casas juntas pelo nome e pela unidade) e os preços de cada artigo.<br>• **Ecrãs:** separadores Resumo, Stock e Compras na Análise, com os filtros comuns (`_filtros.html`) e a exportação em Excel e CSV. Gráfico de linhas da evolução do preço (`linha_precos`). O Resp. stock passa a ter a Análise no rail, só com o Stock e as Compras.<br>12 testes novos (`tests/test_analise_stock_compras.py`), 426 no total; um teste antigo mudou porque o Resp. stock deixou de levar 403 no resumo e passou a ir para o Stock. `check` limpo. Vistos em capturas do Chrome headless com o `demo` e as duas casas: daí saiu o gráfico de linhas mais largo, porque ocupava o cartão todo e o texto ficava enorme. CSS reconstruído e service worker para v16. | Relatórios de pessoas (presenças e ausências, horas por área, atrasos e faltas de marcação). Agregados diários por decidir. Commitado em `ef87b1a`. | Último bloco da Fase 15: os relatórios de pessoas, só para o Admin e o Gerente. |
 | 2026-10-27 (6ª) | 15 | **Primeiro bloco da Fase 15 commitado e enviado** (`23b31f1`). **Exportação das listas em CSV e Excel.**<br>• **Comum:** `core/exports.py` com data e hora (o Excel recebe a hora local sem fuso), sim/não, `formato_pedido()` e `responder()`; `{% exportar %}` e `url_exportar` repetem os filtros do endereço.<br>• **Listas:** stock, movimentos (todos), ponto do mês, ausências, turnos da semana, encomendas (com as linhas), consumos (com o mapa), e o Excel das receções e das vendas por dia e por produto. Os CSV para o contabilista ficam como estavam.<br>13 testes novos (`tests/test_exportacoes.py`), 414 no total; `check` limpo. Todas as exportações testadas com o `demo`; a lista do stock vista numa captura do Chrome headless. CSS reconstruído e service worker para v15. | Relatórios de stock, de pessoas e de compras; gráfico de linhas; agregados diários. A coluna de ações da lista do stock passa da margem a 1400px (já vinha de antes). Commitado em `756d680`. | Próximo bloco da Fase 15: os relatórios de stock (mais movimentados, ajustes, valor por categoria e por casa) e de compras (por fornecedor, por artigo, evolução dos preços com o gráfico de linhas). |
@@ -1214,6 +1217,9 @@ O campo **Próximo passo** é o mais importante: é o que a sessão seguinte lê
 
 Alterações ao plano decididas durante a execução. Se algo aqui contradiz uma secção acima, **corrigir também a secção** — este registo é o histórico, não a fonte de verdade.
 
+- **2026-10-27 · O gerente gere o stock.** Decisão do TM: o pressuposto passa a decisão. O gerente cria e edita artigos, regista movimentos e trata das compras. O código não muda.
+- **2026-10-27 · Fases 7, 9, 11 e 13 aprovadas pelo TM.** O âmbito fica como está construído. A AT fica a saber e dá o visto funcional nos testes dela; os bugs P0 e P1 que encontrar corrigem-se antes do piloto. Os testes em aparelhos reais, com o cliente e no browser continuam no `todo.md`.
+- **2026-10-27 · Fases 5 e 6 no piloto.** Decisão do TM. O saldo anual de férias e o planeador de turnos, que o docx deixava fora do MVP, entram no piloto e ficam ligados. Fecha a nota de 2026-10-24 sobre o arranque da Fase 5 sem a aprovação da AT; a AT fica a saber.
 - **2026-10-27 · Pessoas: quem conta numa casa.** Entram os trabalhadores ativos da casa principal, mesmo sem registos (para se ver quem não trabalhou), e quem picou ou teve turnos lá no período, vindo de outra casa. As ausências de quem vem de fora ficam na casa principal dele.
 - **2026-10-27 · Service worker para v17.** O CSS mudou com o relatório de pessoas.
 - **2026-10-27 · Valor do stock só de agora.** O plano pedia o valor por categoria e por casa sem dizer em que data. Só há o stock atual e o custo de referência atual, por isso o relatório diz «agora» e não muda com o período escolhido.

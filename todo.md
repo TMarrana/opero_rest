@@ -10,9 +10,9 @@ Bloqueiam fases ou o piloto. A proposta de cada uma está na secção 12 do plan
 - [x] **Catálogo de artigos do grupo ou de cada casa.** Decidido a 2026-10-27: de cada casa.
 - [x] **Trabalhador em mais de uma casa.** Decidido a 2026-10-27: uma casa principal, que é a entidade empregadora, com o saldo e o fecho do mês; pica e tem turnos nas outras. Já está construído. Falta o contabilista confirmar (secção 2).
 - [x] **Âmbito e ordem das Fases 9 a 15** face ao piloto. Decidido a 2026-10-27: as Fases 9 a 13 entram no piloto; a 14 faz-se já e fica desligada nele; a 15 depois. Falta dar conhecimento à AT.
-- [ ] **Âmbito das Fases 5 e 6** (saldo anual e planeamento de turnos, que o docx deixava fora do MVP). Arrancaste-as sem esta aprovação.
-- [ ] **Aprovar as fases já feitas:** 7 (quiosque e app), 9, 11 (compras) e 13 (fichas).
-- [ ] **O gerente pode criar artigos e registar movimentos?** Pressuposto atual: pode (secção 7).
+- [x] **Âmbito das Fases 5 e 6** (saldo anual e planeamento de turnos, que o docx deixava fora do MVP). Decidido a 2026-10-27: entram no piloto, ligadas. Falta dar conhecimento à AT.
+- [x] **Aprovar as fases já feitas:** 7 (quiosque e app), 9, 11 (compras) e 13 (fichas). Aprovadas pelo TM a 2026-10-27, tal como estão construídas. Falta dar conhecimento à AT, que dá o visto funcional nos testes dela.
+- [x] **O gerente pode criar artigos e registar movimentos?** Decidido a 2026-10-27: pode, como estava, incluindo as compras. Falta dar conhecimento à AT.
 - [ ] **Código de ponto só no tablet partilhado.** Já está feito; falta a AT validar.
 - [ ] **Hora de corte do dia de serviço nas vendas.** Está nas 5h; falta confirmar.
 - [ ] **Serviço (almoço e jantar) nas vendas por hora trabalhada:** pelos turnos guardados ou por uma hora de mudança. Sem isto, as vendas por serviço da Fase 10 ficam por fazer.
