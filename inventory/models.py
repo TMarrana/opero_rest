@@ -63,6 +63,12 @@ class Item(TimeStampedModel):
     def is_low(self):
         return self.current_stock <= self.minimum_stock
 
+    @property
+    def needs_count(self):
+        """Só as vendas levam o stock abaixo de zero (Fase 14): o artigo fica
+        assinalado até a contagem seguinte o acertar."""
+        return self.current_stock < 0
+
 
 class StockTransfer(TimeStampedModel):
     """Transferência de stock entre duas casas do mesmo grupo (Fase 9): uma
@@ -110,12 +116,14 @@ class StockMovement(TimeStampedModel):
     class Origin(models.TextChoices):
         """De onde vem o movimento (Fase 9), para os relatórios separarem uma
         quebra de uma venda. A Fase 11 junta a compra, a 12 o consumo
-        interno e a 14 a venda."""
+        interno e a 14 a venda e a contagem física."""
 
         MANUAL = "MANUAL", "Registo manual"
         TRANSFERENCIA = "TRANSFERENCIA", "Transferência entre casas"
         COMPRA = "COMPRA", "Compra"
         CONSUMO = "CONSUMO", "Consumo interno"
+        VENDA = "VENDA", "Venda"
+        CONTAGEM = "CONTAGEM", "Contagem física"
 
     item = models.ForeignKey(Item, verbose_name="artigo", on_delete=models.PROTECT, related_name="movements")
     movement_type = models.CharField("tipo", max_length=10, choices=Type.choices)
@@ -270,3 +278,42 @@ class ConsumptionLine(models.Model):
 
     def __str__(self):
         return f"{self.consumption} · {self.item}"
+
+
+class StockCount(TimeStampedModel):
+    """Contagem física de um artigo (Fase 14). Guarda o que o sistema
+    esperava e o que se contou; a diferença entra como um ajuste de origem
+    contagem. Entre duas contagens, compara-se o consumo esperado com o real
+    (`inventory/counts.py`). Não se edita nem se apaga."""
+
+    item = models.ForeignKey(Item, verbose_name="artigo", on_delete=models.PROTECT, related_name="counts")
+    counted_at = models.DateTimeField("contado em")
+    counted_quantity = models.DecimalField("quantidade contada", max_digits=12, decimal_places=3)
+    expected_quantity = models.DecimalField("stock registado", max_digits=12, decimal_places=3)
+    movement = models.OneToOneField(
+        StockMovement,
+        verbose_name="ajuste",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="stock_count",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name="contado por", on_delete=models.PROTECT, related_name="stock_counts"
+    )
+
+    class Meta:
+        verbose_name = "contagem física"
+        verbose_name_plural = "contagens físicas"
+        ordering = ["-counted_at", "-id"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(counted_quantity__gte=0), name="contagem_nao_negativa"),
+        ]
+
+    def __str__(self):
+        return f"{self.item} · {self.counted_quantity} em {self.counted_at:%d/%m/%Y}"
+
+    @property
+    def difference(self):
+        """Contado menos registado: negativo é falta."""
+        return self.counted_quantity - self.expected_quantity

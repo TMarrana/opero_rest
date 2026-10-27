@@ -13,6 +13,16 @@
     {% include "components/campo.html" with field=form.series %}
     {% include "components/campo.html" with field=form.hourly_cost %}
   </div>
+  <div class="cartao space-y-5 p-6">
+    <h2 class="cartao-titulo">Stock pelas vendas</h2>
+    <label class="flex min-h-toque cursor-pointer items-start gap-2 text-sm">
+      {{ form.stock_enabled }}
+      <span><span class="font-medium">{{ form.stock_enabled.label|capfirst }}</span>
+      <span class="block text-ardosia">{{ form.stock_enabled.help_text }} Os produtos sem ficha não mexem no stock. Um artigo pode ficar com stock negativo: fica assinalado até à contagem seguinte.</span></span>
+    </label>
+    {% include "components/campo.html" with field=form.stock_from %}
+    <p class="text-xs text-ardosia">Ao ligar, os dias já importados a partir deste tiram logo do stock. Desligar não devolve o que já saiu.</p>
+  </div>
   <div class="flex justify-end gap-3">
     {% url 'sales:importar' as url_voltar %}
     {% include "components/botao.html" with label="Cancelar" variante="fantasma" href=url_voltar %}

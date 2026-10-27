@@ -1,0 +1,81 @@
+{% extends "base_manage.html" %}
+{% load interface %}
+{% block title %}Stock pelas vendas{% endblock %}
+{% block content %}
+{% comment %}Stock pelas vendas (Fase 14): os dias aplicados e o que ficou por
+abater. Os problemas recalculam-se ao abrir a página; não se guardam.{% endcomment %}
+<a href="{% url 'sales:vendas' %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Vendas</a>
+<h1 class="mt-2 titulo-pagina">Stock pelas vendas</h1>
+
+{% if not regras.stock_enabled %}
+<div class="cartao mt-6 max-w-2xl p-6">
+  <p class="secao-titulo">Desligado nesta casa</p>
+  <p class="mt-2 text-sm text-ardosia">As vendas importadas não mexem no stock. Ligado, cada produto vendido com ficha técnica tira do stock os artigos da receita, num movimento por artigo e por dia.</p>
+  {% if request.role == "ADMIN" %}
+  <p class="mt-4">{% url 'sales:regras' as url_regras %}{% include "components/botao.html" with label="Ligar nas regras de vendas" href=url_regras %}</p>
+  {% else %}
+  <p class="mt-4 text-sm text-ardosia">Só o administrador o liga, nas regras de vendas.</p>
+  {% endif %}
+</div>
+{% else %}
+<p class="subtitulo-pagina">
+  Ligado desde <span class="font-dados">{{ regras.stock_from|date:"d/m/Y" }}</span>.
+  Abaixo, os dias de serviço desde <span class="font-dados">{{ inicio|date:"d/m/Y" }}</span>.
+  {% if request.role == "ADMIN" %}<a href="{% url 'sales:regras' %}" class="link-texto">Regras</a>{% endif %}
+</p>
+
+<form method="post" class="mt-4" x-data="{ confirmar: false }">
+  {% csrf_token %}
+  <button type="button" x-show="!confirmar" x-on:click="confirmar = true" class="btn btn-fantasma">Acertar o stock</button>
+  <span x-show="confirmar" x-cloak class="inline-flex flex-wrap items-center gap-3">
+    <span class="text-sm">Volta a calcular os dias desde {{ regras.stock_from|date:"d/m/Y" }} com as fichas de agora, e lança só a diferença.</span>
+    <button type="button" x-on:click="confirmar = false" class="link-acao">Rever</button>
+    <button type="submit" class="btn btn-primario">Acertar</button>
+  </span>
+</form>
+
+<div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+  <section class="cartao self-start">
+    <h2 class="cartao-cabecalho cartao-titulo">Por abater</h2>
+    {% if resumo.problemas %}
+    <p class="px-6 pt-4 text-sm text-ardosia">Estas vendas não tiraram do stock tudo o que deviam. Corrija a ficha ou o artigo e depois acerte o stock: só entra a diferença.</p>
+    <div class="overflow-x-auto">
+      <table class="tabela">
+        <thead><tr><th>Problema</th><th class="th-dados">Quantidade</th><th><span class="sr-only">Ações</span></th></tr></thead>
+        <tbody>
+          {% for p in resumo.problemas %}
+          <tr>
+            <td>{{ p.text }}</td>
+            <td class="td-dados">{% if p.kind == "sem_ficha" or p.kind == "sem_versao" %}{{ p.quantity|floatformat:"-3" }} vend.{% else %}{{ p.quantity|floatformat:"-3" }}{% endif %}</td>
+            <td class="whitespace-nowrap text-right">
+              {% if p.kind == "sem_ficha" %}<a href="{% url 'recipes:pos' %}" class="link-acao">Criar ficha</a>
+              {% elif p.recipe %}<a href="{% url 'recipes:ficha' p.recipe.pk %}" class="link-acao">Ver ficha</a>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="px-6 py-10 text-center text-sm text-ardosia">Nada por abater: todas as vendas destes dias tiraram do stock o que as fichas gastam.</p>
+    {% endif %}
+  </section>
+
+  <section class="cartao self-start">
+    <h2 class="cartao-cabecalho cartao-titulo">Dias aplicados</h2>
+    {% if dias %}
+    <ul>
+      {% for d in dias %}
+      <li class="flex items-center justify-between gap-4 border-b border-linha px-6 py-3 text-sm last:border-0">
+        <span class="font-dados">{{ d.service_date|date:"d/m/Y" }}</span>
+        <span class="text-ardosia">{{ d.artigos }} artigo{{ d.artigos|pluralize }}{% if d.movimentos > d.artigos %} · {{ d.movimentos }} movimentos{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-6 py-10 text-center text-sm text-ardosia">Ainda nenhum dia tirou do stock. Importe as vendas a partir de {{ regras.stock_from|date:"d/m/Y" }}.</p>
+    {% endif %}
+  </section>
+</div>
+{% endif %}
+{% endblock %}

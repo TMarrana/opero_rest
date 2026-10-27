@@ -9,14 +9,14 @@ Bloqueiam fases ou o piloto. A proposta de cada uma está na secção 12 do plan
 
 - [x] **Catálogo de artigos do grupo ou de cada casa.** Decidido a 2026-10-27: de cada casa.
 - [x] **Trabalhador em mais de uma casa.** Decidido a 2026-10-27: uma casa principal, que é a entidade empregadora, com o saldo e o fecho do mês; pica e tem turnos nas outras. Já está construído. Falta o contabilista confirmar (secção 2).
-- [ ] **Âmbito e ordem das Fases 9 a 15** face ao piloto.
+- [x] **Âmbito e ordem das Fases 9 a 15** face ao piloto. Decidido a 2026-10-27: as Fases 9 a 13 entram no piloto; a 14 faz-se já e fica desligada nele; a 15 depois. Falta dar conhecimento à AT.
 - [ ] **Âmbito das Fases 5 e 6** (saldo anual e planeamento de turnos, que o docx deixava fora do MVP). Arrancaste-as sem esta aprovação.
 - [ ] **Aprovar as fases já feitas:** 7 (quiosque e app), 9, 11 (compras) e 13 (fichas).
 - [ ] **O gerente pode criar artigos e registar movimentos?** Pressuposto atual: pode (secção 7).
 - [ ] **Código de ponto só no tablet partilhado.** Já está feito; falta a AT validar.
 - [ ] **Hora de corte do dia de serviço nas vendas.** Está nas 5h; falta confirmar.
 - [ ] **Serviço (almoço e jantar) nas vendas por hora trabalhada:** pelos turnos guardados ou por uma hora de mudança. Sem isto, as vendas por serviço da Fase 10 ficam por fazer.
-- [ ] **Stock negativo causado pelas vendas** (Fase 14). Proposta: aceitar só nos movimentos de origem venda e assinalar o artigo para contar.
+- [x] **Stock negativo causado pelas vendas** (Fase 14). Decidido a 2026-10-27: só os movimentos de origem venda o deixam negativo, e o artigo fica assinalado para contar. Já está construído. Falta dar conhecimento à AT.
 - [ ] **Pergunta na saída tardia (R-012):** se entra ou não.
 - [ ] **Nome da marca e domínio.**
 - [ ] **Isolamento entre clientes:** domínio, subdomínio ou área partilhada.
@@ -43,6 +43,7 @@ Bloqueiam fases ou o piloto. A proposta de cada uma está na secção 12 do plan
   - se usa o estado F e em que documentos.
 - [ ] Carregar um ficheiro pelo browser, à mão. Até agora só os testes o fizeram.
 - [ ] Usar as compras (Fase 11) com um fornecedor real.
+- [ ] Depois de o total do SAF-T bater, fazer as fichas dos produtos mais vendidos, ligar o stock pelas vendas numa casa a partir do dia a seguir a uma contagem, e comparar na contagem seguinte (Fase 14). No piloto fica desligado.
 
 ## 4. Testar em aparelhos reais
 
@@ -62,6 +63,7 @@ Ecrãs que só foram verificados pelos testes ou pelo texto da página, sem ning
 - [ ] Fase 5: pedidos de correção, fecho do mês, configuração e saldos.
 - [ ] Calendário de ausências (Fase 8) com dados reais.
 - [ ] **Trabalhador em várias casas (Fase 9)** com o `demo`: a Inês no tablet da Esquina, o planeador da Esquina e a ficha dela na Ribeira.
+- [ ] **Stock pelas vendas (Fase 14)** com o `demo` na Esquina: Vendas → Stock, a lista do stock com o bife negativo, uma contagem na folha e Stock → Contagens.
 - [ ] «Os meus turnos» na vista do colaborador: é um quarto elemento além dos três previstos (secção 5).
 - [ ] Percurso completo dos quatro perfis com o `demo`. As compras foram feitas pelo Admin do grupo; o Resp. stock só pelos testes.
 

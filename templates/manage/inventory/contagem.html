@@ -1,0 +1,73 @@
+{% extends "base_manage.html" %}
+{% load interface %}
+{% load vendas %}
+{% block title %}Contagem física{% endblock %}
+{% block content %}
+{% comment %}Folha de contagem (Fase 14). Só os artigos preenchidos contam. A
+diferença para o stock registado entra como um ajuste de origem contagem.{% endcomment %}
+<a href="{% url 'inventory:contagens' %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Contagens</a>
+<h1 class="mt-2 titulo-pagina">Contagem física</h1>
+<p class="subtitulo-pagina">Escreva o que contou. Os artigos em branco ficam como estão. A diferença para o stock registado acerta-se com um ajuste, e a contagem fica para o teórico contra real.</p>
+
+{% if vendas_atrasadas is not None %}
+<p class="aviso aviso-alerta mt-4 max-w-3xl">
+  As vendas desta casa tiram do stock, e {% if vendas_atrasadas %}o último dia importado é {{ vendas_atrasadas|date:"d/m/Y" }}{% else %}ainda não há vendas importadas{% endif %}.
+  Importe as vendas até ontem antes de contar: as que entrarem depois saem do stock com a data delas, e a contagem fica a contar com elas a mais.
+</p>
+{% endif %}
+
+<form method="get" class="mt-6 flex flex-wrap items-center gap-3">
+  <select name="categoria" class="campo-input max-w-[14rem]" aria-label="Categoria" onchange="this.form.submit()">
+    <option value="">Todas as categorias</option>
+    {% for c in categorias %}<option value="{{ c.pk }}" {% if categoria == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+  </select>
+  <label class="flex min-h-toque cursor-pointer items-center gap-2 text-sm font-medium">
+    <input type="checkbox" name="negativos" value="1" {% if negativos %}checked{% endif %} class="h-4 w-4 accent-chama" onchange="this.form.submit()">
+    Só stock negativo
+  </label>
+</form>
+
+<form method="post" class="mt-4 space-y-4" x-data="{ a_enviar: false }" x-on:submit="a_enviar = true">
+  {% csrf_token %}
+  <input type="hidden" name="categoria" value="{{ categoria }}">
+  {% if erro %}<p class="aviso aviso-perigo" role="alert">{{ erro }}</p>{% endif %}
+  <div class="cartao">
+    {% if artigos %}
+    <div class="overflow-x-auto">
+      <table class="tabela">
+        <thead><tr><th>Artigo</th><th>Categoria</th><th class="th-dados">Registado</th><th class="th-dados">Contado</th></tr></thead>
+        <tbody>
+          {% for a in artigos %}
+          <tr>
+            <td class="font-medium">{{ a.name }}{% if a.needs_count %} {% include "components/badge.html" with label="Stock negativo, contar" variante="alerta" %}{% endif %}</td>
+            <td class="text-ardosia">{{ a.category.name }}</td>
+            <td class="td-dados">{{ a.current_stock|numero:3 }} {{ a.unit }}</td>
+            <td class="td-dados">
+              <label class="sr-only" for="contado_{{ a.pk }}">Contado de {{ a.name }}</label>
+              <span class="inline-flex items-center gap-2">
+                <input type="text" inputmode="decimal" name="contado_{{ a.pk }}" id="contado_{{ a.pk }}" value="{{ a.valor }}"
+                       class="campo-input w-28 text-right font-dados" autocomplete="off">
+                <span class="text-sm text-ardosia">{{ a.unit }}</span>
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="px-6 py-12 text-center text-sm text-ardosia">Nenhum artigo com estes filtros.</p>
+    {% endif %}
+  </div>
+  {% if artigos %}
+  <div class="flex justify-end gap-3" x-data="{ confirmar: false }">
+    <button type="button" x-show="!confirmar" x-on:click="confirmar = true" class="btn btn-primario">Registar contagem</button>
+    <div x-show="confirmar" x-cloak class="flex items-center gap-3">
+      <span class="text-sm">O stock dos artigos preenchidos passa a ser o contado, e a contagem não se apaga.</span>
+      <button type="button" x-on:click="confirmar = false" class="link-acao">Rever</button>
+      <button type="submit" class="btn btn-primario" x-bind:disabled="a_enviar">Confirmar contagem</button>
+    </div>
+  </div>
+  {% endif %}
+</form>
+{% endblock %}

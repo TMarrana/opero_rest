@@ -9,8 +9,12 @@ anulados, com as notas de crédito a abater. Os valores são sem IVA.{% endcomme
     <h1 class="titulo-pagina">Vendas</h1>
     {% if ultimo_dia %}<p class="mt-1 text-sm text-ardosia">Valores sem IVA. Último dia importado: <span class="font-dados">{{ ultimo_dia|date:"d/m/Y" }}</span>.</p>{% endif %}
   </div>
-  {% url 'sales:importar' as url_importar %}
-  {% include "components/botao.html" with variante="acento" label="Importar SAF-T" href=url_importar %}
+  <div class="flex gap-3">
+    {% url 'sales:stock' as url_stock %}
+    {% include "components/botao.html" with label="Stock" variante="fantasma" href=url_stock %}
+    {% url 'sales:importar' as url_importar %}
+    {% include "components/botao.html" with variante="acento" label="Importar SAF-T" href=url_importar %}
+  </div>
 </div>
 
 {% if not tem_importacoes %}

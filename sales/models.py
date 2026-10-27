@@ -1,7 +1,8 @@
 """
 Vendas lidas do ficheiro SAF-T (PT) de faturação que o POS exporta (Fase 10).
 
-Só leitura: nada aqui mexe no stock (isso é a Fase 14) nem emite documentos.
+Os documentos não mexem no stock; a Fase 14 (`sales/stock.py`) tira dele o
+que as fichas técnicas gastam, quando a casa o liga. Nada aqui emite documentos.
 Do cliente final não se guarda nada, e o ficheiro original também não: fica
 só o hash, para reconhecer um ficheiro repetido.
 """
@@ -39,6 +40,19 @@ class SalesSettings(TimeStampedModel):
         null=True,
         blank=True,
         help_text="Opcional. Dá o custo de pessoal estimado em percentagem das vendas. Sem salários: é uma média.",
+    )
+    # Fase 14: as vendas tiram do stock o que as fichas técnicas gastam.
+    # Desligado por omissão; liga-se casa a casa.
+    stock_enabled = models.BooleanField(
+        "atualizar o stock pelas vendas",
+        default=False,
+        help_text="Cada produto vendido com ficha técnica tira do stock os artigos da receita.",
+    )
+    stock_from = models.DateField(
+        "a partir do dia",
+        null=True,
+        blank=True,
+        help_text="Os dias de serviço anteriores não mexem no stock. Use o dia a seguir a uma contagem.",
     )
 
     class Meta:
@@ -189,3 +203,35 @@ class SalesLine(models.Model):
 
     def __str__(self):
         return f"{self.document} · {self.line_number}"
+
+
+class SaleStockMovement(models.Model):
+    """O que as vendas de um dia de serviço já tiraram do stock de um artigo
+    (Fase 14). Um movimento por artigo e por dia; se uma importação nova
+    muda as vendas desse dia, a diferença entra como outra linha, com o seu
+    movimento. O que está aplicado é a soma das linhas."""
+
+    restaurant = models.ForeignKey(
+        "core.Restaurant", verbose_name="casa", on_delete=models.CASCADE, related_name="sale_stock_movements"
+    )
+    service_date = models.DateField("dia de serviço")
+    item = models.ForeignKey("inventory.Item", verbose_name="artigo", on_delete=models.PROTECT, related_name="+")
+    # Positivo: saiu do stock. Negativo: voltou (uma nota de crédito, uma
+    # fatura anulada depois).
+    quantity = models.DecimalField("quantidade", max_digits=12, decimal_places=3)
+    movement = models.OneToOneField(
+        "inventory.StockMovement", verbose_name="movimento", on_delete=models.PROTECT, related_name="sale_stock"
+    )
+    sales_import = models.ForeignKey(
+        SalesImport, verbose_name="importação", on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    created_at = models.DateTimeField("aplicado em", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "saída de stock por vendas"
+        verbose_name_plural = "saídas de stock por vendas"
+        ordering = ["service_date", "item"]
+        indexes = [models.Index(fields=["restaurant", "service_date"])]
+
+    def __str__(self):
+        return f"{self.restaurant} · {self.service_date:%d/%m/%Y} · {self.item} {self.quantity}"

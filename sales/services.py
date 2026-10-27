@@ -80,7 +80,11 @@ def _control_matches(ficheiro):
 
 def import_saft(*, restaurant, upload, user):
     """Importa um ficheiro SAF-T carregado (XML ou .zip) para a casa.
-    Devolve a SalesImport. Recusa com ValidationError, sem gravar nada."""
+    Devolve a SalesImport. Recusa com ValidationError, sem gravar nada.
+
+    Com o stock pelas vendas ligado (Fase 14), os dias de serviço que a
+    importação mudou tiram do stock o que as fichas gastam; o resultado fica
+    em `stock_results`."""
     if not restaurant.nif:
         raise ValidationError(
             f"{restaurant} ainda não tem NIF. O Admin do grupo preenche-o em Grupo → Casas e acessos."
@@ -125,8 +129,12 @@ def import_saft(*, restaurant, upload, user):
             control_mismatch=not _control_matches(ficheiro),
         )
         produtos = _save_products(restaurant, ficheiro, documentos)
-        _save_documents(restaurant, importacao, documentos, produtos, regras.day_cutoff_hour)
+        dias = _save_documents(restaurant, importacao, documentos, produtos, regras.day_cutoff_hour)
         _update_prices(produtos, documentos)
+        # Na mesma transação: ou entram as vendas e o stock, ou nada.
+        from .stock import apply_days
+
+        importacao.stock_results = apply_days(restaurant=restaurant, days=dias, user=user, sales_import=importacao)
     importacao.other_types = ficheiro.other_types
     return importacao
 
@@ -220,6 +228,8 @@ def _save_documents(restaurant, importacao, documentos, produtos, cutoff_hour):
     importacao.documents_updated = len(mudados)
     importacao.documents_unchanged = iguais
     importacao.save(update_fields=["documents_new", "documents_updated", "documents_unchanged", "updated_at"])
+    # Os dias de serviço que esta importação mudou, para o stock (Fase 14).
+    return {d.service_date for d in criados} | {d.service_date for d in mudados}
 
 
 def _signed(documento, valor):

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Category, ConsumptionSettings, InternalConsumption, Item, StockMovement
+from .models import Category, ConsumptionSettings, InternalConsumption, Item, StockCount, StockMovement
 
 
 @admin.register(Category)
@@ -58,3 +58,20 @@ class InternalConsumptionAdmin(admin.ModelAdmin):
 @admin.register(ConsumptionSettings)
 class ConsumptionSettingsAdmin(admin.ModelAdmin):
     list_display = ("restaurant", "meals_per_shift")
+
+
+@admin.register(StockCount)
+class StockCountAdmin(admin.ModelAdmin):
+    """Consulta apenas (Fase 14): uma contagem acertou o stock e não se muda."""
+
+    list_display = ("counted_at", "item", "counted_quantity", "expected_quantity", "created_by")
+    list_filter = ("item__restaurant",)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

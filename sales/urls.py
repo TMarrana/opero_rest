@@ -8,4 +8,5 @@ urlpatterns = [
     path("", views.SalesView.as_view(), name="vendas"),
     path("importar/", views.ImportView.as_view(), name="importar"),
     path("regras/", views.SettingsView.as_view(), name="regras"),
+    path("stock/", views.StockView.as_view(), name="stock"),
 ]

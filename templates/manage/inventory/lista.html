@@ -6,6 +6,7 @@
     <h1 class="titulo-pagina">Stock</h1>
     <p class="mt-1 text-sm text-ardosia">
       {% include "partials/inventory/contador_baixo.html" %}
+      {% if contador_negativo %}· <a href="{% url 'inventory:contagem' %}?negativos=1" class="link-texto"><span class="font-dados font-semibold">{{ contador_negativo }}</span> com stock negativo, por contar</a>{% endif %}
     </p>
   </div>
   <div class="flex gap-3">
@@ -13,6 +14,8 @@
     {% include "components/botao.html" with label="Categorias" variante="fantasma" href="/gestao/stock/categorias/" %}
     {% url 'inventory:consumos' as url_consumos %}
     {% include "components/botao.html" with label="Consumos" variante="fantasma" href=url_consumos %}
+    {% url 'inventory:contagens' as url_contagens %}
+    {% include "components/botao.html" with label="Contagens" variante="fantasma" href=url_contagens %}
     {% include "components/botao.html" with variante="acento" label="Novo artigo" href="/gestao/stock/novo/" %}
   </div>
 </div>
@@ -32,6 +35,12 @@
     <input type="checkbox" name="baixo" value="1" {% if filtros.baixo %}checked{% endif %} class="h-4 w-4 accent-chama">
     Só stock baixo
   </label>
+  {% if contador_negativo or filtros.negativos %}
+  <label class="flex min-h-toque cursor-pointer items-center gap-2 text-sm font-medium">
+    <input type="checkbox" name="negativos" value="1" {% if filtros.negativos %}checked{% endif %} class="h-4 w-4 accent-chama">
+    Só stock negativo
+  </label>
+  {% endif %}
 </form>
 
 <div class="mt-4">

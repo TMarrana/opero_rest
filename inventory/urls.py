@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import consumption_views, views
+from . import consumption_views, count_views, views
 
 app_name = "inventory"
 
@@ -15,6 +15,8 @@ urlpatterns = [
     path("consumos/novo/", consumption_views.ConsumptionCreateView.as_view(), name="consumo_novo"),
     path("consumos/regras/", consumption_views.ConsumptionSettingsView.as_view(), name="consumo_regras"),
     path("consumos/<int:pk>/anular/", consumption_views.ConsumptionCancelView.as_view(), name="consumo_anular"),
+    path("contagens/", count_views.CountListView.as_view(), name="contagens"),
+    path("contagens/contar/", count_views.CountSheetView.as_view(), name="contagem"),
     path("categorias/", views.CategoryListView.as_view(), name="categorias"),
     path("categorias/<int:pk>/editar/", views.CategoryUpdateView.as_view(), name="categoria_editar"),
     path("categorias/<int:pk>/eliminar/", views.CategoryDeleteView.as_view(), name="categoria_eliminar"),

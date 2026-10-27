@@ -53,11 +53,20 @@ class ItemListView(StockRequiredMixin, TemplateView):
             qs = qs.filter(category_id=categoria)
         if self.request.GET.get("baixo"):
             qs = qs.filter(current_stock__lte=F("minimum_stock"))
+        if self.request.GET.get("negativos"):
+            qs = qs.filter(current_stock__lt=0)
         ctx["items"] = qs
         ctx["categorias"] = restaurant_scope(self.request, Category.objects.all())
         ctx["contador_baixo"] = _contador_baixo(self.request)
+        # Só as vendas deixam o stock negativo (Fase 14): por contar.
+        ctx["contador_negativo"] = restaurant_scope(self.request, Item.objects.filter(current_stock__lt=0)).count()
         ctx["pode_transferir"] = _outras_casas(self.request).exists()
-        ctx["filtros"] = {"q": q, "categoria": categoria, "baixo": self.request.GET.get("baixo", "")}
+        ctx["filtros"] = {
+            "q": q,
+            "categoria": categoria,
+            "baixo": self.request.GET.get("baixo", ""),
+            "negativos": self.request.GET.get("negativos", ""),
+        }
         return ctx
 
     def get(self, request, *args, **kwargs):

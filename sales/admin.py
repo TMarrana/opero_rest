@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import PosProduct, SalesDocument, SalesImport, SalesSettings
+from .models import PosProduct, SaleStockMovement, SalesDocument, SalesImport, SalesSettings
 
 
 @admin.register(SalesSettings)
@@ -42,4 +42,21 @@ class SalesDocumentAdmin(admin.ModelAdmin):
         return False
 
     def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(SaleStockMovement)
+class SaleStockMovementAdmin(admin.ModelAdmin):
+    """Consulta apenas (Fase 14): cada linha tem o seu movimento, que não se apaga."""
+
+    list_display = ("service_date", "restaurant", "item", "quantity", "sales_import")
+    list_filter = ("restaurant",)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
         return False

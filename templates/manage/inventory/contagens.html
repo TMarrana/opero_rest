@@ -1,0 +1,72 @@
+{% extends "base_manage.html" %}
+{% load interface %}
+{% load vendas %}
+{% block title %}Contagens{% endblock %}
+{% block content %}
+{% comment %}Teórico contra real (Fase 14): cada contagem do mês comparada com a
+anterior do mesmo artigo. A diferença é o que saiu sem ficar registado.{% endcomment %}
+<a href="{% url 'inventory:lista' %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Stock</a>
+<div class="mt-2 flex flex-wrap items-end justify-between gap-4">
+  <h1 class="titulo-pagina">Contagens</h1>
+  {% url 'inventory:contagem' as url_contar %}
+  {% include "components/botao.html" with variante="acento" label="Contar" href=url_contar %}
+</div>
+<p class="subtitulo-pagina">Entre duas contagens de um artigo, o consumo esperado são as vendas pelas fichas técnicas, os consumos internos e as quebras registadas. A diferença na contagem é o que saiu sem registo: desperdício, porções mal servidas ou fichas erradas.</p>
+
+<div class="mt-6 flex items-center gap-2">
+  <a href="?mes={{ mes_anterior|date:'Y-m' }}" class="btn btn-fantasma btn-sm" aria-label="Mês anterior">&larr;</a>
+  <span class="font-dados text-sm font-semibold">{{ mes|date:"m/Y" }}</span>
+  {% if mes_seguinte %}<a href="?mes={{ mes_seguinte|date:'Y-m' }}" class="btn btn-fantasma btn-sm" aria-label="Mês seguinte">&rarr;</a>{% endif %}
+</div>
+
+<section class="cartao mt-4">
+  {% if linhas %}
+  <div class="overflow-x-auto">
+    <table class="tabela">
+      <thead>
+        <tr>
+          <th>Artigo</th>
+          <th>Contado em</th>
+          <th class="th-dados">Vendas</th>
+          <th class="th-dados">Consumos</th>
+          <th class="th-dados">Quebras</th>
+          <th class="th-dados">Esperado</th>
+          <th class="th-dados">Real</th>
+          <th class="th-dados">Diferença</th>
+          <th class="th-dados">Valor</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in linhas %}
+        <tr>
+          <td class="font-medium">{{ l.count.item.name }}<span class="block text-xs font-normal text-ardosia">{{ l.count.item.unit }}{% if l.previous %} · desde {{ l.previous.counted_at|date:"d/m H:i" }}{% endif %}</span></td>
+          <td class="font-dados text-sm">{{ l.count.counted_at|date:"d/m H:i" }}<span class="block text-xs text-ardosia">{{ l.count.created_by }}</span></td>
+          {% if l.previous %}
+          <td class="td-dados">{{ l.sales|numero:3 }}</td>
+          <td class="td-dados">{{ l.consumption|numero:3 }}</td>
+          <td class="td-dados">{{ l.waste|numero:3 }}</td>
+          <td class="td-dados">{{ l.expected|numero:3 }}</td>
+          <td class="td-dados">{{ l.real|numero:3 }}</td>
+          <td class="td-dados {% if l.difference < 0 %}text-perigo{% endif %}">{{ l.difference|numero:3 }}{% if l.deviation_pct is not None and l.difference %}<span class="block text-xs text-ardosia">{{ l.deviation_pct|numero:1 }} %</span>{% endif %}</td>
+          <td class="td-dados">{{ l.value|euros }}</td>
+          {% else %}
+          <td colspan="7" class="text-sm text-ardosia">Primeira contagem: a comparação começa na seguinte. Diferença para o registado: <span class="font-dados">{{ l.difference|numero:3 }}</span>.</td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if total_valor is not None %}
+      <tfoot>
+        <tr>
+          <td colspan="8" class="font-semibold">Total das diferenças{% if sem_custo %} <span class="text-xs font-normal text-ardosia">(sem os artigos sem custo)</span>{% endif %}</td>
+          <td class="td-dados font-semibold">{{ total_valor|euros }}</td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+  {% else %}
+  <p class="px-6 py-12 text-center text-sm text-ardosia">Nenhuma contagem em {{ mes|date:"m/Y" }}.</p>
+  {% endif %}
+</section>
+{% endblock %}

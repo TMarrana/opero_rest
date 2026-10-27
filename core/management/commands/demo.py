@@ -158,6 +158,7 @@ class Command(BaseCommand):
         self._compras(restaurant, resp_stock)
         self._consumos(restaurant, gerente, [marta, rui])
         self._fichas(restaurant, ribeira, gerente)
+        self._stock_vendas(restaurant, gerente)
 
         self.stdout.write(self.style.SUCCESS("Dados de demonstração prontos."))
         self.stdout.write(
@@ -239,6 +240,23 @@ class Command(BaseCommand):
                 restaurant=casa, upload=SimpleUploadedFile(f"saft-{casa.slug}.xml", conteudo), user=gerente
             )
             self.stdout.write(f"Vendas de {casa.slug}: {imp.documents_new} documentos importados")
+
+    def _stock_vendas(self, esquina, gerente):
+        """Fase 14: na Esquina, as vendas do último dia importado tiram do
+        stock o que as fichas gastam. Um só dia, para o stock não ficar
+        quase todo negativo. A Ribeira fica desligada, como no piloto."""
+        from sales.models import SalesSettings
+        from sales.reports import ultimo_dia
+        from sales.stock import apply_since
+
+        regras = SalesSettings.for_restaurant(esquina)
+        if regras.stock_enabled:
+            return
+        regras.stock_enabled = True
+        regras.stock_from = ultimo_dia(esquina) or timezone.localdate()
+        regras.save(update_fields=["stock_enabled", "stock_from", "updated_at"])
+        dias = apply_since(restaurant=esquina, user=gerente)
+        self.stdout.write(f"Stock pelas vendas na Esquina: {sum(d.movements for d in dias)} movimentos")
 
     def _compras(self, esquina, resp_stock):
         """Fase 11: três fornecedores do grupo, os preferidos dos artigos da

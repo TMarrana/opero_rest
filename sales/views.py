@@ -8,6 +8,8 @@ import io
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.db import transaction
+from django.db.models import Count
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -16,12 +18,14 @@ from django.views import View
 from attendance.month import month_range, next_month, previous_month
 from core.mixins import AdminRequiredMixin, ManagerRequiredMixin
 
-from . import reports
+from . import reports, stock
 from .forms import ImportForm, SalesSettingsForm
-from .models import SalesImport, SalesSettings
+from .models import SaleStockMovement, SalesImport, SalesSettings
 from .services import import_saft
 
 MAX_DIAS = 366
+# Vendas → Stock mostra os problemas dos últimos dias aplicados.
+DIAS_STOCK = 30
 
 
 def _data(valor):
@@ -165,6 +169,7 @@ class ImportView(ManagerRequiredMixin, View):
         except ValidationError as exc:
             return self._render(request, ImportForm(), erro=" ".join(exc.messages), status=400)
         messages.success(request, f"Ficheiro importado: {importacao.documents_new} documento(s) novo(s)")
+        _mensagem_stock(request, importacao.stock_results)
         return redirect("sales:importar")
 
 
@@ -179,9 +184,68 @@ class SettingsView(AdminRequiredMixin, View):
 
     def post(self, request):
         regras = SalesSettings.for_restaurant(request.restaurant)
+        antes = (regras.stock_enabled, regras.stock_from)
         form = SalesSettingsForm(request.POST, instance=regras)
         if not form.is_valid():
             return render(request, self.template_name, {"form": form}, status=400)
-        form.save()
+        with transaction.atomic():
+            regras = form.save()
+            # Ao ligar, ou ao mudar o dia de início, os dias já importados
+            # desde esse dia tiram do stock o que ainda não tiraram.
+            resultados = []
+            if regras.stock_enabled and antes != (regras.stock_enabled, regras.stock_from):
+                resultados = stock.apply_since(restaurant=request.restaurant, user=request.user)
         messages.success(request, "Regras de vendas guardadas")
+        _mensagem_stock(request, resultados)
         return redirect("sales:importar")
+
+
+def _mensagem_stock(request, resultados):
+    """O que as vendas fizeram ao stock, depois de uma importação ou de ligar
+    o stock pelas vendas (Fase 14)."""
+    if not resultados:
+        return
+    resumo = stock.summary(resultados)
+    texto = f"Stock atualizado pelas vendas de {resumo['dias']} dia(s): {resumo['movimentos']} movimento(s)"
+    if resumo["problemas"]:
+        texto += f". {len(resumo['problemas'])} problema(s) deixaram vendas por abater: veja Vendas → Stock"
+        messages.warning(request, texto)
+    else:
+        messages.success(request, texto)
+
+
+class StockView(ManagerRequiredMixin, View):
+    """Vendas → Stock (Fase 14): se a casa tem o stock pelas vendas ligado,
+    os últimos dias aplicados e o que ficou por abater, com a razão."""
+
+    template_name = "manage/sales/stock.html"
+
+    def get(self, request):
+        casa = request.restaurant
+        regras = SalesSettings.for_restaurant(casa)
+        hoje = timezone.localdate()
+        desde = hoje - datetime.timedelta(days=DIAS_STOCK)
+        contexto = {"regras": regras, "desde": desde}
+        if regras.stock_enabled and regras.stock_from:
+            inicio = max(desde, regras.stock_from)
+            contexto["resumo"] = stock.problems_since(casa, inicio, hoje)
+            contexto["inicio"] = inicio
+            contexto["dias"] = (
+                SaleStockMovement.objects.filter(restaurant=casa, service_date__gte=inicio)
+                .values("service_date")
+                .annotate(movimentos=Count("pk"), artigos=Count("item", distinct=True))
+                .order_by("-service_date")
+            )
+        return render(request, self.template_name, contexto)
+
+    def post(self, request):
+        """Depois de corrigir uma ficha ou um artigo: volta a aplicar os dias
+        desde o início. Só entra a diferença, por isso repetir não muda nada."""
+        resultados = stock.apply_since(restaurant=request.restaurant, user=request.user)
+        if not resultados:
+            messages.error(request, "O stock pelas vendas está desligado nesta casa.")
+        elif not stock.summary(resultados)["movimentos"]:
+            messages.success(request, "O stock já estava certo: nada mudou")
+        else:
+            _mensagem_stock(request, resultados)
+        return redirect("sales:stock")

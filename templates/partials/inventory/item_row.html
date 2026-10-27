@@ -4,7 +4,9 @@
   <td class="td-dados">{{ item.current_stock }} {{ item.unit }}</td>
   <td class="td-dados text-ardosia">{{ item.minimum_stock }} {{ item.unit }}</td>
   <td>
-    {% if item.is_low %}
+    {% if item.needs_count %}
+    {% include "components/badge.html" with label="Stock negativo, contar" variante="alerta" %}
+    {% elif item.is_low %}
     {% include "components/badge.html" with label="Stock baixo" variante="alerta" %}
     {% else %}
     {% include "components/badge.html" with label="OK" variante="neutro" %}

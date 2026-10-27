@@ -7,7 +7,8 @@ no ecrã, junto ao formulário, porque diz o que fazer a seguir.{% endcomment %}
 <a href="{% url 'sales:vendas' %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Vendas</a>
 <h1 class="mt-2 titulo-pagina">Importar vendas</h1>
 <p class="mt-1 max-w-2xl text-sm text-ardosia">
-  Carregue o ficheiro SAF-T de faturação que o POS exporta. O Opero lê as vendas e não altera nada no POS nem no stock.
+  Carregue o ficheiro SAF-T de faturação que o POS exporta. O Opero lê as vendas e não altera nada no POS.
+  {% if regras.stock_enabled %}Os produtos com ficha técnica tiram do stock o que a receita gasta, a partir de {{ regras.stock_from|date:"d/m/Y" }}.{% else %}O stock não muda.{% endif %}
   Pode carregar o mesmo período mais de uma vez: só entram os documentos novos e os que mudaram de estado.
 </p>
 
@@ -23,6 +24,7 @@ no ecrã, junto ao formulário, porque diz o que fazer a seguir.{% endcomment %}
         <div class="flex justify-between gap-4"><dt class="text-ardosia">NIF da casa</dt><dd class="font-dados">{{ request.restaurant.nif|default:"por preencher" }}</dd></div>
         <div class="flex justify-between gap-4"><dt class="text-ardosia">Dia de serviço até às</dt><dd class="font-dados">{{ regras.day_cutoff_hour|stringformat:"02d" }}:00</dd></div>
         {% if regras.series %}<div class="flex justify-between gap-4"><dt class="text-ardosia">Séries desta casa</dt><dd class="font-dados">{{ regras.series }}</dd></div>{% endif %}
+        <div class="flex justify-between gap-4"><dt class="text-ardosia">Stock pelas vendas</dt><dd>{% if regras.stock_enabled %}<a href="{% url 'sales:stock' %}" class="link-texto">ligado</a>{% else %}desligado{% endif %}</dd></div>
       </dl>
       {% if request.role == "ADMIN" %}
       <p class="text-sm"><a href="{% url 'sales:regras' %}" class="link-texto">Mudar as regras de vendas</a></p>
