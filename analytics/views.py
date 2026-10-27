@@ -9,6 +9,7 @@ Comparar casas é só para o Admin do grupo; os outros veem a casa ativa.
 import datetime
 from decimal import Decimal
 
+from django.conf import settings
 from django.shortcuts import redirect
 from django.utils import timezone
 from django.views.generic import TemplateView
@@ -16,9 +17,10 @@ from django.views.generic import TemplateView
 from attendance.month import month_range, next_month, previous_month
 from core import exports
 from core.exports import EUROS, HORAS, NUMERO, PERCENTAGEM, Tabela
-from core.mixins import StockRequiredMixin
+from core.mixins import ManagerRequiredMixin, StockRequiredMixin
 
 from . import reports
+from . import people_reports as pr
 from . import stock_reports as sr
 
 MAX_DIAS = 366
@@ -305,3 +307,85 @@ def _tabela_precos(artigo):
         linhas=[list(p) for p in artigo.precos],
         formatos=[exports.DATA, EUROS],
     )
+
+
+class PeopleReportView(ManagerRequiredMixin, TemplateView):
+    """Análise → Pessoas: presenças e ausências, horas por área, e atrasos e
+    faltas de marcação face aos turnos publicados. Só o Admin e o Gerente."""
+
+    template_name = "manage/analytics/pessoas.html"
+
+    def get(self, request, *args, **kwargs):
+        inicio, fim, mes = periodo(request)
+        disponiveis = casas_disponiveis(request)
+        escolhidas = casas_escolhidas(request, disponiveis)
+        agora = timezone.now()
+        casas = []
+        for c in escolhidas:
+            linhas, desvios = pr.pessoas(c, inicio, fim, agora)
+            casas.append(
+                {
+                    "casa": c,
+                    "pessoas": linhas,
+                    "desvios": desvios,
+                    "areas": pr.horas_por_area(c, inicio, fim, agora),
+                    "ausencias": pr.ausencias_por_tipo(c, inicio, fim),
+                    "meses": pr.presencas_por_mes(c, inicio, fim, agora),
+                }
+            )
+        formato = exports.formato_pedido(request)
+        if formato:
+            tabelas = []
+            for c in casas:
+                tabelas += _tabelas_pessoas(c)
+            return exports.responder(formato, tabelas, f"pessoas-{inicio:%Y-%m-%d}-a-{fim:%Y-%m-%d}")
+        return self.render_to_response(
+            self.get_context_data(
+                **_contexto_periodo(inicio, fim, mes, disponiveis, escolhidas),
+                casas=casas,
+                tolerancia=settings.SHIFT_TOLERANCE_MINUTES,
+                separador="pessoas",
+            )
+        )
+
+
+def _tabelas_pessoas(c):
+    nome = c["casa"].name
+    return [
+        Tabela(
+            titulo=f"Pessoas {nome}",
+            colunas=["Trabalhador", "Casa principal", "Dias trabalhados", "Horas", "Horas previstas", "Diferença (h)",
+                     "Atrasos", "Minutos de atraso", "Saídas antes da hora", "Faltas de marcação", "Por resolver",
+                     "Dias de ausência"],
+            linhas=[
+                [p.worker.full_name, p.worker.restaurant.name, p.dias_trabalhados, p.horas, p.previstas or None,
+                 p.diferenca, p.atrasos, p.minutos_atraso, p.saidas_cedo, p.faltas, p.por_resolver, p.ausencias]
+                for p in c["pessoas"]
+            ],
+            formatos=[exports.TEXTO, exports.TEXTO, NUMERO, HORAS, HORAS, HORAS] + [NUMERO] * 6,
+        ),
+        Tabela(
+            titulo=f"Áreas {nome}",
+            colunas=["Área", "Horas", "Horas previstas", "Pessoas"],
+            linhas=[[a["area"], a["horas"], a["previstas"], a["pessoas"]] for a in c["areas"]],
+            formatos=[exports.TEXTO, HORAS, HORAS, NUMERO],
+        ),
+        Tabela(
+            titulo=f"Ausências {nome}",
+            colunas=["Tipo", "Pedidos", "Pessoas", "Dias no período"],
+            linhas=[[a["tipo"], a["pedidos"], a["pessoas"], a["dias"]] for a in c["ausencias"]],
+            formatos=[exports.TEXTO, NUMERO, NUMERO, NUMERO],
+        ),
+        Tabela(
+            titulo=f"Por mês {nome}",
+            colunas=["Mês", "Pessoas com presença", "Dias de presença", "Horas", "Dias de ausência"],
+            linhas=[[m["mes"].strftime("%m/%Y"), m["pessoas"], m["presencas"], m["horas"], m["ausencias"]] for m in c["meses"]],
+            formatos=[exports.TEXTO, NUMERO, NUMERO, HORAS, NUMERO],
+        ),
+        Tabela(
+            titulo=f"Desvios {nome}",
+            colunas=["Dia", "Trabalhador", "Desvio", "Minutos", "Turno previsto"],
+            linhas=[[d.dia, d.worker.full_name, d.tipo, d.minutos, d.previsto] for d in c["desvios"]],
+            formatos=[exports.DATA, exports.TEXTO, exports.TEXTO, NUMERO],
+        ),
+    ]

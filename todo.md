@@ -64,6 +64,7 @@ Ecrãs que só foram verificados pelos testes ou pelo texto da página, sem ning
 - [ ] Calendário de ausências (Fase 8) com dados reais.
 - [ ] **Trabalhador em várias casas (Fase 9)** com o `demo`: a Inês no tablet da Esquina, o planeador da Esquina e a ficha dela na Ribeira.
 - [ ] **Stock pelas vendas (Fase 14)** com o `demo` na Esquina: Vendas → Stock, a lista do stock com o bife negativo, uma contagem na folha e Stock → Contagens.
+- [ ] **Análise (Fase 15)** com o `demo`: Resumo, Stock, Pessoas e Compras, como dono com as duas casas e como Resp. stock; abrir um Excel exportado no Excel ou no LibreOffice.
 - [ ] «Os meus turnos» na vista do colaborador: é um quarto elemento além dos três previstos (secção 5).
 - [ ] Percurso completo dos quatro perfis com o `demo`. As compras foram feitas pelo Admin do grupo; o Resp. stock só pelos testes.
 

@@ -8,4 +8,5 @@ urlpatterns = [
     path("", views.AnalysisView.as_view(), name="inicio"),
     path("stock/", views.StockReportView.as_view(), name="stock"),
     path("compras/", views.PurchasesReportView.as_view(), name="compras"),
+    path("pessoas/", views.PeopleReportView.as_view(), name="pessoas"),
 ]

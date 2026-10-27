@@ -1,0 +1,134 @@
+{% extends "base_manage.html" %}
+{% load interface ponto vendas %}
+{% block title %}Análise das pessoas{% endblock %}
+{% block content %}
+{% comment %}Análise → Pessoas (Fase 15), só o Admin e o Gerente. As horas e os
+desvios são os da casa escolhida, com quem vem de outra; as ausências são da
+casa principal, que as aprova.{% endcomment %}
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <h1 class="titulo-pagina">Análise</h1>
+    <p class="mt-1 text-sm text-ardosia"><span class="font-dados">{{ inicio|date:"d/m/Y" }}</span> a <span class="font-dados">{{ fim|date:"d/m/Y" }}</span></p>
+  </div>
+  <div class="flex gap-3">
+    <a href="{% url_exportar 'csv' %}" class="btn btn-fantasma">{% icone "descarregar" "h-4 w-4" %}CSV</a>
+    <a href="{% url_exportar 'xlsx' %}" class="btn btn-primario">{% icone "descarregar" "h-4 w-4" %}Excel</a>
+  </div>
+</div>
+
+{% include "manage/analytics/_separadores.html" %}
+{% include "manage/analytics/_filtros.html" %}
+
+{% for c in casas %}
+<section class="cartao mt-6">
+  <h2 class="cartao-cabecalho cartao-titulo">Presenças e desvios{% if casas|length > 1 %} · {{ c.casa.name }}{% endif %}</h2>
+  {% if c.pessoas %}
+  <div class="overflow-x-auto">
+    <table class="tabela tabela-compacta">
+      <thead>
+        <tr>
+          <th>Trabalhador</th><th class="th-dados">Dias</th><th class="th-dados">Horas</th><th class="th-dados">Previstas</th>
+          <th class="th-dados">Dif.</th><th class="th-dados">Atrasos</th><th class="th-dados">Saídas</th>
+          <th class="th-dados">Faltas</th><th class="th-dados">Por resolver</th><th class="th-dados">Ausência</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in c.pessoas %}
+        <tr>
+          <td class="font-medium">{{ p.worker.full_name }}{% if p.visita %}<span class="block text-xs font-normal text-ardosia">de {{ p.worker.restaurant.name }}</span>{% endif %}</td>
+          <td class="td-dados">{{ p.dias_trabalhados }}</td>
+          <td class="td-dados">{{ p.horas|horas }}</td>
+          <td class="td-dados">{% if p.previstas %}{{ p.previstas|horas }}{% else %}—{% endif %}</td>
+          <td class="td-dados">{{ p.diferenca|horas_sinal }}</td>
+          <td class="td-dados {% if p.atrasos %}text-alerta{% endif %}">{{ p.atrasos }}{% if p.minutos_atraso %}<span class="block text-xs text-ardosia">{{ p.minutos_atraso }} min</span>{% endif %}</td>
+          <td class="td-dados">{{ p.saidas_cedo }}</td>
+          <td class="td-dados {% if p.faltas %}text-perigo{% endif %}">{{ p.faltas }}</td>
+          <td class="td-dados {% if p.por_resolver %}text-alerta{% endif %}">{{ p.por_resolver }}</td>
+          <td class="td-dados">{% if p.visita %}—{% else %}{{ p.ausencias|numero:1 }} d{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="border-t border-linha px-6 py-3 text-xs text-ardosia">
+    Os desvios comparam o ponto com os turnos publicados desta casa, com {{ tolerancia }} minutos de tolerância. Um turno sem nenhuma marcação é uma falta de marcação. Um registo por resolver não conta horas. As ausências contam os dias como o pedido.
+  </p>
+  {% else %}
+  <p class="px-6 py-10 text-center text-sm text-ardosia">Ninguém trabalhou nesta casa neste período.</p>
+  {% endif %}
+</section>
+
+<div class="mt-6 grid gap-6 lg:grid-cols-2">
+  <section class="cartao self-start">
+    <h2 class="cartao-cabecalho cartao-titulo">Horas por área{% if casas|length > 1 %} · {{ c.casa.name }}{% endif %}</h2>
+    {% if c.areas %}
+    <table class="tabela">
+      <thead><tr><th>Área</th><th class="th-dados">Horas</th><th class="th-dados">Previstas</th><th class="th-dados">Pessoas</th></tr></thead>
+      <tbody>
+        {% for a in c.areas %}
+        <tr><td class="font-medium">{{ a.area }}</td><td class="td-dados">{{ a.horas|horas }}</td><td class="td-dados">{% if a.previstas %}{{ a.previstas|horas }}{% else %}—{% endif %}</td><td class="td-dados">{{ a.pessoas }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="px-6 py-10 text-center text-sm text-ardosia">Sem registos neste período.</p>
+    {% endif %}
+  </section>
+
+  <section class="cartao self-start">
+    <h2 class="cartao-cabecalho cartao-titulo">Ausências por tipo{% if casas|length > 1 %} · {{ c.casa.name }}{% endif %}</h2>
+    {% if c.ausencias %}
+    <table class="tabela">
+      <thead><tr><th>Tipo</th><th class="th-dados">Pedidos</th><th class="th-dados">Pessoas</th><th class="th-dados">Dias</th></tr></thead>
+      <tbody>
+        {% for a in c.ausencias %}
+        <tr><td class="font-medium">{{ a.tipo }}</td><td class="td-dados">{{ a.pedidos }}</td><td class="td-dados">{{ a.pessoas }}</td><td class="td-dados">{{ a.dias|numero:1 }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="px-6 py-10 text-center text-sm text-ardosia">Nenhuma ausência aprovada neste período.</p>
+    {% endif %}
+  </section>
+</div>
+
+{% if c.meses|length > 1 %}
+<section class="cartao mt-6">
+  <h2 class="cartao-cabecalho cartao-titulo">Por mês{% if casas|length > 1 %} · {{ c.casa.name }}{% endif %}</h2>
+  <table class="tabela">
+    <thead><tr><th>Mês</th><th class="th-dados">Pessoas</th><th class="th-dados">Dias de presença</th><th class="th-dados">Horas</th><th class="th-dados">Dias de ausência</th></tr></thead>
+    <tbody>
+      {% for m in c.meses %}
+      <tr><td class="font-dados">{{ m.mes|date:"m/Y" }}</td><td class="td-dados">{{ m.pessoas }}</td><td class="td-dados">{{ m.presencas }}</td><td class="td-dados">{{ m.horas|horas }}</td><td class="td-dados">{{ m.ausencias|numero:1 }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+<section class="cartao mt-6">
+  <h2 class="cartao-cabecalho cartao-titulo">Atrasos e faltas de marcação{% if casas|length > 1 %} · {{ c.casa.name }}{% endif %}</h2>
+  {% if c.desvios %}
+  <div class="overflow-x-auto">
+    <table class="tabela">
+      <thead><tr><th>Dia</th><th>Trabalhador</th><th>Desvio</th><th class="th-dados">Minutos</th><th>Turno previsto</th></tr></thead>
+      <tbody>
+        {% for d in c.desvios|slice:":60" %}
+        <tr>
+          <td class="font-dados text-sm"><a href="{% url 'attendance:dia' %}?dia={{ d.dia|date:'Y-m-d' }}" class="hover:underline">{{ d.dia|date:"D d/m" }}</a></td>
+          <td class="font-medium">{{ d.worker.full_name }}</td>
+          <td class="{% if d.tipo == 'Falta de marcação' %}text-perigo{% endif %}">{{ d.tipo }}</td>
+          <td class="td-dados">{{ d.minutos|default_if_none:"—" }}</td>
+          <td class="font-dados text-sm text-ardosia">{{ d.previsto }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if c.desvios|length > 60 %}<p class="border-t border-linha px-6 py-3 text-xs text-ardosia">Os primeiros 60. A exportação tem os {{ c.desvios|length }}.</p>{% endif %}
+  {% else %}
+  <p class="px-6 py-10 text-center text-sm text-ardosia">Nenhum atraso nem falta de marcação face aos turnos publicados.</p>
+  {% endif %}
+</section>
+{% endfor %}
+{% endblock %}
