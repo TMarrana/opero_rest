@@ -28,6 +28,7 @@ contadores dizem o que está por tratar (core/context_processors.py).{% endcomme
       {% url 'recipes:lista' as url %}{% include "partials/nav_item.html" with chave="fichas" simbolo="chapeu" label="Fichas" %}
       {% if request.role == "ADMIN" or request.role == "MANAGER" %}
       {% url 'sales:vendas' as url %}{% include "partials/nav_item.html" with chave="vendas" simbolo="talao" label="Vendas" %}
+      {% url 'analytics:inicio' as url %}{% include "partials/nav_item.html" with chave="analise" simbolo="grafico" label="Análise" %}
       {% endif %}
     </ul>
     <ul class="mt-2 space-y-0.5 border-t border-linha pt-2">

@@ -16,6 +16,7 @@ urlpatterns = [
     path("gestao/vendas/", include("sales.urls")),
     path("gestao/compras/", include("purchasing.urls")),
     path("gestao/fichas/", include("recipes.urls")),
+    path("gestao/analise/", include("analytics.urls")),
     path("equipa/", include("staff.urls")),
     path("quiosque/", include("kiosk.urls")),
     path("", include("core.urls")),

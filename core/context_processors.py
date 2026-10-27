@@ -11,6 +11,7 @@ _SECOES = (
     ("/gestao/compras/", "compras"),
     ("/gestao/fichas/", "fichas"),
     ("/gestao/vendas/", "vendas"),
+    ("/gestao/analise/", "analise"),
     ("/gestao/configuracao/", "configuracao"),
     ("/conta/dispositivo/", "dispositivo"),
 )

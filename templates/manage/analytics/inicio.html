@@ -1,0 +1,111 @@
+{% extends "base_manage.html" %}
+{% load interface graficos vendas %}
+{% block title %}Análise{% endblock %}
+{% block content %}
+{% comment %}Análise (Fase 15): o período e as casas lado a lado. Os totais são
+os mesmos dos ecrãs de cada módulo. O food cost é teórico, ao custo de
+referência atual dos artigos.{% endcomment %}
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <h1 class="titulo-pagina">Análise</h1>
+    <p class="mt-1 text-sm text-ardosia">
+      <span class="font-dados">{{ inicio|date:"d/m/Y" }}</span> a <span class="font-dados">{{ fim|date:"d/m/Y" }}</span>
+      · valores sem IVA
+    </p>
+  </div>
+  <div class="flex gap-3">
+    <a href="?{{ query }}{% if query %}&amp;{% endif %}exportar=csv" class="btn btn-fantasma">{% icone "descarregar" "h-4 w-4" %}CSV</a>
+    <a href="?{{ query }}{% if query %}&amp;{% endif %}exportar=xlsx" class="btn btn-primario">{% icone "descarregar" "h-4 w-4" %}Excel</a>
+  </div>
+</div>
+
+{# Filtros numa linha, por cima de tudo. #}
+<form method="get" class="mt-6 flex flex-wrap items-end gap-4">
+  <div class="flex items-center gap-2">
+    <a href="?mes={{ mes_anterior|date:'Y-m' }}{% for c in escolhidas %}&amp;casa={{ c.pk }}{% endfor %}" class="btn btn-fantasma btn-sm" aria-label="Mês anterior">&larr;</a>
+    <span class="font-dados text-sm font-semibold">{% if mes %}{{ mes|date:"m/Y" }}{% else %}intervalo{% endif %}</span>
+    {% if mes_seguinte %}<a href="?mes={{ mes_seguinte|date:'Y-m' }}{% for c in escolhidas %}&amp;casa={{ c.pk }}{% endfor %}" class="btn btn-fantasma btn-sm" aria-label="Mês seguinte">&rarr;</a>{% endif %}
+  </div>
+  <div class="flex items-end gap-2">
+    <label class="space-y-1 text-sm"><span class="block font-medium">De</span><input type="date" name="inicio" value="{{ inicio|date:'Y-m-d' }}" class="campo-input font-dados"></label>
+    <label class="space-y-1 text-sm"><span class="block font-medium">Até</span><input type="date" name="fim" value="{{ fim|date:'Y-m-d' }}" class="campo-input font-dados"></label>
+  </div>
+  {% if disponiveis|length > 1 %}
+  <fieldset class="flex flex-wrap items-center gap-3">
+    <legend class="sr-only">Casas</legend>
+    {% for c in disponiveis %}
+    <label class="flex min-h-toque cursor-pointer items-center gap-2 text-sm font-medium">
+      <input type="checkbox" name="casa" value="{{ c.pk }}" {% if c in escolhidas %}checked{% endif %} class="h-4 w-4 accent-floresta"> {{ c.name }}
+    </label>
+    {% endfor %}
+  </fieldset>
+  {% else %}
+  {% for c in escolhidas %}<input type="hidden" name="casa" value="{{ c.pk }}">{% endfor %}
+  {% endif %}
+  <button type="submit" class="btn btn-fantasma">Ver</button>
+</form>
+
+<section class="cartao mt-6">
+  <h2 class="cartao-cabecalho cartao-titulo">{% if indicadores|length > 1 %}Casas lado a lado{% else %}{{ escolhidas.0.name }}{% endif %}</h2>
+  <div class="overflow-x-auto">
+    <table class="tabela">
+      <thead>
+        <tr><th><span class="sr-only">Medida</span></th>{% for i in indicadores %}<th class="th-dados">{{ i.restaurant.name }}</th>{% endfor %}</tr>
+      </thead>
+      <tbody>
+        {% for l in linhas %}
+        <tr>
+          <td class="font-medium">{{ l.rotulo }}</td>
+          {% for v in l.valores %}<td class="td-dados">{{ v|medida:l.formato }}</td>{% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="border-t border-linha px-6 py-3 text-xs text-ardosia">
+    As horas são as do ponto, sem pausas não pagas; num dia sem ponto, as dos turnos publicados{% for i in indicadores %}{% if i.dias_previstos %} ({{ i.restaurant.name }}: {{ i.dias_previstos }} dia{{ i.dias_previstos|pluralize }} previsto{{ i.dias_previstos|pluralize }}){% endif %}{% endfor %}.
+    O food cost teórico conta só os produtos com ficha e custo completo, ao custo de referência atual.
+    {% for i in indicadores %}{% if i.consumos_sem_custo %}{{ i.restaurant.name }}: {{ i.consumos_sem_custo }} linha{{ i.consumos_sem_custo|pluralize }} de consumo sem custo. {% endif %}{% endfor %}
+  </p>
+</section>
+
+<div class="mt-6 grid gap-6 {% if indicadores|length > 1 %}lg:grid-cols-2{% endif %}">
+  {% for i in indicadores %}
+  <section class="cartao p-6">
+    <h2 class="cartao-titulo">Vendas por dia{% if indicadores|length > 1 %} · {{ i.restaurant.name }}{% endif %}</h2>
+    <div class="mt-4">{% barras_por_dia i.por_dia rotulo="Vendas por dia" %}</div>
+  </section>
+  {% endfor %}
+</div>
+
+{% for i in indicadores %}
+<section class="cartao mt-6">
+  <h2 class="cartao-cabecalho cartao-titulo">Margem por produto{% if indicadores|length > 1 %} · {{ i.restaurant.name }}{% endif %}</h2>
+  {% if i.produtos %}
+  <div class="overflow-x-auto">
+    <table class="tabela">
+      <thead>
+        <tr><th>Produto</th><th class="th-dados">Quant.</th><th class="th-dados">Vendas</th><th class="th-dados">Preço médio</th><th class="th-dados">Custo/dose</th><th class="th-dados">Margem</th><th class="th-dados">Food cost</th></tr>
+      </thead>
+      <tbody>
+        {% for p in i.produtos|slice:":30" %}
+        <tr>
+          <td>{{ p.description }}<span class="block text-xs text-ardosia">{% if p.recipe %}<a href="{% url 'recipes:ficha' p.recipe.pk %}" class="link-texto">{{ p.recipe.name }}</a>{% if p.incomplete %} · sem custo completo{% endif %}{% else %}sem ficha{% endif %}</span></td>
+          <td class="td-dados">{{ p.quantity|numero:3 }}</td>
+          <td class="td-dados">{{ p.sales|euros }}</td>
+          <td class="td-dados">{{ p.unit_price|euros }}</td>
+          <td class="td-dados">{% if p.cost_per_dose is not None %}{{ p.cost_per_dose|euros }}{% else %}—{% endif %}</td>
+          <td class="td-dados">{{ p.margin|euros }}</td>
+          <td class="td-dados">{{ p.food_cost|medida:"pct" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if i.produtos|length > 30 %}<p class="border-t border-linha px-6 py-3 text-xs text-ardosia">Os 30 produtos que mais venderam. A exportação para Excel tem os {{ i.produtos|length }}.</p>{% endif %}
+  {% else %}
+  <p class="px-6 py-10 text-center text-sm text-ardosia">Sem vendas importadas neste período.</p>
+  {% endif %}
+</section>
+{% endfor %}
+{% endblock %}

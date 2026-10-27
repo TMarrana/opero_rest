@@ -3,3 +3,4 @@ django-environ>=0.12
 dj-database-url>=2.3
 whitenoise>=6.8
 defusedxml>=0.7
+openpyxl>=3.1,<4
