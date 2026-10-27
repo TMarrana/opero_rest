@@ -1,0 +1,8 @@
+{# Separadores da Análise, em pílula. O resumo cruza vendas e pessoas: só o Admin e o Gerente o veem. #}
+<nav class="separadores mt-5" aria-label="Análise">
+  {% if request.role == "ADMIN" or request.role == "MANAGER" %}
+  <a href="{% url 'analytics:inicio' %}" class="separador {% if separador == 'resumo' %}separador-ativo{% endif %}"{% if separador == 'resumo' %} aria-current="page"{% endif %}>Resumo</a>
+  {% endif %}
+  <a href="{% url 'analytics:stock' %}" class="separador {% if separador == 'stock' %}separador-ativo{% endif %}"{% if separador == 'stock' %} aria-current="page"{% endif %}>Stock</a>
+  <a href="{% url 'analytics:compras' %}" class="separador {% if separador == 'compras' %}separador-ativo{% endif %}"{% if separador == 'compras' %} aria-current="page"{% endif %}>Compras</a>
+</nav>

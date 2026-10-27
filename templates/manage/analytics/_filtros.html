@@ -1,0 +1,26 @@
+{# Filtros da Análise numa linha: o mês com setas, ou um intervalo, e as casas (só o Admin do grupo compara). #}
+<form method="get" class="mt-6 flex flex-wrap items-end gap-4">
+  <div class="flex items-center gap-2">
+    <a href="?mes={{ mes_anterior|date:'Y-m' }}{% for c in escolhidas %}&amp;casa={{ c.pk }}{% endfor %}" class="btn btn-fantasma btn-sm" aria-label="Mês anterior">&larr;</a>
+    <span class="font-dados text-sm font-semibold">{% if mes %}{{ mes|date:"m/Y" }}{% else %}intervalo{% endif %}</span>
+    {% if mes_seguinte %}<a href="?mes={{ mes_seguinte|date:'Y-m' }}{% for c in escolhidas %}&amp;casa={{ c.pk }}{% endfor %}" class="btn btn-fantasma btn-sm" aria-label="Mês seguinte">&rarr;</a>{% endif %}
+  </div>
+  <div class="flex items-end gap-2">
+    <label class="space-y-1 text-sm"><span class="block font-medium">De</span><input type="date" name="inicio" value="{{ inicio|date:'Y-m-d' }}" class="campo-input font-dados"></label>
+    <label class="space-y-1 text-sm"><span class="block font-medium">Até</span><input type="date" name="fim" value="{{ fim|date:'Y-m-d' }}" class="campo-input font-dados"></label>
+  </div>
+  {% if disponiveis|length > 1 %}
+  <fieldset class="flex flex-wrap items-center gap-3">
+    <legend class="sr-only">Casas</legend>
+    {% for c in disponiveis %}
+    <label class="flex min-h-toque cursor-pointer items-center gap-2 text-sm font-medium">
+      <input type="checkbox" name="casa" value="{{ c.pk }}" {% if c in escolhidas %}checked{% endif %} class="h-4 w-4 accent-floresta"> {{ c.name }}
+    </label>
+    {% endfor %}
+  </fieldset>
+  {% else %}
+  {% for c in escolhidas %}<input type="hidden" name="casa" value="{{ c.pk }}">{% endfor %}
+  {% endif %}
+  {% if chave %}<input type="hidden" name="artigo" value="{{ chave }}">{% endif %}
+  <button type="submit" class="btn btn-fantasma">Ver</button>
+</form>

@@ -91,3 +91,71 @@ def medida(valor, formato):
     if formato == "pct":
         return f"{Decimal(valor).quantize(Decimal('0.1'))} %".replace(".", ",")
     return numero(valor)
+
+
+@register.simple_tag
+def linha_precos(pontos, unidade="", rotulo="Evolução do preço"):
+    """Uma linha de preços no tempo: o x é a data, à escala; cada receção é um
+    ponto com a dica (data, preço, fornecedor). `pontos` são tuplos (data,
+    preço, fornecedor, ...), por data."""
+    if not pontos:
+        return ""
+    datas = [p[0] for p in pontos]
+    precos = [Decimal(p[1]) for p in pontos]
+    d0, d1 = min(datas), max(datas)
+    vmin, vmax = min(precos), max(precos)
+    # Uma folga de 10 % em cima e em baixo, para a linha não colar às bordas.
+    folga = (vmax - vmin) * Decimal("0.1") or (vmax * Decimal("0.1")) or Decimal(1)
+    vmin, vmax = max(vmin - folga, Decimal(0)), vmax + folga
+    # Mais larga do que as barras: ocupa a largura toda do cartão, e assim o
+    # texto fica do mesmo tamanho.
+    largura, altura = LARGURA * 2, ALTURA + 40
+    esquerda, direita = 8, 8
+    util_x = largura - esquerda - direita
+    util_y = altura - TOPO - BASE
+    dias = (d1 - d0).days or 1
+
+    def xy(data, preco):
+        x = esquerda + ((data - d0).days / dias * util_x if d1 != d0 else util_x / 2)
+        y = TOPO + float((vmax - preco) / (vmax - vmin)) * util_y
+        return x, y
+
+    pts = [xy(d, p) for d, p in zip(datas, precos)]
+    partes = [
+        f'<svg viewBox="0 0 {largura} {altura}" class="h-auto w-full" role="img" aria-label="{escape(rotulo)}">',
+        f'<line x1="0" x2="{largura}" y1="{altura - BASE}" y2="{altura - BASE}" class="stroke-linha" stroke-width="1"/>',
+        f'<text x="0" y="13" class="fill-ardosia" font-size="13">{escape(_extremos(precos))}</text>',
+    ]
+    if len(pts) > 1:
+        caminho = " ".join(f"{'M' if i == 0 else 'L'}{x:.1f},{y:.1f}" for i, (x, y) in enumerate(pts))
+        partes.append(
+            f'<path d="{caminho}" fill="none" class="stroke-floresta" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
+        )
+    for (x, y), p in zip(pts, pontos):
+        dica = f"{p[0]:%d/%m/%Y}: {_preco(p[1])}{' / ' + unidade if unidade else ''} · {p[2]}"
+        # Anel da cor da superfície à volta do ponto, e área de toque maior.
+        partes.append(
+            f'<g><title>{escape(dica)}</title>'
+            f'<circle cx="{x:.1f}" cy="{y:.1f}" r="12" fill="transparent"/>'
+            f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4" class="fill-floresta stroke-superficie" stroke-width="2"/></g>'
+        )
+    for data, ancora, x in ((d0, "start", esquerda), (d1, "end", largura - direita)):
+        if data == d1 and d0 == d1 and ancora == "end":
+            continue
+        partes.append(
+            f'<text x="{x}" y="{altura - 5}" text-anchor="{ancora}" class="fill-ardosia" font-size="13">{data:%d/%m/%Y}</text>'
+        )
+    partes.append("</svg>")
+    return mark_safe("".join(partes))
+
+
+def _preco(valor):
+    from sales.templatetags.vendas import preco
+
+    return preco(valor)
+
+
+def _extremos(precos):
+    if max(precos) == min(precos):
+        return _preco(max(precos))
+    return f"{_preco(max(precos))} máx. · {_preco(min(precos))} mín."

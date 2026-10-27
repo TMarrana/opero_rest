@@ -156,10 +156,13 @@ class TestAcesso:
         r = client.get(_url(mes=f"{MES:%Y-%m}", casa=[a.pk, b.pk]))
         assert [i.restaurant for i in r.context["indicadores"]] == [a]
 
-    def test_other_profiles_are_refused(self, client, grupo, stock_user, staff_user):
-        for conta in (stock_user, staff_user):
-            client.force_login(conta)
-            assert client.get(reverse("analytics:inicio")).status_code == 403
+    def test_other_profiles_do_not_see_the_summary(self, client, grupo, stock_user, staff_user):
+        """O resumo cruza vendas e pessoas: o Resp. stock vai para o stock, e o
+        colaborador não entra."""
+        client.force_login(stock_user)
+        assert client.get(reverse("analytics:inicio")).url == reverse("analytics:stock")
+        client.force_login(staff_user)
+        assert client.get(reverse("analytics:inicio")).status_code == 403
 
     def test_group_admin_defaults_to_active_house(self, client, grupo, dono):
         a, b = grupo

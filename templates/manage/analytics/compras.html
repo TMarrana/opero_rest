@@ -1,0 +1,108 @@
+{% extends "base_manage.html" %}
+{% load interface graficos vendas %}
+{% block title %}Análise das compras{% endblock %}
+{% block content %}
+{% comment %}Análise → Compras (Fase 15), pelas receções e pela data da fatura
+ou da guia, como no ecrã Receções. Valores sem IVA.{% endcomment %}
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <h1 class="titulo-pagina">Análise</h1>
+    <p class="mt-1 text-sm text-ardosia"><span class="font-dados">{{ inicio|date:"d/m/Y" }}</span> a <span class="font-dados">{{ fim|date:"d/m/Y" }}</span> · valores sem IVA</p>
+  </div>
+  <div class="flex gap-3">
+    <a href="{% url_exportar 'csv' %}" class="btn btn-fantasma">{% icone "descarregar" "h-4 w-4" %}CSV</a>
+    <a href="{% url_exportar 'xlsx' %}" class="btn btn-primario">{% icone "descarregar" "h-4 w-4" %}Excel</a>
+  </div>
+</div>
+
+{% include "manage/analytics/_separadores.html" %}
+{% include "manage/analytics/_filtros.html" %}
+
+<section class="cartao mt-6">
+  <h2 class="cartao-cabecalho cartao-titulo">Por fornecedor</h2>
+  {% if fornecedores %}
+  <div class="overflow-x-auto">
+    <table class="tabela">
+      <thead>
+        <tr>
+          <th>Fornecedor</th>
+          {% if escolhidas|length > 1 %}{% for c in escolhidas %}<th class="th-dados">{{ c.name }}</th>{% endfor %}{% endif %}
+          <th class="th-dados">Total</th><th class="th-dados">Receções</th><th class="th-dados">Peso</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in fornecedores %}
+        <tr>
+          <td class="font-medium">{{ f.fornecedor }}</td>
+          {% if escolhidas|length > 1 %}{% for v in f.valores %}<td class="td-dados">{{ v|euros }}</td>{% endfor %}{% endif %}
+          <td class="td-dados">{{ f.total|euros }}</td>
+          <td class="td-dados">{{ f.rececoes }}</td>
+          <td class="td-dados">{{ f.peso|medida:"pct" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td class="font-semibold">Total</td>
+          {% if escolhidas|length > 1 %}{% for t in totais %}<td class="td-dados font-semibold">{{ t|euros }}</td>{% endfor %}{% endif %}
+          <td class="td-dados font-semibold">{{ total|euros }}</td><td></td><td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  {% else %}
+  <p class="px-6 py-10 text-center text-sm text-ardosia">Nenhuma receção com preço neste período.</p>
+  {% endif %}
+</section>
+
+{% if artigo %}
+<section class="cartao mt-6 p-6">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h2 class="cartao-titulo">Evolução do preço · {{ artigo.nome }}</h2>
+      <p class="mt-1 text-sm text-ardosia">Preço unitário em cada receção, por {{ artigo.unidade }}.{% if artigo.variacao is not None %} Do primeiro ao último: <span class="font-dados">{{ artigo.variacao|medida:"pct" }}</span>.{% endif %}</p>
+    </div>
+    <form method="get" class="flex items-center gap-2">
+      <input type="hidden" name="inicio" value="{{ inicio|date:'Y-m-d' }}">
+      <input type="hidden" name="fim" value="{{ fim|date:'Y-m-d' }}">
+      {% for c in escolhidas %}<input type="hidden" name="casa" value="{{ c.pk }}">{% endfor %}
+      <label for="artigo" class="sr-only">Artigo</label>
+      <select id="artigo" name="artigo" class="campo-input max-w-[16rem]" onchange="this.form.submit()">
+        {% for a in artigos %}<option value="{{ a.nome }}|{{ a.unidade }}" {% if a.nome == artigo.nome and a.unidade == artigo.unidade %}selected{% endif %}>{{ a.nome }} ({{ a.unidade }})</option>{% endfor %}
+      </select>
+      <noscript><button type="submit" class="btn btn-fantasma">Ver</button></noscript>
+    </form>
+  </div>
+  <div class="mt-4">{% linha_precos artigo.precos artigo.unidade rotulo="Evolução do preço" %}</div>
+</section>
+{% endif %}
+
+<section class="cartao mt-6">
+  <h2 class="cartao-cabecalho cartao-titulo">Por artigo</h2>
+  {% if artigos %}
+  <div class="overflow-x-auto">
+    <table class="tabela">
+      <thead>
+        <tr><th>Artigo</th><th class="th-dados">Quantidade</th><th class="th-dados">Total</th><th class="th-dados">Preço médio</th><th class="th-dados">Mín.</th><th class="th-dados">Máx.</th><th class="th-dados">Último</th><th class="th-dados">Variação</th></tr>
+      </thead>
+      <tbody>
+        {% for a in artigos %}
+        <tr>
+          <td class="font-medium"><a href="{% url_exportar a.nome|add:'|'|add:a.unidade 'artigo' %}" class="hover:underline">{{ a.nome }}</a><span class="block text-xs font-normal text-ardosia">{{ a.unidade }}</span></td>
+          <td class="td-dados">{{ a.quantidade|numero:3 }}</td>
+          <td class="td-dados">{{ a.total|euros }}</td>
+          <td class="td-dados">{{ a.preco_medio|preco }}</td>
+          <td class="td-dados">{{ a.minimo|preco }}</td>
+          <td class="td-dados">{{ a.maximo|preco }}</td>
+          <td class="td-dados">{{ a.ultimo|preco }}</td>
+          <td class="td-dados {% if a.variacao > 0 %}text-perigo{% endif %}">{{ a.variacao|medida:"pct" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="px-6 py-10 text-center text-sm text-ardosia">Nenhuma receção com preço neste período.</p>
+  {% endif %}
+</section>
+{% endblock %}

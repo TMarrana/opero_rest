@@ -1,0 +1,111 @@
+{% extends "base_manage.html" %}
+{% load interface vendas %}
+{% block title %}Análise do stock{% endblock %}
+{% block content %}
+{% comment %}Análise → Stock (Fase 15). O valor do stock é o de agora, ao custo
+de referência; os movimentos e os ajustes são os do período.{% endcomment %}
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <h1 class="titulo-pagina">Análise</h1>
+    <p class="mt-1 text-sm text-ardosia"><span class="font-dados">{{ inicio|date:"d/m/Y" }}</span> a <span class="font-dados">{{ fim|date:"d/m/Y" }}</span></p>
+  </div>
+  <div class="flex gap-3">
+    <a href="{% url_exportar 'csv' %}" class="btn btn-fantasma">{% icone "descarregar" "h-4 w-4" %}CSV</a>
+    <a href="{% url_exportar 'xlsx' %}" class="btn btn-primario">{% icone "descarregar" "h-4 w-4" %}Excel</a>
+  </div>
+</div>
+
+{% include "manage/analytics/_separadores.html" %}
+{% include "manage/analytics/_filtros.html" %}
+
+<section class="cartao mt-6">
+  <h2 class="cartao-cabecalho cartao-titulo">Valor do stock por categoria · agora</h2>
+  {% if valor %}
+  <div class="overflow-x-auto">
+    <table class="tabela">
+      <thead><tr><th>Categoria</th>{% for c in escolhidas %}<th class="th-dados">{{ c.name }}</th>{% endfor %}</tr></thead>
+      <tbody>
+        {% for l in valor %}
+        <tr><td class="font-medium">{{ l.categoria }}</td>{% for v in l.valores %}<td class="td-dados">{{ v|euros }}</td>{% endfor %}</tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><td class="font-semibold">Total</td>{% for t in totais %}<td class="td-dados font-semibold">{{ t|euros }}</td>{% endfor %}</tr></tfoot>
+    </table>
+  </div>
+  {% else %}
+  <p class="px-6 py-10 text-center text-sm text-ardosia">Nenhum artigo com stock e custo de referência.</p>
+  {% endif %}
+  <p class="border-t border-linha px-6 py-3 text-xs text-ardosia">
+    Ao custo de referência de cada artigo, que as receções atualizam. O stock negativo não conta.
+    {% for c, n in sem_custo %}{{ c.name }}: {{ n }} artigo{{ n|pluralize }} com stock e sem custo, fora da conta. {% endfor %}
+  </p>
+</section>
+
+{% for c in casas %}
+<section class="cartao mt-6">
+  <h2 class="cartao-cabecalho cartao-titulo">Mais movimentados{% if casas|length > 1 %} · {{ c.casa.name }}{% endif %}</h2>
+  {% if c.movimentados %}
+  <div class="overflow-x-auto">
+    <table class="tabela">
+      <thead>
+        <tr>
+          <th>Artigo</th><th class="th-dados">Movim.</th><th class="th-dados">Entradas</th><th class="th-dados">Vendas</th>
+          <th class="th-dados">Consumos</th><th class="th-dados">Quebras</th><th class="th-dados">Transfer.</th>
+          <th class="th-dados">Ajustes</th><th class="th-dados">Valor das saídas</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in c.movimentados %}
+        <tr>
+          <td class="font-medium">{{ m.item.name }}<span class="block text-xs font-normal text-ardosia">{{ m.item.unit }}</span></td>
+          <td class="td-dados">{{ m.movimentos }}</td>
+          <td class="td-dados">{{ m.entradas|numero:3 }}</td>
+          <td class="td-dados">{{ m.vendas|numero:3 }}</td>
+          <td class="td-dados">{{ m.consumos|numero:3 }}</td>
+          <td class="td-dados">{{ m.quebras|numero:3 }}</td>
+          <td class="td-dados">{{ m.transferencias|numero:3 }}</td>
+          <td class="td-dados {% if m.ajustes < 0 %}text-perigo{% endif %}">{{ m.ajustes|numero:3 }}</td>
+          <td class="td-dados">{{ m.valor_saidas|euros }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="border-t border-linha px-6 py-3 text-xs text-ardosia">Os {{ c.movimentados|length }} artigos com mais movimentos no período. As saídas são as vendas, os consumos internos e as quebras registadas, ao custo de referência atual.</p>
+  {% else %}
+  <p class="px-6 py-10 text-center text-sm text-ardosia">Nenhum movimento neste período.</p>
+  {% endif %}
+</section>
+
+{% with linhas=c.ajustes.0 perdas=c.ajustes.1 ganhos=c.ajustes.2 %}
+<section class="cartao mt-6">
+  <div class="cartao-cabecalho flex flex-wrap items-baseline justify-between gap-2">
+    <h2 class="cartao-titulo">Ajustes{% if casas|length > 1 %} · {{ c.casa.name }}{% endif %}</h2>
+    {% if linhas %}<p class="text-sm text-ardosia">Faltas <span class="font-dados text-perigo">{{ perdas|euros }}</span> · sobras <span class="font-dados">{{ ganhos|euros }}</span></p>{% endif %}
+  </div>
+  {% if linhas %}
+  <div class="overflow-x-auto">
+    <table class="tabela">
+      <thead><tr><th>Data</th><th>Artigo</th><th class="th-dados">Quantidade</th><th class="th-dados">Valor</th><th>Origem</th><th>Motivo</th></tr></thead>
+      <tbody>
+        {% for l in linhas|slice:":50" %}
+        <tr>
+          <td class="font-dados text-sm">{{ l.mov.occurred_at|date:"d/m H:i" }}</td>
+          <td class="font-medium">{{ l.mov.item.name }}</td>
+          <td class="td-dados {% if l.mov.signed_quantity < 0 %}text-perigo{% endif %}">{{ l.mov.signed_quantity|numero:3 }} {{ l.mov.item.unit }}</td>
+          <td class="td-dados">{{ l.valor|euros }}</td>
+          <td class="text-sm text-ardosia">{{ l.mov.get_origin_display }}</td>
+          <td class="text-sm text-ardosia">{{ l.mov.reason|default:"—" }}<span class="block text-xs">{{ l.mov.created_by }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if linhas|length > 50 %}<p class="border-t border-linha px-6 py-3 text-xs text-ardosia">Os 50 mais recentes. A exportação tem os {{ linhas|length }}.</p>{% endif %}
+  {% else %}
+  <p class="px-6 py-10 text-center text-sm text-ardosia">Nenhum ajuste neste período.</p>
+  {% endif %}
+</section>
+{% endwith %}
+{% endfor %}
+{% endblock %}
