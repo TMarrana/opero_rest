@@ -22,7 +22,11 @@ FOLGA = 2  # a folga de superfície entre barras vizinhas
 @register.simple_tag
 def barras_por_dia(linhas, campo="total", rotulo="Vendas por dia"):
     """Barras verticais, uma por dia. `linhas` são dicionários com `dia` e o
-    valor em `campo` (como as de `sales.reports.por_dia`)."""
+    valor em `campo` (como as de `sales.reports.por_dia`).
+
+    Só as barras ficam no SVG, que estica à largura do cartão; o máximo e as
+    datas são HTML, para o texto ter o tamanho do resto da página em
+    qualquer largura."""
     valores = [(l["dia"], Decimal(l.get(campo) or 0)) for l in linhas]
     if not valores:
         return ""
@@ -31,39 +35,40 @@ def barras_por_dia(linhas, campo="total", rotulo="Vendas por dia"):
     passo = LARGURA / n
     largura_barra = max(passo - FOLGA, 1)
     util = ALTURA - TOPO - BASE
-    partes = [
-        f'<svg viewBox="0 0 {LARGURA} {ALTURA}" class="h-auto w-full" role="img" aria-label="{escape(rotulo)}">',
-        # Linha de base, discreta.
-        f'<line x1="0" x2="{LARGURA}" y1="{ALTURA - BASE}" y2="{ALTURA - BASE}" class="stroke-linha" stroke-width="1"/>',
-    ]
+    partes = []
     if maximo > 0:
-        partes.append(
-            f'<text x="0" y="13" class="fill-ardosia" font-size="13">máx. {escape(euros(maximo))}</text>'
-        )
+        partes.append(f'<p class="font-dados text-xs text-ardosia">máx. {escape(euros(maximo))}</p>')
+    partes += [
+        f'<svg viewBox="0 0 {LARGURA} {util}" preserveAspectRatio="none" class="mt-1 block h-40 w-full" '
+        f'role="img" aria-label="{escape(rotulo)}">',
+        # Linha de base, discreta.
+        f'<line x1="0" x2="{LARGURA}" y1="{util}" y2="{util}" class="stroke-linha" stroke-width="1" '
+        f'vector-effect="non-scaling-stroke"/>',
+    ]
+    datas = []
     for i, (dia, valor) in enumerate(valores):
         x = i * passo + FOLGA / 2
         altura = float(valor / maximo) * util if maximo > 0 and valor > 0 else 0
-        y = ALTURA - BASE - altura
+        y = util - altura
         dica = f"{dia:%d/%m}: {euros(valor)}"
         partes.append("<g>")
         partes.append(f"<title>{escape(dica)}</title>")
         # Área de toque da altura toda, maior do que a barra.
-        partes.append(
-            f'<rect x="{i * passo:.1f}" y="{TOPO}" width="{passo:.1f}" height="{util}" fill="transparent"/>'
-        )
+        partes.append(f'<rect x="{i * passo:.1f}" y="0" width="{passo:.1f}" height="{util}" fill="transparent"/>')
         if altura:
             raio = min(4, largura_barra / 2, altura)
-            partes.append(
-                f'<path d="{_barra(x, y, largura_barra, altura, raio)}" class="fill-floresta"/>'
-            )
+            partes.append(f'<path d="{_barra(x, y, largura_barra, altura, raio)}" class="fill-floresta"/>')
         partes.append("</g>")
         if i == 0 or i == n - 1 or (n > 10 and dia.day in (8, 15, 22)):
-            ancora = "start" if i == 0 else ("end" if i == n - 1 else "middle")
-            tx = i * passo if i == 0 else ((i + 1) * passo if i == n - 1 else x + largura_barra / 2)
-            partes.append(
-                f'<text x="{tx:.1f}" y="{ALTURA - 5}" text-anchor="{ancora}" class="fill-ardosia" font-size="13">{dia:%d/%m}</text>'
-            )
+            if i == 0:
+                posicao = "left: 0"
+            elif i == n - 1:
+                posicao = "right: 0"
+            else:
+                posicao = f"left: {(i + 0.5) / n * 100:.2f}%; transform: translateX(-50%)"
+            datas.append(f'<span class="absolute" style="{posicao}">{dia:%d/%m}</span>')
     partes.append("</svg>")
+    partes.append(f'<div class="relative mt-2 h-4 font-dados text-xs text-ardosia">{"".join(datas)}</div>')
     return mark_safe("".join(partes))
 
 

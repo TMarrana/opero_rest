@@ -122,8 +122,10 @@ anulados, com as notas de crédito a abater. Os valores são sem IVA.{% endcomme
 <section class="mt-6 cartao">
   <div class="cartao-cabecalho">
     <h2 class="cartao-titulo">Por dia</h2>
-    <a href="?{{ query }}&amp;exportar=dias" class="link-acao">Exportar CSV</a>
-    <a href="?{{ query }}&amp;exportar=dias&amp;formato=xlsx" class="link-acao">Excel</a>
+    <div class="flex gap-2">
+      <a href="?{{ query }}&amp;exportar=dias" class="link-acao">Exportar CSV</a>
+      <a href="?{{ query }}&amp;exportar=dias&amp;formato=xlsx" class="link-acao">Excel</a>
+    </div>
   </div>
   <div class="overflow-x-auto">
     <table class="tabela">
@@ -211,8 +213,10 @@ anulados, com as notas de crédito a abater. Os valores são sem IVA.{% endcomme
   <section class="cartao self-start">
     <div class="cartao-cabecalho">
       <h2 class="cartao-titulo">Produtos mais vendidos</h2>
-      <a href="?{{ query }}&amp;exportar=produtos" class="link-acao">Exportar todos</a>
-      <a href="?{{ query }}&amp;exportar=produtos&amp;formato=xlsx" class="link-acao">Excel</a>
+      <div class="flex gap-2">
+        <a href="?{{ query }}&amp;exportar=produtos" class="link-acao">Exportar todos</a>
+        <a href="?{{ query }}&amp;exportar=produtos&amp;formato=xlsx" class="link-acao">Excel</a>
+      </div>
     </div>
     {% if produtos %}
     <div class="overflow-x-auto">

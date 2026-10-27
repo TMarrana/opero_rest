@@ -89,6 +89,6 @@ como no planeador de turnos.{% endcomment %}
 </div>
 
 {# Painel por cima da grelha, à direita: abre ao clicar numa célula e fecha com o X ou com Esc. #}
-<aside id="painel" class="fixed right-6 top-6 z-30 max-h-[calc(100vh-3rem)] w-80 overflow-y-auto shadow-flutuante empty:hidden"
+<aside id="painel" class="fixed right-6 top-24 z-30 max-h-[calc(100vh-7rem)] w-80 overflow-y-auto shadow-flutuante empty:hidden"
        aria-live="polite" x-data x-on:keydown.escape.window="$el.innerHTML = ''"></aside>
 {% endblock %}

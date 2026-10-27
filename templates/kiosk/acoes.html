@@ -52,7 +52,7 @@ minuto. As pausas aparecem ao lado da Saída, sem passo extra.{% endcomment %}
     <input type="hidden" name="token" value="{{ token }}">
     <input type="hidden" name="acao" value="saida_prevista">
     <button type="submit" class="flex min-h-[20vh] w-full flex-col items-center justify-center gap-1 rounded-2xl border-2 border-chama bg-superficie px-4 text-chama transition-colors duration-150 hover:bg-creme">
-      <span class="flex items-center gap-4 text-4xl font-bold tracking-tight">{% icone "relogio" "h-10 w-10" %}Saí às <span class="font-dados">{{ saida_prevista|date:"H:i" }}</span></span>
+      <span class="flex items-center gap-4 text-4xl font-bold tracking-tight">{% icone "relogio" "h-10 w-10" %}<span>Saí às <span class="font-dados">{{ saida_prevista|date:"H:i" }}</span></span></span>
       <span class="text-base font-medium text-ardosia">O gerente confirma a hora</span>
     </button>
   </form>

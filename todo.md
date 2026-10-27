@@ -24,6 +24,8 @@ Bloqueiam fases ou o piloto. A proposta de cada uma está na secção 12 do plan
 
 ## 2. Contabilista e jurista (com a AT)
 
+> As perguntas de cada item estão preparadas no documento «Opero: perguntas ao contabilista e ao jurista» (https://claude.ai/artifact/ELx63GZJDJa3AtzprETvek), feito a 2026-10-27.
+
 - [ ] **Validação jurídica do registo de tempos (BR-001, Q-001):** conteúdo mínimo, prazo de conservação, mapa de horário e o que a ACT pede numa inspeção. **O piloto não arranca sem esta resposta.** Depois, arquivar a resposta e refletir as regras no produto.
 - [ ] **Contrato coletivo da restauração (Q-010) e dias de férias extra (Q-008):** turnos, folgas, trabalho noturno e saldo por omissão.
 - [ ] **Formato da exportação mensal de ponto** (Fase 5). Ganhou a coluna «Casa».
@@ -50,7 +52,7 @@ Bloqueiam fases ou o piloto. A proposta de cada uma está na secção 12 do plan
 - [ ] **Quiosque num tablet real**, ao alto e deitado: nome, código e ação em menos de 5 segundos.
 - [ ] Dois colaboradores seguidos no mesmo tablet: o segundo não herda nada do primeiro.
 - [ ] Tablet desligado da rede: o ecrã diz que nada foi registado, e o gerente acrescenta o registo depois.
-- [ ] Saída tardia no tablet (R-012): com um turno publicado já acabado, ver «Saí agora» e «Saí às HH:MM», e o pedido a chegar a Ponto → Pedidos.
+- [ ] Saída tardia no tablet (R-012), vista a 2026-10-27 no browser de secretária, com o pedido a chegar a Ponto → Pedidos. Falta num tablet: com um turno publicado já acabado, ver «Saí agora» e «Saí às HH:MM», e o pedido a chegar a Ponto → Pedidos.
 - [ ] Ecrã de pausa no tablet: ver se o estado «em pausa» (contorno, sem cor) se percebe.
 - [ ] **App do colaborador num telemóvel real**, a 375px: «Os meus turnos», férias, «Os meus consumos».
 - [ ] Instalar a PWA em Android e em iOS, e ver as limitações de notificações push no iOS (BR-004). Isto decide se as trocas de turno podem depender de push.
@@ -59,14 +61,14 @@ Bloqueiam fases ou o piloto. A proposta de cada uma está na secção 12 do plan
 
 Ecrãs que só foram verificados pelos testes ou pelo texto da página, sem ninguém os ver.
 
-- [ ] **Fichas técnicas (Fase 13):** lista, ficha, formulário, ficha para a cozinha e produtos do POS sem ficha.
-- [ ] **Planeador de turnos (Fase 6):** ainda ninguém o viu.
-- [ ] Fase 5: pedidos de correção, fecho do mês, configuração e saldos.
-- [ ] Calendário de ausências (Fase 8) com dados reais.
-- [ ] **Trabalhador em várias casas (Fase 9)** com o `demo`: a Inês no tablet da Esquina, o planeador da Esquina e a ficha dela na Ribeira.
-- [ ] **Stock pelas vendas (Fase 14)** com o `demo` na Esquina: Vendas → Stock, a lista do stock com o bife negativo, uma contagem na folha e Stock → Contagens.
-- [ ] **Vendas por serviço (Fase 10)** com o `demo`: o cartão «Por serviço» no ecrã Vendas, e a hora de mudança nas Regras.
-- [ ] **Análise (Fase 15)** com o `demo`: Resumo, Stock, Pessoas e Compras, como dono com as duas casas e como Resp. stock; abrir um Excel exportado no Excel ou no LibreOffice.
+- [x] **Fichas técnicas (Fase 13):** lista, ficha, formulário, ficha para a cozinha e produtos do POS sem ficha. Vistos a 2026-10-27, sem acertos.
+- [x] **Planeador de turnos (Fase 6).** Visto a 2026-10-27. O painel da célula tapava a barra de topo; agora abre por baixo dela (também no calendário).
+- [x] Fase 5: pedidos de correção, fecho do mês, configuração e saldos. Vistos a 2026-10-27; o cartão Vendas da Configuração passou a falar da hora do jantar e do stock.
+- [ ] Calendário de ausências (Fase 8) com dados reais. Com o `demo` foi visto a 2026-10-27 e está bem.
+- [ ] **Trabalhador em várias casas (Fase 9)** com o `demo`: a Inês no tablet da Esquina, o planeador da Esquina e a ficha dela na Ribeira. Os dois primeiros vistos a 2026-10-27; falta a ficha.
+- [ ] **Stock pelas vendas (Fase 14)** com o `demo` na Esquina: Vendas → Stock, a lista do stock com o bife negativo, uma contagem na folha e Stock → Contagens. Os ecrãs foram vistos a 2026-10-27 (as unidades da folha ficaram alinhadas); falta guardar uma contagem.
+- [x] **Vendas por serviço (Fase 10)** com o `demo`: o cartão «Por serviço» no ecrã Vendas, e a hora de mudança nas Regras. Vistos a 2026-10-27; os links de exportação dos cartões «Por dia» e «Produtos» ficaram juntos à direita.
+- [ ] **Análise (Fase 15)** com o `demo` (vista a 2026-10-27 como dono, com uma e com as duas casas; o texto do gráfico de barras deixou de crescer com a largura; falta como Resp. stock e abrir um Excel): Resumo, Stock, Pessoas e Compras, como dono com as duas casas e como Resp. stock; abrir um Excel exportado no Excel ou no LibreOffice.
 - [ ] «Os meus turnos» na vista do colaborador: é um quarto elemento além dos três previstos (secção 5).
 - [ ] Percurso completo dos quatro perfis com o `demo`. As compras foram feitas pelo Admin do grupo; o Resp. stock só pelos testes.
 
