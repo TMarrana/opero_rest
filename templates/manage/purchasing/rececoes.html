@@ -15,7 +15,7 @@
     <span class="font-dados text-sm font-semibold">{{ mes|date:"m/Y" }}</span>
     {% if mes_seguinte %}<a href="?mes={{ mes_seguinte|date:'Y-m' }}" class="btn btn-fantasma btn-sm" aria-label="Mês seguinte">&rarr;</a>{% endif %}
   </div>
-  {% if rececoes %}<a href="?mes={{ mes|date:'Y-m' }}&amp;exportar=1" class="link-acao">Exportar CSV do mês</a>{% endif %}
+  {% if rececoes %}<span class="inline-flex items-center gap-2"><a href="?mes={{ mes|date:'Y-m' }}&amp;exportar=1" class="link-acao">Exportar CSV do mês</a><a href="?mes={{ mes|date:'Y-m' }}&amp;exportar=xlsx" class="link-acao">Excel</a></span>{% endif %}
 </div>
 <p class="mt-1 text-xs text-ardosia">O mês conta pela data da fatura ou da guia. Valores sem IVA.</p>
 

@@ -1,4 +1,5 @@
 {% extends "base_manage.html" %}
+{% load interface %}
 {% block title %}Férias{% endblock %}
 {% block content %}
 <div class="flex flex-wrap items-end justify-between gap-4">
@@ -69,7 +70,8 @@
       {% endfor %}
     </select>
   </form>
-  <div class="mt-3 cartao">
+  <div class="mt-3 flex justify-end">{% exportar rotulo="Exportar as ausências" %}</div>
+  <div class="mt-2 cartao">
     {% if historico %}
     <div class="overflow-x-auto">
       <table class="tabela">

@@ -10,6 +10,7 @@ from django.utils.dateparse import parse_date
 from django.views import View
 from django.views.generic import TemplateView
 
+from core import exports
 from core.mixins import ManagerRequiredMixin
 from core.utils import restaurant_scope
 from workers.models import Worker
@@ -67,6 +68,36 @@ class VacationListView(ManagerRequiredMixin, TemplateView):
         ctx["form_decisao"] = DecisionForm()
         ctx["filtros"] = {"trabalhador": trabalhador, "estado": estado}
         return ctx
+
+
+    def get(self, request, *args, **kwargs):
+        formato = exports.formato_pedido(request)
+        if formato:
+            # Os pendentes e o histórico, com os filtros do histórico, sem o
+            # limite de 100 do ecrã.
+            qs = _scoped_requests(request).order_by("start_date", "worker__full_name")
+            if request.GET.get("trabalhador"):
+                qs = qs.filter(worker_id=request.GET["trabalhador"])
+            if request.GET.get("estado"):
+                qs = qs.filter(status=request.GET["estado"])
+            return exports.responder(formato, [_tabela_ausencias(qs)], "ausencias")
+        return super().get(request, *args, **kwargs)
+
+
+def _tabela_ausencias(pedidos):
+    return exports.Tabela(
+        titulo="Ausências",
+        colunas=["Trabalhador", "Tipo", "Início", "Fim", "Meio dia", "Dias", "Estado", "Pedido em", "Observação do pedido",
+                 "Decidido por", "Decidido em", "Observação da decisão"],
+        linhas=[
+            [p.worker.full_name, p.absence_type.name, p.start_date, p.end_date, p.half_day, p.days_taken,
+             p.get_status_display(), p.created_at, p.request_note, str(p.decided_by) if p.decided_by else "",
+             p.decided_at, p.decision_note]
+            for p in pedidos
+        ],
+        formatos=[exports.TEXTO, exports.TEXTO, exports.DATA, exports.DATA, exports.TEXTO, exports.NUMERO, exports.TEXTO,
+                  exports.DATAHORA, exports.TEXTO, exports.TEXTO, exports.DATAHORA],
+    )
 
 
 class VacationCreateView(ManagerRequiredMixin, View):

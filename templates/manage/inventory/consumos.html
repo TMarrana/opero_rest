@@ -58,6 +58,7 @@ consumos registados. Um consumo não se apaga: anula-se, e o stock volta.{% endc
         {% for w in trabalhadores %}<option value="{{ w.pk }}"{% if pessoa == w.pk|stringformat:"s" %} selected{% endif %}>{{ w.full_name }}</option>{% endfor %}
       </select>
       <noscript><button type="submit" class="link-texto">Filtrar</button></noscript>
+      {% exportar %}
     </form>
   </div>
   {% for c in consumos %}

@@ -1,5 +1,5 @@
 {% extends "base_manage.html" %}
-{% load ponto %}
+{% load interface ponto %}
 {% block title %}Ponto{% endblock %}
 {% block content %}
 <div class="flex flex-wrap items-end justify-between gap-4">
@@ -17,6 +17,7 @@
 </div>
 
 {% include "manage/attendance/_nav.html" %}
+<div class="mt-4 flex justify-end">{% exportar rotulo="Exportar o mês" %}</div>
 
 {% if pedidos_pendentes or total_por_resolver %}
 <a href="{% url 'attendance:pedidos' %}" class="mt-4 flex items-center justify-between rounded-xl border border-alerta-200 bg-superficie px-4 py-3 text-sm hover:bg-alerta-50">

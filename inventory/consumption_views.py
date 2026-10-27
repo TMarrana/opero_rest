@@ -14,6 +14,7 @@ from django.utils import timezone
 from django.views import View
 
 from attendance.month import month_start, next_month, previous_month
+from core import exports
 from core.mixins import AdminRequiredMixin, StockRequiredMixin
 from core.utils import parse_decimal, restaurant_scope, workers_scope
 from workers.models import Worker
@@ -38,7 +39,10 @@ class ConsumptionListView(StockRequiredMixin, View):
 
     def get(self, request):
         mes = _mes(request)
-        if request.GET.get("exportar"):
+        exportar = request.GET.get("exportar")
+        formato = exports.formato_pedido(request)
+        if exportar and not formato:
+            # O mapa do mês para o contabilista (Fase 12), como sempre foi.
             resp = HttpResponse(servico.export_csv(request.restaurant, mes), content_type="text/csv; charset=utf-8")
             resp["Content-Disposition"] = f'attachment; filename="consumos-{mes:%Y-%m}.csv"'
             return resp
@@ -52,6 +56,12 @@ class ConsumptionListView(StockRequiredMixin, View):
             consumos = consumos.filter(worker__isnull=True)
         elif pessoa.isdigit():
             consumos = consumos.filter(worker_id=int(pessoa))
+        if formato:
+            return exports.responder(
+                formato,
+                [_tabela_consumos(consumos), _tabela_mapa(servico.month_map(request.restaurant, mes))],
+                f"consumos-{mes:%Y-%m}",
+            )
         return render(
             request,
             "manage/inventory/consumos.html",
@@ -66,6 +76,33 @@ class ConsumptionListView(StockRequiredMixin, View):
                 "regras": ConsumptionSettings.for_restaurant(request.restaurant),
             },
         )
+
+
+def _tabela_consumos(consumos):
+    """Os consumos do mês com o filtro da pessoa, uma linha por artigo, com
+    os anulados assinalados (Fase 15)."""
+    return exports.Tabela(
+        titulo="Consumos",
+        colunas=["Referência", "Dia", "Quem", "Motivo", "Artigo", "Quantidade", "Unidade", "Custo unitário", "Valor",
+                 "Acima do limite", "Anulado em", "Motivo da anulação", "Observação"],
+        linhas=[
+            [c.reference, c.consumed_on, c.who, c.get_reason_display(), l.item.name, l.quantity, l.item.unit, l.unit_cost,
+             l.value, c.over_limit, c.cancelled_at, c.cancel_reason, c.note]
+            for c in consumos.order_by("consumed_on", "pk")
+            for l in c.lines.all()
+        ],
+        formatos=[exports.TEXTO, exports.DATA, exports.TEXTO, exports.TEXTO, exports.TEXTO, exports.NUMERO, exports.TEXTO,
+                  exports.EUROS, exports.EUROS, exports.TEXTO, exports.DATAHORA],
+    )
+
+
+def _tabela_mapa(mapa):
+    return exports.Tabela(
+        titulo="Mapa do mês",
+        colunas=["Quem", "Refeições", "Outros consumos", "Acima do limite", "Valor ao custo", "Linhas sem custo"],
+        linhas=[[l["quem"], l["refeicoes"], l["outros"], l["acima"], l["valor"], l["sem_custo"]] for l in mapa],
+        formatos=[exports.TEXTO, exports.NUMERO, exports.NUMERO, exports.NUMERO, exports.EUROS, exports.NUMERO],
+    )
 
 
 class ConsumptionCreateView(StockRequiredMixin, View):

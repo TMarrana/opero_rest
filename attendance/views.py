@@ -12,6 +12,7 @@ from django.utils.dateparse import parse_date
 from django.views import View
 from django.views.generic import TemplateView
 
+from core import exports
 from core.mixins import ManagerRequiredMixin
 from shifts.models import Shift
 from core.utils import restaurant_scope, workers_scope
@@ -86,6 +87,60 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
             TimeEntry.objects.filter(restaurant=restaurant).unresolved(now=agora).count()
         )
         return ctx
+
+
+    def get(self, request, *args, **kwargs):
+        formato = exports.formato_pedido(request)
+        if formato:
+            dia = parse_date(request.GET.get("dia", "") or "") or timezone.localdate()
+            inicio, fim = mes.month_range(dia)
+            return exports.responder(
+                formato, [tabela_registos(request.restaurant, inicio, fim)], f"ponto-{inicio:%Y-%m}"
+            )
+        return super().get(request, *args, **kwargs)
+
+
+def tabela_registos(restaurant, inicio, fim):
+    """Os registos de ponto de uma casa num período (Fase 15): um por linha,
+    com as horas como no ecrã. Um registo por resolver conta zero."""
+    agora = timezone.now()
+    entradas = (
+        TimeEntry.objects.filter(restaurant=restaurant, work_date__range=(inicio, fim))
+        .select_related("worker__restaurant", "work_area", "corrected_by")
+        .prefetch_related("breaks__break_type")
+        .order_by("work_date", "worker__full_name", "check_in")
+    )
+    linhas = []
+    for e in entradas:
+        if e.is_unresolved(now=agora):
+            estado = "Por resolver"
+        elif e.is_open:
+            estado = "Em turno"
+        else:
+            estado = ""
+        linhas.append(
+            [
+                e.worker.full_name,
+                e.worker.restaurant.name,
+                e.work_date,
+                e.check_in,
+                e.check_out,
+                e.unpaid_break_time(until=e.check_out or agora),
+                e.worked(until=agora),
+                e.work_area.name if e.work_area else "",
+                e.get_source_display(),
+                estado,
+                str(e.corrected_by) if e.corrected_by else "",
+                e.correction_reason,
+            ]
+        )
+    return exports.Tabela(
+        titulo="Ponto",
+        colunas=["Trabalhador", "Casa principal", "Dia", "Entrada", "Saída", "Pausas não pagas (h)", "Trabalhado (h)",
+                 "Área", "Origem", "Estado", "Corrigido por", "Motivo da correção"],
+        linhas=linhas,
+        formatos=[exports.TEXTO, exports.TEXTO, exports.DATA, exports.DATAHORA, exports.DATAHORA, exports.HORAS, exports.HORAS],
+    )
 
 
 class EntryCorrectionView(ManagerRequiredMixin, View):

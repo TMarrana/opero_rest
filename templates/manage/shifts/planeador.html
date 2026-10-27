@@ -1,5 +1,5 @@
 {% extends "base_manage.html" %}
-{% load ponto %}
+{% load interface ponto %}
 {% block title %}Turnos{% endblock %}
 {% block largura %}max-w-none{% endblock %}
 {% block content %}
@@ -29,6 +29,7 @@
   <a href="{% url 'shifts:lote' %}?semana={{ semana|date:'Y-m-d' }}" class="btn btn-fantasma">Criar em lote</a>
   {% endif %}
   <a href="{% url 'config:lista' 'turnos' %}" class="link-acao">Turnos guardados</a>
+  {% exportar rotulo="Exportar a semana" %}
   <span class="ml-auto"></span>
   {% if por_publicar %}
   <a href="{% url 'shifts:publicar' %}?semana={{ semana|date:'Y-m-d' }}" class="btn btn-acento">Publicar semana ({{ por_publicar }})</a>

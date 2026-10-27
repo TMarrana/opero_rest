@@ -16,6 +16,7 @@ from django.urls import reverse
 from django.views import View
 
 from attendance.month import month_start, next_month, previous_month
+from core import exports
 from core.mixins import StockRequiredMixin
 from core.utils import restaurant_scope
 from inventory.models import Item
@@ -90,6 +91,10 @@ class OrderListView(StockRequiredMixin, View):
             encomendas = encomendas.filter(state__in=PurchaseOrder.OPEN_STATES)
         elif estado in PurchaseOrder.State.values:
             encomendas = encomendas.filter(state=estado)
+        formato = exports.formato_pedido(request)
+        if formato:
+            encomendas = encomendas.prefetch_related("lines__item", "lines__receipt_lines")
+            return exports.responder(formato, _tabelas_encomendas(encomendas), "encomendas")
         return render(
             request,
             "manage/purchasing/encomendas.html",
@@ -100,6 +105,35 @@ class OrderListView(StockRequiredMixin, View):
                 "fornecedores": _suppliers(request).filter(is_active=True),
             },
         )
+
+
+def _tabelas_encomendas(encomendas):
+    """As encomendas do filtro (Fase 15) e, no Excel, as linhas numa segunda
+    folha."""
+    cabecalho = exports.Tabela(
+        titulo="Encomendas",
+        colunas=["Referência", "Fornecedor", "Estado", "Criada em", "Enviada em", "Entrega prevista", "Linhas",
+                 "Total previsto", "Observações"],
+        linhas=[
+            [e.reference, e.supplier.name, e.get_state_display(), e.created_at, e.sent_at, e.expected_date, e.n_linhas,
+             e.total(), e.notes]
+            for e in encomendas
+        ],
+        formatos=[exports.TEXTO] * 3 + [exports.DATAHORA, exports.DATAHORA, exports.DATA, exports.NUMERO, exports.EUROS],
+    )
+    linhas = exports.Tabela(
+        titulo="Linhas",
+        colunas=["Encomenda", "Fornecedor", "Artigo", "Unidade", "Quantidade", "Preço previsto", "Total previsto", "Recebido",
+                 "Por receber"],
+        linhas=[
+            [e.reference, e.supplier.name, l.item.name, l.item.get_unit_display(), l.quantity, l.unit_price, l.total(),
+             l.received(), l.pending()]
+            for e in encomendas
+            for l in e.lines.all()
+        ],
+        formatos=[exports.TEXTO] * 4 + [exports.NUMERO, exports.EUROS, exports.EUROS, exports.NUMERO, exports.NUMERO],
+    )
+    return [cabecalho, linhas]
 
 
 class OrderCreateView(StockRequiredMixin, View):
@@ -340,7 +374,11 @@ class ReceiptListView(StockRequiredMixin, View):
     def get(self, request):
         mes = _mes_pedido(request)
         linhas = list(services.month_receipts(request.restaurant, mes))
-        if request.GET.get("exportar"):
+        exportar = request.GET.get("exportar")
+        if exportar == "xlsx":
+            return exports.xlsx_response([_tabela_rececoes(linhas)], f"compras-{mes:%Y-%m}")
+        if exportar:
+            # O CSV de sempre, para o contabilista (Fase 11).
             return self._csv(linhas, mes)
         rececoes = (
             restaurant_scope(request, Receipt.objects.select_related("supplier", "order", "received_by"))
@@ -387,6 +425,21 @@ class ReceiptListView(StockRequiredMixin, View):
         resp = HttpResponse("﻿" + saida.getvalue(), content_type="text/csv; charset=utf-8")
         resp["Content-Disposition"] = f'attachment; filename="compras-{mes:%Y-%m}.csv"'
         return resp
+
+
+def _tabela_rececoes(linhas):
+    return exports.Tabela(
+        titulo="Receções",
+        colunas=["Data", "Fornecedor", "NIF", "Documento", "Encomenda", "Receção", "Artigo", "Quantidade", "Unidade",
+                 "Preço unitário", "Total"],
+        linhas=[
+            [l.receipt.document_date, l.receipt.supplier.name, l.receipt.supplier.nif, l.receipt.document_number,
+             l.receipt.order.reference if l.receipt.order else "", l.receipt.reference, l.item.name, l.quantity,
+             l.item.unit, l.unit_price, l.total()]
+            for l in linhas
+        ],
+        formatos=[exports.DATA] + [exports.TEXTO] * 6 + [exports.NUMERO, exports.TEXTO, exports.EUROS, exports.EUROS],
+    )
 
 
 class ReceiptDetailView(StockRequiredMixin, View):

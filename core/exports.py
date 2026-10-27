@@ -13,7 +13,8 @@ from decimal import Decimal
 
 from django.http import HttpResponse
 
-TEXTO, EUROS, NUMERO, PERCENTAGEM, HORAS, DATA = "texto", "euros", "numero", "pct", "horas", "data"
+TEXTO, EUROS, NUMERO, PERCENTAGEM, HORAS, DATA, DATAHORA = "texto", "euros", "numero", "pct", "horas", "data", "datahora"
+FORMATOS = ("csv", "xlsx")
 
 _FORMATO_XLSX = {
     EUROS: '#,##0.00 "€"',
@@ -21,6 +22,7 @@ _FORMATO_XLSX = {
     PERCENTAGEM: '0.0 "%"',
     HORAS: "0.00",
     DATA: "dd/mm/yyyy",
+    DATAHORA: "dd/mm/yyyy hh:mm",
 }
 
 
@@ -55,8 +57,12 @@ def _texto_csv(valor, formato):
         return ""
     if isinstance(valor, datetime.timedelta):
         valor = em_horas(valor)
-    if isinstance(valor, (datetime.date, datetime.datetime)):
+    if isinstance(valor, datetime.datetime):
+        return _local(valor).strftime("%d/%m/%Y %H:%M")
+    if isinstance(valor, datetime.date):
         return valor.strftime("%d/%m/%Y")
+    if isinstance(valor, bool):
+        return "sim" if valor else ""
     if isinstance(valor, Decimal):
         casas = 2 if formato in (EUROS, HORAS) else (1 if formato == PERCENTAGEM else None)
         valor = valor.quantize(Decimal(10) ** -casas) if casas is not None else valor.normalize()
@@ -75,7 +81,20 @@ def csv_response(tabela, nome):
     return resp
 
 
+def _local(valor):
+    """Hora local e sem fuso: o Excel não guarda fusos horários."""
+    from django.utils import timezone
+
+    if timezone.is_aware(valor):
+        valor = timezone.localtime(valor)
+    return valor.replace(tzinfo=None)
+
+
 def _valor_xlsx(valor):
+    if isinstance(valor, datetime.datetime):
+        return _local(valor)
+    if isinstance(valor, bool):
+        return "sim" if valor else ""
     if isinstance(valor, datetime.timedelta):
         return float(em_horas(valor))
     if isinstance(valor, Decimal):
@@ -115,3 +134,16 @@ def xlsx_response(tabelas, nome):
     )
     resp["Content-Disposition"] = f'attachment; filename="{nome}.xlsx"'
     return resp
+
+
+def formato_pedido(request, chave="exportar"):
+    """O formato pedido no endereço (`?exportar=csv` ou `xlsx`), ou None."""
+    valor = request.GET.get(chave)
+    return valor if valor in FORMATOS else None
+
+
+def responder(formato, tabelas, nome):
+    """O CSV leva a primeira tabela; o Excel, uma folha por tabela."""
+    if formato == "csv":
+        return csv_response(tabelas[0], nome)
+    return xlsx_response(tabelas, nome)

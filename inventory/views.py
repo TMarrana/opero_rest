@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
@@ -9,6 +10,7 @@ from django.utils.dateparse import parse_date
 from django.views import View
 from django.views.generic import TemplateView
 
+from core import exports
 from core.mixins import StockRequiredMixin
 from core.models import Restaurant
 from core.utils import restaurant_scope
@@ -70,10 +72,34 @@ class ItemListView(StockRequiredMixin, TemplateView):
         return ctx
 
     def get(self, request, *args, **kwargs):
+        formato = exports.formato_pedido(request)
+        if formato:
+            return exports.responder(formato, [_tabela_artigos(self.get_context_data()["items"])], "stock")
         # Pedidos HTMX (pesquisa/filtros) recebem só o fragmento da tabela.
         if request.headers.get("HX-Request"):
             return render(request, "partials/inventory/tabela_items.html", self.get_context_data())
         return super().get(request, *args, **kwargs)
+
+
+def _tabela_artigos(items):
+    """A lista do stock com os filtros do ecrã (Fase 15). O valor é ao custo
+    de referência; um stock negativo não tem valor."""
+    linhas = []
+    for i in items:
+        valor = None
+        if i.reference_cost is not None and i.current_stock > 0:
+            valor = (i.current_stock * i.reference_cost).quantize(Decimal("0.01"))
+        estado = "Stock negativo, contar" if i.needs_count else ("Stock baixo" if i.is_low else "OK")
+        linhas.append(
+            [i.name, i.category.name, i.get_unit_display(), i.current_stock, i.minimum_stock, i.reference_cost, valor,
+             estado, i.is_active]
+        )
+    return exports.Tabela(
+        titulo="Stock",
+        colunas=["Artigo", "Categoria", "Unidade", "Stock", "Mínimo", "Custo de referência", "Valor do stock", "Estado", "Ativo"],
+        linhas=linhas,
+        formatos=[exports.TEXTO] * 3 + [exports.NUMERO, exports.NUMERO, exports.EUROS, exports.EUROS],
+    )
 
 
 class ItemFormView(StockRequiredMixin, View):
@@ -220,6 +246,7 @@ class HistoryView(StockRequiredMixin, TemplateView):
         if ate:
             qs = qs.filter(occurred_at__date__lte=ate)
         ctx["movimentos"] = qs[:200]
+        ctx["todos"] = qs
         ctx["items"] = restaurant_scope(self.request, Item.objects.all())
         ctx["filtros"] = {
             "artigo": artigo,
@@ -229,9 +256,27 @@ class HistoryView(StockRequiredMixin, TemplateView):
         return ctx
 
     def get(self, request, *args, **kwargs):
+        formato = exports.formato_pedido(request)
+        if formato:
+            # A exportação leva todos os movimentos do filtro, e não só os 200
+            # do ecrã.
+            return exports.responder(formato, [_tabela_movimentos(self.get_context_data()["todos"])], "movimentos")
         if request.headers.get("HX-Request"):
             return render(request, "partials/inventory/rail_historico.html", self.get_context_data())
         return super().get(request, *args, **kwargs)
+
+
+def _tabela_movimentos(movimentos):
+    return exports.Tabela(
+        titulo="Movimentos",
+        colunas=["Data", "Artigo", "Unidade", "Tipo", "Quantidade", "Origem", "Motivo", "Referência", "Registado por"],
+        linhas=[
+            [m.occurred_at, m.item.name, m.item.get_unit_display(), m.get_movement_type_display(), m.signed_quantity,
+             m.get_origin_display(), m.reason, m.reference, str(m.created_by)]
+            for m in movimentos
+        ],
+        formatos=[exports.DATAHORA, exports.TEXTO, exports.TEXTO, exports.TEXTO, exports.NUMERO],
+    )
 
 
 class CategoryListView(StockRequiredMixin, View):

@@ -1,5 +1,6 @@
-<div id="rail-historico">
+{% load interface %}<div id="rail-historico">
   {% if movimentos %}
+  <div class="mb-3 flex justify-end">{% exportar rotulo="Exportar todos" %}</div>
   <div class="rail-taloes">
     {% for mov in movimentos %}
     <article class="talao">

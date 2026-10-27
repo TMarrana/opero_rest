@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views import View
 
+from core import exports
 from core.mixins import ManagerRequiredMixin
 from core.models import WorkArea
 from core.utils import workers_scope
@@ -83,6 +84,11 @@ class PlannerView(ManagerRequiredMixin, View):
         semana = _semana(request)
         dias = services.week_days(semana)
         area = request.GET.get("area", "")
+        formato = exports.formato_pedido(request)
+        if formato:
+            return exports.responder(
+                formato, [_tabela_turnos(restaurant, dias, area)], f"turnos-{semana:%Y-%m-%d}"
+            )
         workers = workers_scope(request, Worker.objects.filter(is_active=True))
         turnos = Shift.objects.filter(restaurant=restaurant, work_date__range=(dias[0], dias[-1])).select_related(
             "template", "work_area"
@@ -155,6 +161,31 @@ class PlannerView(ManagerRequiredMixin, View):
                 "ultima_publicacao": WeekPublication.objects.filter(restaurant=restaurant, week=semana).first(),
             },
         )
+
+
+def _tabela_turnos(restaurant, dias, area=""):
+    """Os turnos e as folgas da semana desta casa (Fase 15), com o filtro da
+    área. Inclui os rascunhos: é a semana do gerente, não a publicada."""
+    turnos = Shift.objects.filter(
+        restaurant=restaurant, work_date__range=(dias[0], dias[-1]), pending_removal=False
+    ).select_related("worker", "template", "work_area")
+    if area:
+        turnos = turnos.filter(work_area_id=area)
+    linhas = [
+        [s.worker.full_name, s.work_date, s.start_at, s.end_at, s.duration, s.label,
+         s.work_area.name if s.work_area else "", s.get_state_display()]
+        for s in turnos.order_by("worker__full_name", "start_at")
+    ]
+    if not area:
+        for f in RestDay.objects.filter(restaurant=restaurant, date__range=(dias[0], dias[-1])).select_related("worker"):
+            linhas.append([f.worker.full_name, f.date, None, None, None, "Folga", "", f.get_state_display()])
+        linhas.sort(key=lambda l: (l[0], l[1]))
+    return exports.Tabela(
+        titulo="Turnos",
+        colunas=["Trabalhador", "Dia", "Início", "Fim", "Horas", "Turno", "Área", "Estado"],
+        linhas=linhas,
+        formatos=[exports.TEXTO, exports.DATA, exports.DATAHORA, exports.DATAHORA, exports.HORAS],
+    )
 
 
 class CellView(ManagerRequiredMixin, View):

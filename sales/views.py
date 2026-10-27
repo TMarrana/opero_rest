@@ -16,6 +16,7 @@ from django.utils import timezone
 from django.views import View
 
 from attendance.month import month_range, next_month, previous_month
+from core import exports
 from core.mixins import AdminRequiredMixin, ManagerRequiredMixin
 
 from . import reports, stock
@@ -81,11 +82,44 @@ def _csv(nome, cabecalho, linhas):
     return resp
 
 
+def _tabela_dias(casa, inicio, fim):
+    linhas, totais = reports.por_dia(casa, inicio, fim)
+    return exports.Tabela(
+        titulo="Vendas por dia",
+        colunas=["Dia", "Vendas sem IVA", "Documentos", "Ticket médio", "Horas trabalhadas", "Horas previstas",
+                 "Vendas por hora", "Custo de pessoal (%)"],
+        linhas=[
+            [l["dia"], l["total"], l["vendas"], l["ticket"], l["horas"], l["previstas"], l["por_hora"], l["custo_pessoal"]]
+            for l in linhas
+        ]
+        + [["Total", totais["total"], totais["vendas"], totais["ticket"], totais["horas"], "", totais["por_hora"],
+            totais["custo_pessoal"]]],
+        formatos=[exports.DATA, exports.EUROS, exports.NUMERO, exports.EUROS, exports.HORAS, exports.TEXTO, exports.EUROS,
+                  exports.PERCENTAGEM],
+    )
+
+
+def _tabela_produtos(casa, inicio, fim):
+    return exports.Tabela(
+        titulo="Vendas por produto",
+        colunas=["Código", "Produto", "Família", "Quantidade", "Vendas sem IVA"],
+        linhas=[
+            [p["product__code"], p["product__description"], p["product__group"], p["quantidade"], p["total"]]
+            for p in reports.por_produto(casa, inicio, fim)
+        ],
+        formatos=[exports.TEXTO] * 3 + [exports.NUMERO, exports.EUROS],
+    )
+
+
 class SalesView(ManagerRequiredMixin, View):
     def get(self, request):
         casa = request.restaurant
         inicio, fim, mes = _periodo(request)
         exportar = request.GET.get("exportar")
+        if exportar in ("dias", "produtos") and request.GET.get("formato") == "xlsx":
+            nome = f"vendas-por-{'dia' if exportar == 'dias' else 'produto'}-{inicio:%Y%m%d}-{fim:%Y%m%d}"
+            tabela = _tabela_dias(casa, inicio, fim) if exportar == "dias" else _tabela_produtos(casa, inicio, fim)
+            return exports.xlsx_response([tabela], nome)
         if exportar == "dias":
             linhas, totais = reports.por_dia(casa, inicio, fim)
             return _csv(

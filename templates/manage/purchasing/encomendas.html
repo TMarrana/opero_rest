@@ -1,4 +1,5 @@
 {% extends "base_manage.html" %}
+{% load interface %}
 {% block title %}Encomendas{% endblock %}
 {% block content %}
 <div class="flex flex-wrap items-end justify-between gap-4">
@@ -16,7 +17,7 @@
 </div>
 {% include "manage/purchasing/_nav.html" %}
 
-<form method="get" class="mt-4 flex items-center gap-2 text-sm">
+<form method="get" class="mt-4 flex flex-wrap items-center gap-2 text-sm">
   <label for="estado" class="text-ardosia">Mostrar</label>
   <select id="estado" name="estado" class="campo-input w-56" onchange="this.form.submit()">
     <option value="abertas"{% if estado == "abertas" %} selected{% endif %}>Em aberto</option>
@@ -24,6 +25,7 @@
     {% for valor, nome in estados %}<option value="{{ valor }}"{% if estado == valor %} selected{% endif %}>{{ nome }}</option>{% endfor %}
   </select>
   <noscript><button type="submit" class="link-texto">Ver</button></noscript>
+  <span class="ml-auto">{% exportar %}</span>
 </form>
 
 <div class="mt-4 cartao">

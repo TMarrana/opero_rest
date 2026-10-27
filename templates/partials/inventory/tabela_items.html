@@ -1,4 +1,8 @@
-<div id="tabela-items" class="cartao">
+{% load interface %}<div id="tabela-items">
+  {% if items %}
+  <div class="mb-2 flex justify-end">{% exportar %}</div>
+  {% endif %}
+  <div class="cartao">
   {% if items %}
   <div class="overflow-x-auto">
     <table class="tabela">
@@ -29,4 +33,5 @@
     {% endif %}
   </div>
   {% endif %}
+</div>
 </div>

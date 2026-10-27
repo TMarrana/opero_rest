@@ -91,3 +91,24 @@ def iniciais(nome):
     if len(partes) == 1:
         return partes[0][:2].upper()
     return (partes[0][0] + partes[-1][0]).upper()
+
+
+@register.simple_tag(takes_context=True)
+def url_exportar(context, formato, chave="exportar"):
+    """O endereço da página com os mesmos filtros e o formato de exportação
+    (Fase 15)."""
+    query = context["request"].GET.copy()
+    for k in ("exportar", "formato"):
+        query.pop(k, None)
+    query[chave] = formato
+    return "?" + query.urlencode()
+
+
+@register.inclusion_tag("components/exportar.html", takes_context=True)
+def exportar(context, rotulo="Exportar"):
+    """Os links CSV e Excel de uma lista, com os filtros do ecrã."""
+    return {
+        "rotulo": rotulo,
+        "url_csv": url_exportar(context, "csv"),
+        "url_xlsx": url_exportar(context, "xlsx"),
+    }
