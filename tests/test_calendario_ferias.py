@@ -211,7 +211,13 @@ class TestPainelDaCelula:
 
 
 def test_cancelamento_do_colaborador_guarda_quem(marta, ferias):
+    # O primeiro dia útil daqui a 10 dias ou mais: um fim de semana ou um
+    # feriado não tem dias de férias e o pedido seria recusado.
+    from vacations.services import count_days
+
     inicio = timezone.localdate() + 10 * DIA
+    while count_days(marta, inicio, inicio) == 0:
+        inicio += DIA
     pedido = create_request(worker=marta, absence_type=ferias, start_date=inicio, end_date=inicio)
     cancel_request(request_obj=pedido, worker=marta)
     pedido.refresh_from_db()
