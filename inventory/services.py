@@ -26,8 +26,8 @@ def register_movement(
 ):
     """
     Regista um movimento e atualiza o stock do artigo na mesma transação,
-    com lock sobre o artigo. Só os movimentos de origem venda podem deixar o
-    stock negativo. Levanta ValidationError com mensagens em
+    com lock sobre o artigo. Só as vendas e os consumos internos podem
+    deixar o stock negativo. Levanta ValidationError com mensagens em
     português simples (secção 9) quando o movimento não é válido.
     """
     if movement_type not in StockMovement.Type.values:
@@ -40,9 +40,10 @@ def register_movement(
         locked = Item.objects.select_for_update().get(pk=item.pk)
         delta = -quantity if movement_type in _NEGATIVOS else quantity
         new_stock = locked.current_stock + delta
-        # Uma venda que já aconteceu não se recusa (Fase 14, secção 12): o
-        # stock fica negativo e o artigo assinalado até à contagem seguinte.
-        if new_stock < 0 and origin != StockMovement.Origin.VENDA:
+        # Uma venda ou um consumo que já aconteceu não se recusa (Fase 14,
+        # secção 12): o stock fica negativo e o artigo assinalado até à
+        # contagem seguinte.
+        if new_stock < 0 and origin not in (StockMovement.Origin.VENDA, StockMovement.Origin.CONSUMO):
             raise ValidationError(
                 f"Este movimento deixaria o stock em {new_stock} {locked.unit}. "
                 f"O stock registado agora é {locked.current_stock} {locked.unit}. "

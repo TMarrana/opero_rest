@@ -102,6 +102,7 @@ AUTH_PASSWORD_VALIDATORS = [
 LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "accounts:pos_login"
 LOGOUT_REDIRECT_URL = "accounts:login"
+CSRF_FAILURE_VIEW = "accounts.views.csrf_failure"
 
 LANGUAGE_CODE = "pt-pt"
 TIME_ZONE = "Europe/Lisbon"

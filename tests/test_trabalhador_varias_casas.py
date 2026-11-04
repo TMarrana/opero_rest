@@ -258,7 +258,7 @@ class TestFicha:
         assert list(form.fields["other_restaurants"].queryset) == [casa_b]
         client.post(
             reverse("workers:editar", args=[rui.pk]),
-            {"full_name": "Rui Costa", "is_active": "on", "other_restaurants": [casa_b.pk]},
+            {"full_name": "Rui Costa", "job_title": "Sala", "contact": "912345678", "start_date": "2026-01-05", "is_active": "on", "other_restaurants": [casa_b.pk]},
         )
         assert list(rui.other_restaurants.all()) == [casa_b]
 

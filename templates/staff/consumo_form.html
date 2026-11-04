@@ -1,0 +1,54 @@
+{% extends "base_staff.html" %}
+{% load interface %}
+{% block title %}{% if consumo %}Alterar consumo{% else %}Registar consumo{% endif %}{% endblock %}
+{% block content %}
+{% comment %}Registar ou alterar um consumo próprio (app do colaborador). A
+pessoa é sempre o próprio. Alterar anula o antigo e regista o novo.{% endcomment %}
+{% url 'staff:consumos' as url_voltar %}
+{% if consumo %}
+{% include "staff/_cabecalho.html" with titulo="Alterar consumo" voltar=url_voltar %}
+{% else %}
+{% include "staff/_cabecalho.html" with titulo="Registar consumo" voltar=url_voltar %}
+{% endif %}
+<p class="mt-2 text-sm text-ardosia">Cada artigo sai do stock da casa. Se o stock não chegar, regista-se na mesma: o gerente acerta-o na próxima contagem.</p>
+
+{% if casas|length > 1 and not consumo %}
+<form method="get" class="mt-4">
+  <label for="casa-escolha" class="block text-sm font-medium">Casa</label>
+  <select id="casa-escolha" name="casa" class="campo-input mt-1.5" onchange="this.form.submit()">
+    {% for c in casas %}<option value="{{ c.pk }}"{% if c.pk == casa.pk %} selected{% endif %}>{{ c.name }}</option>{% endfor %}
+  </select>
+  <noscript><button type="submit" class="mt-2 text-sm underline">Mudar de casa</button></noscript>
+</form>
+{% endif %}
+
+<form method="post" class="mt-4 space-y-4">
+  {% csrf_token %}
+  <input type="hidden" name="casa" value="{{ casa.pk }}">
+  {% if erro %}<p class="aviso aviso-perigo" role="alert">{{ erro }}</p>{% endif %}
+  <div class="cartao space-y-4 p-5">
+    <div class="space-y-1.5">
+      <label for="dia" class="block text-sm font-medium">Dia</label>
+      <input id="dia" type="date" name="dia" value="{{ dia }}" max="{{ hoje|date:'Y-m-d' }}" class="campo-input font-dados">
+    </div>
+    <fieldset>
+      <legend class="text-sm font-medium">Motivo</legend>
+      <div class="mt-1 flex flex-wrap gap-x-4">
+        {% for valor, nome in motivos %}
+        <label class="inline-flex min-h-toque items-center gap-2 text-sm"><input type="radio" name="motivo" value="{{ valor }}" {% if dados.motivo == valor %}checked{% endif %} class="h-4 w-4"> {{ nome }}</label>
+        {% endfor %}
+      </div>
+      {% if regras.meals_per_shift is not None %}<p class="mt-1 text-xs text-ardosia">Limite da casa: {{ regras.meals_per_shift }} refeição por turno.</p>{% endif %}
+    </fieldset>
+  </div>
+
+  {% include "partials/inventory/consumo_linhas.html" %}
+
+  <div class="cartao p-5">
+    <label for="nota" class="block text-sm font-medium">Observação</label>
+    <input id="nota" type="text" name="nota" maxlength="200" value="{{ dados.nota|default:'' }}" class="campo-input mt-1.5">
+  </div>
+
+  <button type="submit" class="btn btn-primario w-full justify-center">{% if consumo %}Guardar alteração{% else %}Registar consumo{% endif %}</button>
+</form>
+{% endblock %}

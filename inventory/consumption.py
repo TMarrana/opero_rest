@@ -5,8 +5,17 @@ o dono leva. Cada linha é uma SAIDA de origem consumo interno, pelo
 momento. O valor fica guardado e não se recalcula quando o custo muda.
 
 Um consumo não se apaga (invariante 2): anula-se, com uma ENTRADA da mesma
-origem que repõe o stock, e deixa de contar no mapa do mês.
+origem que repõe o stock, e deixa de contar no mapa do mês. Alterar um
+consumo é anulá-lo e registar o novo, na mesma transação.
+
+Um consumo que deixa o stock negativo regista-se na mesma, com aviso: o
+artigo fica assinalado até a contagem seguinte o acertar.
+
+Quem regista (decidido a 2026-11-04): qualquer trabalhador regista, altera
+e anula os seus consumos, na app do colaborador; só o Gerente e o Admin
+mexem nos consumos dos outros e nos da casa.
 """
+import re
 import csv
 import io
 from collections import defaultdict
@@ -48,10 +57,33 @@ def meals_check(*, worker, day, extra=0, restaurant=None):
     return refeicoes, por_turno * turnos
 
 
+_LINHA = re.compile(r"^(?:item|qtd)-(\d+)$")
+
+
+def parse_lines(dados, artigos, parse_decimal):
+    """As linhas do formulário (`item-N` e `qtd-N`, tantas quantas vierem)
+    como lista de (artigo, quantidade). `artigos`: {pk em texto: artigo}."""
+    indices = sorted({int(m.group(1)) for k in dados for m in [_LINHA.match(k)] if m})
+    linhas = []
+    for n in indices:
+        item = artigos.get(dados.get(f"item-{n}", ""))
+        qtd = parse_decimal(dados.get(f"qtd-{n}"), "A quantidade")
+        if item is None:
+            if qtd:
+                raise ValidationError("Há uma quantidade numa linha sem artigo. Escolha o artigo.")
+            continue
+        if qtd is None:
+            raise ValidationError(f"Indique a quantidade de {item}.")
+        linhas.append((item, qtd))
+    return linhas
+
+
 def register_consumption(*, restaurant, worker, reason, day, lines, user, note=""):
     """Regista um consumo. `lines` é uma lista de (artigo, quantidade); as
     quantidades vazias ficam de fora. Tudo numa transação. Devolve o
-    consumo; `over_limit` diz se passou o limite de refeições (não bloqueia)."""
+    consumo; `over_limit` diz se passou o limite de refeições (não bloqueia),
+    e `negativos` os artigos que ficaram com stock negativo (também não
+    bloqueia), como lista de (artigo, stock)."""
     if reason not in InternalConsumption.Reason.values:
         raise ValidationError("Escolha o motivo do consumo.")
     if worker is not None and not worker.works_in(restaurant):
@@ -85,6 +117,7 @@ def register_consumption(*, restaurant, worker, reason, day, lines, user, note="
             restaurant=restaurant, worker=worker, reason=reason, consumed_on=day, note=note, created_by=user, over_limit=acima
         )
         quem = worker.full_name if worker else "a casa"
+        consumo.negativos = []
         for item, quantidade in validas:
             movimento = register_movement(
                 item=item,
@@ -96,7 +129,9 @@ def register_consumption(*, restaurant, worker, reason, day, lines, user, note="
                 origin=StockMovement.Origin.CONSUMO,
             )
             # O custo lê-se depois do lock do movimento, o do momento.
-            custo = item.__class__.objects.values_list("reference_cost", flat=True).get(pk=item.pk)
+            custo, stock = item.__class__.objects.values_list("reference_cost", "current_stock").get(pk=item.pk)
+            if stock < 0:
+                consumo.negativos.append((item, stock))
             ConsumptionLine.objects.create(
                 consumption=consumo,
                 item=item,
@@ -106,6 +141,19 @@ def register_consumption(*, restaurant, worker, reason, day, lines, user, note="
                 movement=movimento,
             )
     return consumo
+
+
+def replace_consumption(*, consumption, user, worker, reason, day, lines, note=""):
+    """Altera um consumo: anula o antigo (repõe o stock) e regista o novo,
+    numa só transação. O antigo fica, anulado, a dizer qual o substitui."""
+    with transaction.atomic():
+        antigo = cancel_consumption(consumption=consumption, user=user, reason="Alterado")
+        novo = register_consumption(
+            restaurant=antigo.restaurant, worker=worker, reason=reason, day=day, lines=lines, user=user, note=note
+        )
+        antigo.cancel_reason = f"Alterado: substituído por {novo.reference}"
+        antigo.save(update_fields=["cancel_reason", "updated_at"])
+    return novo
 
 
 def cancel_consumption(*, consumption, user, reason):

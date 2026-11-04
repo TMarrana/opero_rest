@@ -6,7 +6,10 @@ Parâmetros:
   titulo          — pergunta direta (ex.: "Recusar este pedido de férias?")
   corpo           — consequência em português simples
   confirmar_label — verbo da ação (ex.: "Recusar pedido")
-  form_action     — URL do POST de confirmação
+  form_action     — URL do POST de confirmação; sem ele, o modal só informa
+                    e o botão de fechar diz «Fechar»
+  variante_confirmar — "primario" para uma ação que se desfaz (por omissão,
+                    perigo)
 {% endcomment %}
 <div x-data="{ aberto: false }"
      x-on:abrir-modal.window="if ($event.detail.id === '{{ id }}') aberto = true"
@@ -19,11 +22,13 @@ Parâmetros:
     <h2 id="{{ id }}-titulo" class="font-display text-xl font-bold text-carvao">{{ titulo }}</h2>
     <p class="mt-2 text-sm text-ardosia">{{ corpo }}</p>
     <div class="mt-7 flex flex-wrap justify-end gap-3">
-      <button type="button" x-on:click="aberto = false" class="btn btn-fantasma">Cancelar</button>
+      <button type="button" x-on:click="aberto = false" class="btn btn-fantasma">{% if form_action %}Cancelar{% else %}Fechar{% endif %}</button>
+      {% if form_action %}
       <form method="post" action="{{ form_action }}">
         {% csrf_token %}
-        <button type="submit" class="btn btn-perigo">{{ confirmar_label }}</button>
+        <button type="submit" class="btn {% if variante_confirmar == 'primario' %}btn-primario{% else %}btn-perigo{% endif %}">{{ confirmar_label }}</button>
       </form>
+      {% endif %}
     </div>
   </div>
 </div>

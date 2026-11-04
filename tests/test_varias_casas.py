@@ -163,7 +163,7 @@ class TestCasaAtiva:
         a sessão passou para a B. O POST é recusado sem gravar nada."""
         dar_acesso(manager, casa_b, User.Role.MANAGER)
         _na_casa(client, manager, casa_b)
-        resp = client.post(reverse("workers:novo"), {"full_name": "Novo Colega", "is_active": "on", "_casa": restaurant.pk})
+        resp = client.post(reverse("workers:novo"), {"full_name": "Novo Colega", "job_title": "Sala", "contact": "912345678", "start_date": "2026-01-05", "is_active": "on", "_casa": restaurant.pk})
         assert resp.status_code == 302 and resp.url == reverse("dashboard:home")
         assert not Worker.objects.filter(full_name="Novo Colega").exists()
 
@@ -174,7 +174,7 @@ class TestCasaAtiva:
         assert not Worker.objects.filter(full_name="Novo Colega").exists()
 
         # Da casa certa, grava.
-        client.post(reverse("workers:novo"), {"full_name": "Novo Colega", "is_active": "on", "_casa": casa_b.pk})
+        client.post(reverse("workers:novo"), {"full_name": "Novo Colega", "job_title": "Sala", "contact": "912345678", "start_date": "2026-01-05", "is_active": "on", "_casa": casa_b.pk})
         assert Worker.objects.get(full_name="Novo Colega").restaurant == casa_b
 
     def test_post_login_goes_to_restaurant_with_backoffice(self, client, staff_user, casa_b):

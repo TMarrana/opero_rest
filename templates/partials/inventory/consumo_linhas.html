@@ -1,0 +1,39 @@
+{% comment %}
+Linhas de um consumo (backoffice e app do colaborador). Mostra `visiveis`
+linhas (3 por omissão) e o botão + abre a seguinte, até ao máximo de
+`linhas`. As linhas escondidas vão vazias e ficam de fora.
+Cada artigo leva o stock disponível em data-stock: se a quantidade passar
+dele, avisa que o stock fica negativo. Não impede o registo.
+Parâmetros: linhas, visiveis, artigos (com `disponivel`).
+{% endcomment %}
+<div class="cartao" x-data="{ visiveis: {{ visiveis }}, max: {{ linhas|length }} }">
+  <table class="tabela">
+    <thead><tr><th>Artigo</th><th class="th-dados">Quantidade</th></tr></thead>
+    <tbody>
+      {% for l in linhas %}
+      <tr x-show="{{ l.n }} < visiveis"{% if l.n >= visiveis %} x-cloak{% endif %}
+          x-data="{ stock: null, unidade: '', qtd: '',
+                    ler() { const o = $refs.sel.selectedOptions[0]; this.stock = o && o.dataset.stock ? parseFloat(o.dataset.stock) : null; this.unidade = o ? (o.dataset.unidade || '') : '' },
+                    get falta() { const q = parseFloat(String(this.qtd).replace(',', '.')); return this.stock !== null && q > 0 && q > this.stock } }"
+          x-init="qtd = $refs.q.value; ler()">
+        <td>
+          <select x-ref="sel" x-on:change="ler()" name="item-{{ l.n }}" class="campo-input" aria-label="Artigo da linha {{ forloop.counter }}">
+            <option value="">—</option>
+            {% for a in artigos %}<option value="{{ a.pk }}" data-stock="{{ a.disponivel|stringformat:'s' }}" data-unidade="{{ a.unit }}"{% if l.item == a.pk|stringformat:"s" %} selected{% endif %}>{{ a.name }} ({{ a.unit }}){% if a.reference_cost is None %} · sem custo{% endif %}</option>{% endfor %}
+          </select>
+          <p x-show="falta" x-cloak class="mt-1 text-xs font-medium text-alerta-700" role="status">
+            O stock fica negativo (<span x-text="stock > 0 ? 'há' : 'já está em'"></span> <span class="font-dados" x-text="stock.toLocaleString('pt-PT')"></span> <span x-text="unidade"></span>).
+          </p>
+        </td>
+        <td class="td-dados align-top"><input x-ref="q" x-model="qtd" type="text" inputmode="decimal" name="qtd-{{ l.n }}" value="{{ l.qtd }}" aria-label="Quantidade da linha {{ forloop.counter }}" class="campo-input font-dados w-24 text-right"></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div class="flex items-center justify-between gap-4 border-t border-linha px-6 py-3.5">
+    <p class="text-xs text-ardosia">As linhas sem artigo ficam de fora. Um artigo sem custo de referência sai do stock, mas fica sem valor no mapa.</p>
+    <button type="button" x-show="visiveis < max" x-cloak
+            x-on:click="visiveis++; $nextTick(() => $root.querySelectorAll('tbody select')[visiveis - 1].focus())"
+            class="btn btn-fantasma btn-sm shrink-0" aria-label="Acrescentar uma linha" title="Acrescentar uma linha">+</button>
+  </div>
+</div>

@@ -10,7 +10,7 @@ from accounts.models import BACKOFFICE_ROLES
 from attendance.models import CorrectionRequest, TimeEntry
 from core.middleware import SESSION_KEY
 from core.mixins import GroupAdminRequiredMixin, RoleRequiredMixin
-from core.utils import restaurant_scope
+from core.utils import restaurant_scope, workers_scope
 from inventory.models import Item, StockMovement
 from vacations.models import VacationRequest
 
@@ -92,7 +92,154 @@ class DashboardView(RoleRequiredMixin, TemplateView):
             ctx["pedidos_correcao"] = restaurant_scope(
                 request, CorrectionRequest.objects.filter(status=CorrectionRequest.Status.PENDENTE)
             ).count()
+            ctx.update(turnos_de_hoje(request))
+            from attendance.views import overlapping_entries
+
+            ctx["sobrepostos"] = len(overlapping_entries(request))
         return ctx
+
+
+def turnos_de_hoje(request, agora=None):
+    """Os turnos publicados de hoje nesta casa, um por pessoa, com o ponto ao
+    lado: em turno, já saiu, em falta (passou a hora de entrada mais a
+    tolerância e não picou) ou ainda por entrar. Quem picou sem turno
+    planeado aparece no fim. As ausências aprovadas tiram o turno da lista
+    (fica em reserva, R-033)."""
+    import datetime
+
+    from django.conf import settings
+
+    from attendance.views import _desvios
+    from shifts.models import Shift
+    from workers.models import Worker
+
+    agora = agora or timezone.now()
+    dia = timezone.localdate(agora)
+    casa = request.restaurant
+    tolerancia = datetime.timedelta(minutes=settings.SHIFT_TOLERANCE_MINUTES)
+    workers = workers_scope(request, Worker.objects.all())
+
+    turnos = {}
+    for t in (
+        Shift.objects.filter(restaurant=casa, worker__in=workers, work_date=dia, state=Shift.State.PUBLICADO)
+        .select_related("worker", "template", "work_area")
+        .order_by("start_at")
+    ):
+        turnos.setdefault(t.worker, []).append(t)
+    registos = {}
+    for e in (
+        TimeEntry.objects.filter(restaurant=casa, worker__in=workers, work_date=dia)
+        .select_related("worker")
+        .order_by("check_in")
+    ):
+        registos.setdefault(e.worker, []).append(e)
+
+    linhas = []
+    for worker, previstos in turnos.items():
+        do_dia = registos.pop(worker, [])
+        inicio = previstos[0].start_at
+        if any(r.is_open for r in do_dia):
+            estado = "em_turno"
+        elif do_dia:
+            estado = "saiu"
+        elif agora > inicio + tolerancia:
+            estado = "em_falta"
+        else:
+            estado = "por_entrar"
+        linhas.append(
+            {
+                "worker": worker,
+                "turnos": previstos,
+                "registos": do_dia,
+                "estado": estado,
+                "desvios": [d for d in _desvios(previstos, do_dia, agora) if d != "Sem marcação"],
+            }
+        )
+    sem_turno = [
+        {"worker": w, "turnos": [], "registos": rs, "estado": "sem_turno", "desvios": []}
+        for w, rs in registos.items()
+    ]
+    todas = linhas + sem_turno
+    escala = _escala(todas, dia, agora)
+    return {
+        "turnos_hoje": todas,
+        "escala": escala,
+        "turnos_previstos": len(linhas),
+        "turnos_picaram": sum(1 for l in linhas if l["estado"] in ("em_turno", "saiu")),
+        "turnos_em_falta": sum(1 for l in linhas if l["estado"] == "em_falta"),
+    }
+
+
+# Cores das barras por estado: (turno planeado, ponto).
+TONS = {
+    "em_turno": ("border-servico-100 bg-servico-50", "bg-servico"),
+    "saiu": ("border-neutro-300 bg-neutro-100", "bg-neutro-500"),
+    "em_falta": ("border-dashed border-perigo-200 bg-perigo-50", "bg-perigo"),
+    "por_entrar": ("border-ambar-100 bg-ambar-50", "bg-ambar"),
+    "sem_turno": ("", "bg-alerta"),
+}
+
+
+def _pct(fracao):
+    """Percentagem para um `style`: em texto, com ponto decimal (o Django
+    escreveria vírgula, à portuguesa, e o CSS não a lê)."""
+    return f"{100 * fracao:.2f}"
+
+
+def _escala(linhas, dia, agora):
+    """A linha do tempo do card «Turnos de hoje»: das horas cheias antes do
+    primeiro turno ou entrada até depois do último fim (no mínimo 8 horas;
+    um turno que passa a meia-noite estica para lá das 24). Acrescenta a
+    cada linha as barras do turno e do ponto, em percentagem da largura."""
+    import datetime
+    import math
+
+    zero = timezone.make_aware(datetime.datetime.combine(dia, datetime.time()))
+
+    def horas(momento):
+        return (momento - zero).total_seconds() / 3600
+
+    pontos = []
+    for l in linhas:
+        for t in l["turnos"]:
+            pontos += [horas(t.start_at), horas(t.end_at)]
+        for r in l["registos"]:
+            pontos += [horas(r.check_in), horas(r.check_out or max(agora, r.check_in))]
+    if pontos:
+        # A hora atual entra sempre na escala, para se ver onde está o dia.
+        pontos.append(min(max(horas(agora), 0), 24))
+        inicio, fim = math.floor(min(pontos)), math.ceil(max(pontos))
+    else:
+        inicio, fim = 9, 23
+    if fim - inicio < 8:
+        fim = inicio + 8
+    total = fim - inicio
+
+    def barra(de, ate):
+        esquerda = max(horas(de), inicio) - inicio
+        direita = min(horas(ate), fim) - inicio
+        return {"esquerda": _pct(esquerda / total), "largura": _pct(max((direita - esquerda) / total, 0.006))}
+
+    for l in linhas:
+        l["tom_turno"], l["tom_ponto"] = TONS[l["estado"]]
+        l["barras_turno"] = [
+            {**barra(t.start_at, t.end_at), "titulo": f"{t.label} {timezone.localtime(t.start_at):%H:%M}–{timezone.localtime(t.end_at):%H:%M}"}
+            for t in l["turnos"]
+        ]
+        l["barras_ponto"] = [
+            {**barra(r.check_in, r.check_out or max(agora, r.check_in)), "aberto": r.check_out is None}
+            for r in l["registos"]
+        ]
+    passo = 1 if total <= 12 else 2
+    agora_h = horas(agora)
+    return {
+        "horas": [
+            {"hora": f"{h % 24:02d}h", "pos": _pct((h - inicio) / total)}
+            for h in range(inicio, fim + 1, passo)
+        ],
+        "agora": _pct((agora_h - inicio) / total) if inicio <= agora_h <= fim else None,
+        "agora_txt": f"{timezone.localtime(agora):%H:%M}",
+    }
 
 
 class SwitchRestaurantView(LoginRequiredMixin, View):

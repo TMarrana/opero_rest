@@ -1,11 +1,54 @@
 {% extends "base_manage.html" %}
 {% block title %}Corrigir registo{% endblock %}
 {% block content %}
-<h1 class="titulo-pagina">Corrigir registo de ponto</h1>
-<p class="subtitulo-pagina">{{ entry.worker.full_name }} · registo de {{ entry.work_date|date:"d M Y" }}. A correção fica auditada: o seu nome, o motivo, a hora e o valor anterior ficam no histórico.</p>
+{% load interface %}
+<div class="flex max-w-md items-center justify-between gap-4">
+  <h1 class="titulo-pagina">Corrigir registo de ponto</h1>
+  <button type="button" x-data x-on:click="$dispatch('abrir-modal', {id: 'apagar-registo'})"
+          class="btn-icone border-perigo bg-perigo text-white hover:bg-perigo-700"
+          aria-label="Apagar este registo" title="Apagar registo">{% icone "lixo" %}</button>
+</div>
+<p class="subtitulo-pagina">{{ entry.worker.full_name }} · registo de {{ entry.work_date|date:"d M Y" }}. A correção fica auditada: o seu nome, a hora e o valor anterior ficam no histórico, com o motivo se o indicar.</p>
+
+{% if sobreposto %}
+<p class="aviso aviso-perigo mt-4 max-w-md">Este registo sobrepõe-se a outro de {{ entry.worker.full_name }}. Se for um duplicado ou um engano, apague-o; senão, corrija as horas.</p>
+{% endif %}
+
+{# Apagar: com o mês aprovado só informa; senão confirma, com motivo opcional. #}
+<div x-data="{ aberto: {% if abrir_apagar %}true{% else %}false{% endif %} }"
+     x-on:abrir-modal.window="if ($event.detail.id === 'apagar-registo') aberto = true"
+     x-show="aberto" x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center p-4"
+     role="dialog" aria-modal="true" aria-labelledby="apagar-registo-titulo">
+  <div class="absolute inset-0 bg-floresta/40 backdrop-blur-[2px]" x-on:click="aberto = false"></div>
+  <div class="relative w-full max-w-md rounded-2xl bg-superficie p-6 shadow-flutuante" x-on:keydown.escape.window="aberto = false">
+    {% if mes_fechado %}
+    <h2 id="apagar-registo-titulo" class="font-display text-xl font-bold text-carvao">Não é possível apagar</h2>
+    <p class="mt-2 text-sm text-ardosia">O mês de {{ entry.work_date|date:"m/Y" }} de {{ entry.worker.full_name }} já foi aprovado. Para apagar este registo, reabra primeiro o mês.</p>
+    <div class="mt-7 flex justify-end"><button type="button" x-on:click="aberto = false" class="btn btn-fantasma">Fechar</button></div>
+    {% else %}
+    <h2 id="apagar-registo-titulo" class="font-display text-xl font-bold text-carvao">Apagar este registo?</h2>
+    <p class="mt-2 text-sm text-ardosia">
+      {{ entry.worker.full_name }} · <span class="font-dados">{{ entry.check_in|date:"d/m H:i" }} &rarr; {% if entry.check_out %}{{ entry.check_out|date:"d/m H:i" }}{% else %}sem saída{% endif %}</span>.
+      Deixa de aparecer no ponto e de contar nas horas. Fica guardado no histórico, com o seu nome e a hora, como manda a lei.
+    </p>
+    <form method="post" action="{% url 'attendance:apagar' entry.pk %}" class="mt-5">
+      {% csrf_token %}
+      <input type="hidden" name="voltar" value="{{ voltar }}">
+      <label class="block text-sm font-medium text-carvao" for="motivo-apagar">Motivo</label>
+      <input id="motivo-apagar" name="reason" maxlength="200" class="campo-input mt-1.5" placeholder="Opcional. Ex.: registo duplicado">
+      <div class="mt-7 flex flex-wrap justify-end gap-3">
+        <button type="button" x-on:click="aberto = false" class="btn btn-fantasma">Cancelar</button>
+        <button type="submit" class="btn btn-perigo">Apagar registo</button>
+      </div>
+    </form>
+    {% endif %}
+  </div>
+</div>
 
 <form method="post" class="mt-6 max-w-md space-y-5">
   {% csrf_token %}
+  <input type="hidden" name="voltar" value="{{ voltar }}">
   {% for erro in form.non_field_errors %}
   <p class="aviso aviso-perigo">{{ erro }}</p>
   {% endfor %}
@@ -17,7 +60,7 @@
     {% include "components/campo.html" with field=form.reason %}
   </div>
   <div class="flex justify-end gap-3">
-    {% include "components/botao.html" with label="Cancelar" variante="fantasma" href="/gestao/ponto/" %}
+    {% include "components/botao.html" with label="Cancelar" variante="fantasma" href=voltar %}
     {% include "components/botao.html" with label="Corrigir registo" variante="perigo" %}
   </div>
 </form>
@@ -38,7 +81,7 @@
       {% endif %}
       {% endif %}
       <p class="mt-0.5">{% if c.kind == "ALTERAR" %}depois {% endif %}{{ c.new_check_in|date:"d/m H:i" }} &rarr; {% if c.new_check_out %}{{ c.new_check_out|date:"d/m H:i" }}{% else %}sem saída{% endif %}</p>
-      <p class="mt-1 text-xs text-ardosia">{{ c.corrected_by }} · {{ c.reason }}</p>
+      <p class="mt-1 text-xs text-ardosia">{{ c.corrected_by }}{% if c.reason %} · {{ c.reason }}{% endif %}</p>
     </article>
     {% endfor %}
   </div>

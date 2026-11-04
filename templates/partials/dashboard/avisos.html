@@ -1,7 +1,7 @@
 {% load interface %}
 {% comment %}Coisas por resolver na equipa. Cada aviso diz quantas são e
 leva até elas (secção 9).{% endcomment %}
-{% if pedidos_correcao or por_resolver or por_aprovar or vendas_atraso %}
+{% if pedidos_correcao or por_resolver or por_aprovar or vendas_atraso or sobrepostos %}
 <section class="cartao mt-8" aria-labelledby="por-tratar">
   <div class="cartao-cabecalho">
     <h2 id="por-tratar" class="cartao-titulo">Por tratar</h2>
@@ -30,6 +30,12 @@ leva até elas (secção 9).{% endcomment %}
       <span class="mosaico h-10 w-10 bg-alerta-50 text-alerta">{% icone "alerta" "h-[18px] w-[18px]" %}</span>
       <span class="flex-1"><span class="font-dados font-semibold text-alerta">{{ por_resolver }}</span> registo{{ por_resolver|pluralize }} de ponto por resolver: entrada sem saída</span>
       <span class="link-acao">Ver</span></a></li>
+    {% endif %}
+    {% if sobrepostos %}
+    <li><a href="{% url 'attendance:pedidos' %}#sobrepostos" class="flex items-center gap-4 px-6 py-3.5 text-sm transition-colors hover:bg-perigo-50">
+      <span class="mosaico h-10 w-10 bg-perigo-50 text-perigo">{% icone "relogio" "h-[18px] w-[18px]" %}</span>
+      <span class="flex-1"><span class="font-dados font-semibold text-perigo">{{ sobrepostos }}</span> registo{{ sobrepostos|pluralize }} de ponto sobreposto{{ sobrepostos|pluralize }}: pode{{ sobrepostos|pluralize:"m" }} ser erro{{ sobrepostos|pluralize }}</span>
+      <span class="link-acao">Rever</span></a></li>
     {% endif %}
   </ul>
 </section>

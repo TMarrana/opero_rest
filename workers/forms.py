@@ -12,32 +12,36 @@ User = get_user_model()
 class WorkerForm(forms.ModelForm):
     class Meta:
         model = Worker
-        fields = ["full_name", "job_title", "contact", "start_date", "user", "is_active", "notes", "other_restaurants"]
+        fields = ["full_name", "job_title", "contact", "start_date", "is_active", "notes", "other_restaurants"]
         widgets = {
             "full_name": forms.TextInput(attrs=_INPUT),
             "job_title": forms.TextInput(attrs={**_INPUT, "placeholder": "Ex.: cozinha, sala, copa"}),
             "contact": forms.TextInput(attrs={**_INPUT, "placeholder": "Telefone ou email"}),
             "start_date": forms.DateInput(attrs={**_INPUT, "class": "campo-input font-dados", "type": "date"}, format="%Y-%m-%d"),
-            "user": forms.Select(attrs=_INPUT),
             "notes": forms.Textarea(attrs={**_INPUT, "rows": 3}),
             "other_restaurants": forms.CheckboxSelectMultiple,
         }
-        labels = {"is_active": "Trabalhador ativo", "user": "Conta de acesso (opcional)"}
+        labels = {"is_active": "Trabalhador ativo"}
         help_texts = {
             "other_restaurants": "Pica e tem turnos nestas casas. A ficha, as férias e o fecho do mês ficam nesta, "
             "que é a casa principal.",
-            "user": "Liga este trabalhador a uma conta que já existe. Para criar uma conta nova, use «Conta da app»."
         }
+
+    # Obrigatórios na ficha (decidido a 2026-11-04). No modelo continuam
+    # opcionais, por causa das fichas antigas.
+    OBRIGATORIOS = {
+        "job_title": "Indique a função.",
+        "contact": "Indique um contacto: telefone ou email.",
+        "start_date": "Indique a data de início.",
+    }
 
     def __init__(self, *args, restaurant=None, **kwargs):
         super().__init__(*args, **kwargs)
-        qs = User.objects.filter(is_active=True)
-        if restaurant is not None:
-            qs = qs.filter(memberships__restaurant=restaurant)
-        livres = qs.filter(worker__isnull=True)
-        if self.instance.pk and self.instance.user_id:
-            livres = livres | qs.filter(pk=self.instance.user_id)
-        self.fields["user"].queryset = livres.distinct()
+        # A conta da app cria-se em «Conta da app»: cada trabalhador tem a
+        # sua, com um email que nenhuma outra conta usa.
+        for nome, erro in self.OBRIGATORIOS.items():
+            self.fields[nome].required = True
+            self.fields[nome].error_messages["required"] = erro
         # As outras casas do mesmo grupo (Fase 9). Num grupo de uma só casa,
         # o campo não aparece.
         outras = Restaurant.objects.none()
@@ -97,8 +101,7 @@ class AccountCreateForm(forms.Form):
         email = User.objects.normalize_email(self.cleaned_data["email"]).lower()
         if User.objects.filter(email__iexact=email).exists():
             raise forms.ValidationError(
-                "Já existe uma conta com este email. Para a ligar a este trabalhador, escolha-a em "
-                "«Conta de acesso» no formulário do trabalhador."
+                "Já existe uma conta com este email. Cada conta é de uma só pessoa: use outro email."
             )
         return email
 

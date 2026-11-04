@@ -95,9 +95,9 @@ class TestPorResolver:
     def test_dashboard_conta_por_resolver(self, client, manager, worker):
         open_shift(worker=worker, at=timezone.now() - 20 * H)
         client.force_login(manager)
-        html = client.get(reverse("dashboard:home")).content.decode()
-        assert "registo de ponto por resolver" in html
-        assert "Ninguém em turno" in html
+        resp = client.get(reverse("dashboard:home"))
+        assert "registo de ponto por resolver" in resp.content.decode()
+        assert len(resp.context["em_turno"]) == 0  # por resolver não conta como em turno
 
 
 class TestPedidosDeCorrecao:

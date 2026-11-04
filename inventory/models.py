@@ -65,8 +65,9 @@ class Item(TimeStampedModel):
 
     @property
     def needs_count(self):
-        """Só as vendas levam o stock abaixo de zero (Fase 14): o artigo fica
-        assinalado até a contagem seguinte o acertar."""
+        """Só as vendas e os consumos internos levam o stock abaixo de zero
+        (Fases 12 e 14): o artigo fica assinalado até a contagem seguinte o
+        acertar."""
         return self.current_stock < 0
 
 

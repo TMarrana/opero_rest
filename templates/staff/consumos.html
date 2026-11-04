@@ -3,8 +3,10 @@
 {% block title %}Os meus consumos{% endblock %}
 {% block content %}
 {% comment %}Os meus consumos (Fase 12): refeições e outros consumos do
-próprio, com o valor ao custo. Só leitura: quem regista é o gerente.{% endcomment %}
+próprio, com o valor ao custo. O próprio regista, altera e anula os seus.{% endcomment %}
 {% url 'staff:home' as url_voltar %}{% include "staff/_cabecalho.html" with titulo="Os meus consumos" voltar=url_voltar %}
+
+<a href="{% url 'staff:consumo_novo' %}" class="btn btn-acento mt-5 w-full justify-center">{% icone "talheres" "h-5 w-5" %}Registar consumo</a>
 
 <div class="mt-5 flex items-center justify-between gap-2">
   <a href="?mes={{ mes_anterior|date:'Y-m' }}" class="btn-icone bg-superficie" aria-label="Mês anterior">{% icone "anterior" %}</a>
@@ -29,10 +31,19 @@ próprio, com o valor ao custo. Só leitura: quem regista é o gerente.{% endcom
     <time class="block text-xs text-ardosia">{{ c.consumed_on|date:"D d/m" }} · {{ c.get_reason_display }}</time>
     <p class="mt-0.5 text-sm font-semibold">{% for l in c.lines.all %}{{ l.item.name }} {{ l.quantity|numero }} {{ l.item.unit }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
     <p class="font-dados text-sm text-ardosia">{% if c.value is not None %}{{ c.value|euros }}{% else %}sem custo{% endif %}</p>
+    {% if c.note %}<p class="text-sm text-ardosia">{{ c.note }}</p>{% endif %}
+    <form method="post" action="{% url 'staff:consumo_anular' c.pk %}" class="mt-2 flex flex-wrap items-center gap-4" x-data="{ aberto: false }">
+      {% csrf_token %}
+      <a x-show="!aberto" href="{% url 'staff:consumo_alterar' c.pk %}" class="inline-flex min-h-toque items-center text-sm text-ardosia underline underline-offset-2">Alterar</a>
+      <button type="button" x-show="!aberto" x-on:click="aberto = true" class="inline-flex min-h-toque items-center text-sm text-ardosia underline underline-offset-2">Anular</button>
+      <span x-show="aberto" x-cloak class="text-sm">Anular este consumo? O stock volta.</span>
+      <button x-show="aberto" x-cloak type="submit" class="inline-flex min-h-toque items-center text-sm font-semibold text-perigo underline underline-offset-2">Anular</button>
+      <button x-show="aberto" x-cloak type="button" x-on:click="aberto = false" class="inline-flex min-h-toque items-center text-sm text-ardosia">Cancelar</button>
+    </form>
   </article>
   {% endfor %}
 </div>
 {% else %}
-<p class="mt-6 text-sm text-ardosia">Não há consumos registados em seu nome neste mês. Os consumos são registados pelo gerente.</p>
+<p class="mt-6 text-sm text-ardosia">Não há consumos registados em seu nome neste mês.</p>
 {% endif %}
 {% endblock %}

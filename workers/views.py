@@ -2,6 +2,7 @@ import secrets
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
@@ -14,6 +15,7 @@ from accounts.services import dar_acesso, perfil_na_casa
 
 from .forms import AccountCreateForm, AccountRoleForm, KioskCodeForm, WorkerForm, roles_que_gere
 from .models import Worker
+from .services import delete_blockers, delete_worker
 
 User = get_user_model()
 # Sem letras e algarismos que se confundem ao ditar (0/o, 1/l/i).
@@ -51,7 +53,27 @@ class WorkerFormView(ManagerRequiredMixin, View):
         worker = self._get_worker(request, pk)
         restaurant = request.restaurant
         form = WorkerForm(instance=worker, restaurant=restaurant)
-        return render(request, "manage/workers/form.html", {"form": form, "worker": worker})
+        return render(request, "manage/workers/form.html", self._contexto(request, form, worker))
+
+    def _contexto(self, request, form, worker):
+        contexto = {"form": form, "worker": worker}
+        if worker is not None:
+            bloqueios = delete_blockers(worker)
+            contexto["bloqueios"] = bloqueios
+            contexto["propria"] = worker.user_id == request.user.pk
+            contexto["conta_protegida"] = bool(
+                worker.user and worker.user_id != request.user.pk and not _pode_gerir_conta(request, worker.user)
+            )
+            if bloqueios:
+                fim = (
+                    "Pode desativá-lo: deixa de aparecer nas listas e de picar o ponto, e o histórico fica guardado."
+                    if worker.is_active
+                    else "Já está desativado."
+                )
+                contexto["aviso_bloqueio"] = (
+                    f"{worker.full_name} tem histórico que tem de ficar guardado ({', '.join(bloqueios)}). {fim}"
+                )
+        return contexto
 
     def post(self, request, pk=None):
         worker = self._get_worker(request, pk)
@@ -61,13 +83,45 @@ class WorkerFormView(ManagerRequiredMixin, View):
             return redirect("workers:lista")
         form = WorkerForm(request.POST, instance=worker, restaurant=restaurant)
         if not form.is_valid():
-            return render(request, "manage/workers/form.html", {"form": form, "worker": worker})
+            return render(request, "manage/workers/form.html", self._contexto(request, form, worker))
         novo = form.save(commit=False)
         novo.restaurant = restaurant
         novo.save()
         form.save_m2m()
         messages.success(request, "Trabalhador guardado" if worker else "Trabalhador criado")
         return redirect("workers:lista")
+
+
+class WorkerDeleteView(ManagerRequiredMixin, View):
+    """Apagar a ficha de um trabalhador sem histórico (ver workers.services)."""
+
+    def post(self, request, pk):
+        worker = _worker_do_gerente(request, pk)
+        nome = worker.full_name
+        try:
+            if worker.user and worker.user != request.user and not _pode_gerir_conta(request, worker.user):
+                raise ValidationError("A conta da app desta ficha só o administrador a pode eliminar.")
+            delete_worker(worker=worker, user=request.user)
+        except ValidationError as exc:
+            messages.error(request, exc.messages[0])
+            return redirect("workers:editar", pk=pk)
+        messages.success(request, f"{nome} eliminado")
+        return redirect("workers:lista")
+
+
+class WorkerDeactivateView(ManagerRequiredMixin, View):
+    """Desativar a ficha (a alternativa a eliminar quando há histórico)."""
+
+    def post(self, request, pk):
+        worker = _worker_do_gerente(request, pk)
+        worker.is_active = False
+        worker.save(update_fields=["is_active", "updated_at"])
+        messages.success(request, f"{worker.full_name} desativado")
+        return redirect("workers:lista")
+
+
+def _pode_gerir_conta(request, conta):
+    return perfil_na_casa(conta, request.restaurant) in roles_que_gere(request.role)
 
 
 def _worker_do_gerente(request, pk):

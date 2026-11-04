@@ -3,6 +3,7 @@ import datetime
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views import View
 from django.views.generic import TemplateView
@@ -314,3 +315,124 @@ class StaffConsumptionView(StaffViewMixin, TemplateView):
                 "refeicoes": sum(1 for c in consumos if c.reason == InternalConsumption.Reason.REFEICAO),
             },
         )
+
+
+# Motivos que o colaborador escolhe para um consumo seu. «Dono» é da casa.
+def _motivos_do_colaborador():
+    from inventory.models import InternalConsumption
+
+    return [(v, n) for v, n in InternalConsumption.Reason.choices if v != InternalConsumption.Reason.DONO]
+
+
+class StaffConsumptionFormView(StaffViewMixin, View):
+    """Registar um consumo próprio, ou alterar um (`pk`): o antigo fica
+    anulado e o novo regista-se no seu lugar. A pessoa é sempre o próprio;
+    os consumos dos outros só o gerente os regista (decidido a 2026-11-04)."""
+
+    template_name = "staff/consumo_form.html"
+
+    def _consumo(self, worker, pk):
+        if pk is None:
+            return None
+        return get_object_or_404(worker.consumptions.filter(cancelled_at__isnull=True), pk=pk)
+
+    def _casa(self, request, worker, consumo):
+        """A casa do consumo: a do consumo a alterar, a escolhida (se a
+        pessoa trabalha em várias), ou a principal."""
+        if consumo is not None:
+            return consumo.restaurant
+        casas = {str(c.pk): c for c in worker.restaurants()}
+        return casas.get(request.POST.get("casa") or request.GET.get("casa") or "", worker.restaurant)
+
+    def _render(self, request, worker, casa, dados, consumo=None, erro=None, status=200):
+        from inventory.consumption_views import artigos_com_stock, linhas_formulario
+        from inventory.models import ConsumptionSettings, Item
+
+        linhas, visiveis = linhas_formulario(dados)
+        return render(
+            request,
+            self.template_name,
+            {
+                "worker": worker,
+                "casa": casa,
+                "casas": worker.restaurants(),
+                "consumo": consumo,
+                "dados": dados,
+                "linhas": linhas,
+                "visiveis": visiveis,
+                "erro": erro,
+                "hoje": timezone.localdate(),
+                "dia": dados.get("dia") or timezone.localdate().isoformat(),
+                "motivos": _motivos_do_colaborador(),
+                "artigos": artigos_com_stock(Item.objects.filter(restaurant=casa, is_active=True).order_by("name"), consumo),
+                "regras": ConsumptionSettings.for_restaurant(casa),
+            },
+            status=status,
+        )
+
+    def get(self, request, pk=None):
+        from inventory.consumption_views import dados_de
+        from inventory.models import InternalConsumption
+
+        worker = _worker_for(request.user)
+        if worker is None:
+            return render(request, "staff/sem_ficha.html")
+        consumo = self._consumo(worker, pk)
+        casa = self._casa(request, worker, consumo)
+        dados = dados_de(consumo) if consumo else {"motivo": InternalConsumption.Reason.REFEICAO}
+        return self._render(request, worker, casa, dados, consumo)
+
+    def post(self, request, pk=None):
+        from core.utils import parse_decimal
+        from inventory import consumption as servico
+        from inventory.consumption_views import avisar_resultado, dia_de
+        from inventory.models import Item
+
+        worker = _worker_for(request.user)
+        if worker is None:
+            return render(request, "staff/sem_ficha.html")
+        antigo = self._consumo(worker, pk)
+        casa = self._casa(request, worker, antigo)
+        dados = request.POST
+        try:
+            motivo = dados.get("motivo", "")
+            if motivo not in dict(_motivos_do_colaborador()):
+                raise ValidationError("Escolha o motivo do consumo.")
+            artigos = {str(i.pk): i for i in Item.objects.filter(restaurant=casa, is_active=True)}
+            campos = dict(
+                worker=worker,
+                reason=motivo,
+                day=dia_de(dados.get("dia", "")),
+                lines=servico.parse_lines(dados, artigos, parse_decimal),
+                user=request.user,
+                note=dados.get("nota", "").strip()[:200],
+            )
+            if antigo is None:
+                consumo = servico.register_consumption(restaurant=casa, **campos)
+            else:
+                consumo = servico.replace_consumption(consumption=antigo, **campos)
+        except ValidationError as exc:
+            return self._render(request, worker, casa, dados, antigo, erro=" ".join(exc.messages), status=400)
+        messages.success(request, "Consumo alterado" if antigo else "Consumo registado")
+        avisar_resultado(request, consumo)
+        return redirect(f"{reverse('staff:consumos')}?mes={consumo.consumed_on:%Y-%m}")
+
+
+class StaffConsumptionCancelView(StaffViewMixin, View):
+    """Anular um consumo próprio registado por engano: o stock volta."""
+
+    def post(self, request, pk):
+        from inventory import consumption as servico
+
+        worker = _worker_for(request.user)
+        if worker is None:
+            return render(request, "staff/sem_ficha.html")
+        consumo = get_object_or_404(worker.consumptions.all(), pk=pk)
+        try:
+            servico.cancel_consumption(
+                consumption=consumo, user=request.user, reason=request.POST.get("motivo", "") or "Anulado pelo próprio"
+            )
+            messages.success(request, "Consumo anulado")
+        except ValidationError as exc:
+            messages.error(request, " ".join(exc.messages))
+        return redirect(f"{reverse('staff:consumos')}?mes={consumo.consumed_on:%Y-%m}")

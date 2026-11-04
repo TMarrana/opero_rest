@@ -2,15 +2,109 @@
 Serviços de ponto. Invariantes 3 e 4 do plano: um só turno aberto por
 trabalhador; não há saída sem entrada prévia. Invariante 7: uma correção
 nunca apaga o valor anterior — fica no histórico (EntryCorrection).
+
+Desde 2026-11-04: os registos de uma pessoa não se sobrepõem (ninguém
+trabalha duas horas ao mesmo tempo, nem em duas casas), e o gerente pode
+apagar um registo que seja um erro. Apagar é anular: o registo sai das
+listas e dos totais, mas fica guardado com quem o apagou.
 """
 import datetime
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from .models import Break, CorrectionRequest, EntryCorrection, TimeEntry, work_date_for
 from .month import ensure_open
+
+
+def _fim(entry, now):
+    """Até quando um registo ocupa o tempo da pessoa: a saída; num turno
+    aberto, para sempre (None); num registo por resolver, só o instante da
+    entrada, porque não se sabe a que horas saiu."""
+    if entry.check_out is not None:
+        return entry.check_out
+    if entry.is_unresolved(now=now):
+        return entry.check_in
+    return None
+
+
+def _sobrepoe(inicio_a, fim_a, inicio_b, fim_b):
+    """Dois intervalos [início, fim) sobrepõem-se; fim None é sem fim. Um
+    intervalo de duração zero (registo por resolver) sobrepõe-se ao que o
+    contém, e a outro que comece no mesmo instante."""
+    if inicio_a == inicio_b:
+        return True
+    return (fim_b is None or inicio_a < fim_b) and (fim_a is None or inicio_b < fim_a)
+
+
+def _hhmm(momento):
+    return f"{timezone.localtime(momento):%d/%m %H:%M}"
+
+
+def check_overlap(*, worker, check_in, check_out=None, exclude=None, now=None):
+    """Recusa um registo [entrada, saída) que se sobreponha a outro registo
+    da mesma pessoa, em qualquer casa. Sem saída, o registo vai até ao fim."""
+    now = now or timezone.now()
+    outros = TimeEntry.objects.filter(worker=worker).filter(Q(check_out__isnull=True) | Q(check_out__gt=check_in))
+    if check_out is not None:
+        outros = outros.filter(check_in__lte=check_out)
+    if exclude is not None:
+        outros = outros.exclude(pk=exclude.pk)
+    for e in outros.order_by("check_in"):
+        if _sobrepoe(check_in, check_out, e.check_in, _fim(e, now)):
+            fim = f"{timezone.localtime(e.check_out):%H:%M}" if e.check_out else "sem saída"
+            raise ValidationError(
+                f"Sobrepõe-se a outro registo: {_hhmm(e.check_in)} → {fim}."
+            )
+
+
+def overlapping(entries, now=None):
+    """Dos registos indicados, os que se sobrepõem a outro da mesma pessoa
+    (podem ser erros: duplicados, ou um registo acrescentado por cima de
+    outro). Devolve o conjunto dos ids."""
+    now = now or timezone.now()
+    por_pessoa = {}
+    for e in entries:
+        por_pessoa.setdefault(e.worker_id, []).append(e)
+    ids = set()
+    for registos in por_pessoa.values():
+        registos.sort(key=lambda e: (e.check_in, e.pk))
+        for i, a in enumerate(registos):
+            fim_a = _fim(a, now)
+            for b in registos[i + 1:]:
+                if fim_a is not None and b.check_in > fim_a:
+                    break
+                if _sobrepoe(a.check_in, fim_a, b.check_in, _fim(b, now)):
+                    ids.update((a.pk, b.pk))
+    return ids
+
+
+def annul_entry(*, entry, user, reason=""):
+    """Apagar um registo que é um erro. Fica na base de dados, fora das
+    listas e dos totais, com a correção «Registo apagado» no histórico. Os
+    pedidos de correção pendentes desse registo ficam recusados."""
+    reason = (reason or "").strip()
+    with transaction.atomic():
+        entry = TimeEntry.all_objects.select_for_update().get(pk=entry.pk)
+        if entry.annulled_at is not None:
+            raise ValidationError("Este registo já foi apagado.")
+        ensure_open(entry.worker, entry.work_date)
+        agora = timezone.now()
+        entry.annulled_at = agora
+        entry.annulled_by = user
+        entry.save(update_fields=["annulled_at", "annulled_by", "updated_at"])
+        EntryCorrection.objects.create(
+            entry=entry, kind=EntryCorrection.Kind.APAGAR, corrected_by=user, reason=reason, corrected_at=agora,
+            old_check_in=entry.check_in, old_check_out=entry.check_out,
+            new_check_in=entry.check_in, new_check_out=entry.check_out,
+        )
+        entry.correction_requests.filter(status=CorrectionRequest.Status.PENDENTE).update(
+            status=CorrectionRequest.Status.RECUSADO, decided_by=user, decided_at=agora,
+            decision_note="O registo foi apagado.",
+        )
+    return entry
 
 
 def _open_entry_for_update(worker):
@@ -53,6 +147,7 @@ def open_shift(*, worker, at=None, work_area=None, source="", restaurant=None):
                 raise ValidationError(
                     f"{worker.full_name} já tem um turno aberto. Marque a saída antes de nova entrada."
                 )
+        check_overlap(worker=worker, check_in=at, now=at)
         return TimeEntry.objects.create(
             worker=worker, restaurant=restaurant, check_in=at, work_area=work_area, source=source
         )
@@ -141,11 +236,11 @@ def _record_correction(*, entry, user, reason, kind, old_in=None, old_out=None):
     entry.save(update_fields=["corrected_by", "correction_reason", "corrected_at", "updated_at"])
 
 
-def correct_entry(*, entry, user, reason, check_in=None, check_out=None):
-    """Correção auditada (invariantes 5 e 7): autor e motivo obrigatórios,
-    e o valor anterior fica no histórico."""
-    if not reason or not reason.strip():
-        raise ValidationError("O motivo da correção é obrigatório.")
+def correct_entry(*, entry, user, reason="", check_in=None, check_out=None):
+    """Correção auditada (invariantes 5 e 7): o autor fica sempre, e o
+    valor anterior fica no histórico. O motivo do gerente é opcional; o do
+    colaborador é obrigatório no pedido de correção."""
+    reason = (reason or "").strip()
     with transaction.atomic():
         # Reler com lock: os campos não indicados mantêm o valor atual, não
         # o de uma instância antiga (uma saída marcada entretanto não se perde).
@@ -168,6 +263,7 @@ def correct_entry(*, entry, user, reason, check_in=None, check_out=None):
                 raise ValidationError(
                     f"{entry.worker.full_name} já tem outro turno aberto; este registo tem de ter saída."
                 )
+        check_overlap(worker=entry.worker, check_in=new_in, check_out=new_out, exclude=entry)
         old_in, old_out = entry.check_in, entry.check_out
         entry.check_in = new_in
         entry.check_out = new_out
@@ -176,24 +272,25 @@ def correct_entry(*, entry, user, reason, check_in=None, check_out=None):
             _close_open_break(entry, new_out)
         entry.save()
         _record_correction(
-            entry=entry, user=user, reason=reason.strip(), kind=EntryCorrection.Kind.ALTERAR,
+            entry=entry, user=user, reason=reason, kind=EntryCorrection.Kind.ALTERAR,
             old_in=old_in, old_out=old_out,
         )
     return entry
 
 
-def add_manual_entry(*, worker, user, reason, check_in, check_out=None, work_area=None, restaurant=None):
+def add_manual_entry(*, worker, user, check_in, check_out=None, reason="", work_area=None, restaurant=None):
     """Registo em falta acrescentado pelo gerente — nasce como correção
-    auditada, com autor e motivo. Fica na casa indicada, ou na principal."""
+    auditada, com autor e, se o gerente o indicar, motivo. Fica na casa
+    indicada, ou na principal."""
     restaurant = _casa(worker, restaurant)
-    if not reason or not reason.strip():
-        raise ValidationError("O motivo é obrigatório num registo manual.")
+    reason = (reason or "").strip()
     if check_out is not None and check_out <= check_in:
         raise ValidationError("A saída tem de ser depois da entrada.")
     ensure_open(worker, work_date_for(check_in))
     with transaction.atomic():
         if check_out is None and _open_entry_for_update(worker) is not None:
             raise ValidationError(f"{worker.full_name} já tem um turno aberto.")
+        check_overlap(worker=worker, check_in=check_in, check_out=check_out)
         entry = TimeEntry.objects.create(
             worker=worker,
             restaurant=restaurant,
@@ -202,7 +299,7 @@ def add_manual_entry(*, worker, user, reason, check_in, check_out=None, work_are
             work_area=work_area,
             source=TimeEntry.Source.GERENTE,
         )
-        _record_correction(entry=entry, user=user, reason=reason.strip(), kind=EntryCorrection.Kind.CRIAR)
+        _record_correction(entry=entry, user=user, reason=reason, kind=EntryCorrection.Kind.CRIAR)
         return entry
 
 
@@ -222,6 +319,7 @@ def request_correction(*, worker, note, check_in, check_out, entry=None, restaur
             raise ValidationError("Só pode pedir correções dos seus registos.")
         if entry.correction_requests.filter(status=CorrectionRequest.Status.PENDENTE).exists():
             raise ValidationError("Já há um pedido pendente para este registo. Aguarde a decisão do gerente.")
+    check_overlap(worker=worker, check_in=check_in, check_out=check_out, exclude=entry)
     return CorrectionRequest.objects.create(
         worker=worker,
         entry=entry,

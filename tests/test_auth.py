@@ -70,3 +70,47 @@ def test_pagina_de_componentes_renderiza(client, manager):
     corpo = resp.content.decode()
     for elemento in ["Botão", "Campo", "Badge", "Talão", "Tabela", "Modal", "Toast"]:
         assert elemento in corpo
+
+
+def _form_login(client, url):
+    import re
+
+    resp = client.get(url)
+    token = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', resp.content.decode()).group(1)
+    return {"username": "colaborador@tasca.pt", "password": "segredo-de-teste-123", "csrfmiddlewaretoken": token}
+
+
+def test_segundo_envio_do_login_segue_para_a_app_em_vez_de_403(staff_user):
+    """O login roda o token CSRF: um duplo toque no telemóvel mandava o
+    segundo envio com o token antigo e dava 403 com a sessão já aberta."""
+    from django.test import Client
+
+    client = Client(enforce_csrf_checks=True)
+    url = reverse("accounts:login") + "?next=/equipa/"
+    dados = _form_login(client, url)
+    assert client.post(url, dados).status_code == 302
+    resp = client.post(url, dados)
+    assert resp.status_code == 302
+    assert resp.url == "/equipa/"
+
+
+def test_login_com_token_caducado_volta_ao_formulario(staff_user):
+    from django.test import Client
+
+    client = Client(enforce_csrf_checks=True)
+    url = reverse("accounts:login")
+    dados = _form_login(client, url)
+    dados["csrfmiddlewaretoken"] = "x" * 64
+    resp = client.post(url, dados)
+    assert resp.status_code == 302
+    assert resp.url == url
+    assert "_auth_user_id" not in client.session
+
+
+def test_falha_csrf_fora_do_login_continua_403(staff_user):
+    from django.test import Client
+
+    client = Client(enforce_csrf_checks=True)
+    client.force_login(staff_user)
+    resp = client.post(reverse("accounts:logout"))
+    assert resp.status_code == 403

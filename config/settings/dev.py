@@ -16,3 +16,8 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # Sem scan do STATIC_ROOT em dev (ainda não há collectstatic).
 WHITENOISE_AUTOREFRESH = True
+
+# O WhiteNoise serve os estáticos também no runserver, como em produção. Em
+# dev manda max-age=0: o browser pergunta sempre se o CSS ou o JS mudou, em
+# vez de reutilizar uma cópia antiga (o runserver não manda Cache-Control).
+INSTALLED_APPS = ["whitenoise.runserver_nostatic", *INSTALLED_APPS]  # noqa: F405

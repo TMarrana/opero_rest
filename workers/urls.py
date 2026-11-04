@@ -10,4 +10,6 @@ urlpatterns = [
     path("<int:pk>/editar/", views.WorkerFormView.as_view(), name="editar"),
     path("<int:pk>/codigo/", views.WorkerCodeView.as_view(), name="codigo"),
     path("<int:pk>/conta/", views.WorkerAccountView.as_view(), name="conta"),
+    path("<int:pk>/apagar/", views.WorkerDeleteView.as_view(), name="apagar"),
+    path("<int:pk>/desativar/", views.WorkerDeactivateView.as_view(), name="desativar"),
 ]

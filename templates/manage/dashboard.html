@@ -44,6 +44,87 @@
 
 <div class="mt-8 grid gap-6 lg:grid-cols-2">
 
+  {% if ve_pessoas %}
+  <section class="cartao lg:col-span-2">
+    <div class="cartao-cabecalho">
+      <div>
+        <h2 class="cartao-titulo">Turnos de hoje</h2>
+        {% if turnos_previstos %}
+        <p class="mt-0.5 text-xs text-ardosia"><span class="font-dados">{{ turnos_picaram }}</span> de <span class="font-dados">{{ turnos_previstos }}</span> já picaram{% if turnos_em_falta %} · <span class="font-semibold text-perigo"><span class="font-dados">{{ turnos_em_falta }}</span> em falta</span>{% endif %}</p>
+        {% endif %}
+      </div>
+      <a href="{% url 'attendance:dia' %}" class="link-ver">Ponto {% icone "seguinte" "h-4 w-4" %}</a>
+    </div>
+    {% if turnos_hoje %}
+    {# Linha do tempo do dia: a barra larga é o turno planeado, a fina por baixo é o ponto. #}
+    <div class="overflow-x-auto">
+      <div class="min-w-[720px] px-6 pb-4">
+        <div class="flex gap-4 pt-3">
+          <div class="w-52 shrink-0"></div>
+          <div class="relative h-5 flex-1 text-[11px] text-ardosia">
+            {% for h in escala.horas %}
+            <span class="absolute -translate-x-1/2 font-dados" style="left: {{ h.pos }}%">{{ h.hora }}</span>
+            {% endfor %}
+            {% if escala.agora is not None %}
+            <span class="absolute -translate-x-1/2 -top-0.5 rounded bg-chama px-1 font-dados font-semibold text-white" style="left: {{ escala.agora }}%">{{ escala.agora_txt }}</span>
+            {% endif %}
+          </div>
+          <div class="w-24 shrink-0"></div>
+        </div>
+        <ul>
+          {% for l in turnos_hoje %}
+          <li class="flex items-center gap-4 border-t border-linha py-2.5 first:border-t-0">
+            <div class="flex w-52 shrink-0 items-center gap-3">
+              <span class="avatar h-9 w-9 text-xs">{{ l.worker.full_name|iniciais }}</span>
+              <span class="min-w-0">
+                <span class="block truncate text-sm font-semibold">{{ l.worker.full_name }}</span>
+                <span class="block truncate font-dados text-xs text-ardosia">
+                  {% for t in l.turnos %}{% if not forloop.first %} + {% endif %}{{ t.start_at|time:"H:i" }}–{{ t.end_at|time:"H:i" }}{% empty %}sem turno planeado{% endfor %}
+                </span>
+                {% for d in l.desvios %}<span class="block truncate text-xs font-semibold text-alerta">{{ d }}</span>{% endfor %}
+              </span>
+            </div>
+            <div class="relative h-11 flex-1">
+              {% for h in escala.horas %}<span class="absolute inset-y-0 w-px bg-linha" style="left: {{ h.pos }}%"></span>{% endfor %}
+              {% for b in l.barras_turno %}
+              <span class="absolute top-1 flex h-6 items-center overflow-hidden rounded-md border px-2 text-[11px] font-medium text-carvao {{ l.tom_turno }}"
+                    style="left: {{ b.esquerda }}%; width: {{ b.largura }}%" title="{{ b.titulo }}"><span class="truncate">{{ b.titulo }}</span></span>
+              {% endfor %}
+              {% for b in l.barras_ponto %}
+              <span class="absolute bottom-1 h-2 {% if b.aberto %}rounded-l-full{% else %}rounded-full{% endif %} {{ l.tom_ponto }}"
+                    style="left: {{ b.esquerda }}%; width: {{ b.largura }}%" title="Ponto{% if b.aberto %}: em turno{% endif %}"></span>
+              {% endfor %}
+              {% if escala.agora is not None %}<span class="absolute inset-y-0 w-0.5 bg-chama" style="left: {{ escala.agora }}%"></span>{% endif %}
+            </div>
+            <div class="flex w-24 shrink-0 justify-end">
+              {% if l.estado == "em_turno" %}
+                {% include "components/badge.html" with label="Em turno" variante="servico" %}
+              {% elif l.estado == "saiu" %}
+                {% include "components/badge.html" with label="Já saiu" %}
+              {% elif l.estado == "em_falta" %}
+                {% include "components/badge.html" with label="Em falta" variante="perigo" %}
+              {% elif l.estado == "por_entrar" %}
+                {% include "components/badge.html" with label="Por entrar" variante="ambar" %}
+              {% else %}
+                {% include "components/badge.html" with label="Sem turno" variante="alerta" %}
+              {% endif %}
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        <div class="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-linha pt-3 text-xs text-ardosia">
+          <span class="flex items-center gap-1.5"><span class="h-3 w-6 rounded border border-neutro-300 bg-neutro-100"></span>Turno planeado</span>
+          <span class="flex items-center gap-1.5"><span class="h-2 w-6 rounded-full bg-neutro-500"></span>Ponto</span>
+          <span class="flex items-center gap-1.5"><span class="h-3 w-0.5 bg-chama"></span>Agora</span>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <p class="vazio">Não há turnos publicados para hoje.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+
   <section class="cartao">
     <div class="cartao-cabecalho">
       <h2 class="cartao-titulo">Stock abaixo do mínimo</h2>
@@ -118,29 +199,6 @@
     </ul>
     {% else %}
     <p class="vazio">Não há pedidos pendentes.</p>
-    {% endif %}
-  </section>
-
-  <section class="cartao">
-    <div class="cartao-cabecalho">
-      <h2 class="cartao-titulo">Em turno agora</h2>
-      <a href="{% url 'attendance:dia' %}" class="link-ver">Ponto {% icone "seguinte" "h-4 w-4" %}</a>
-    </div>
-    {% if em_turno %}
-    <ul class="divide-y divide-linha">
-      {% for e in em_turno %}
-      <li class="flex items-center gap-4 px-6 py-3.5">
-        <span class="avatar h-10 w-10 text-xs">{{ e.worker.full_name|iniciais }}</span>
-        <span class="min-w-0 flex-1">
-          <span class="block truncate text-sm font-semibold">{{ e.worker.full_name }}</span>
-          <span class="block font-dados text-xs text-ardosia">desde {{ e.check_in|date:"H:i" }}</span>
-        </span>
-        {% include "components/badge.html" with label="Em turno" variante="servico" %}
-      </li>
-      {% endfor %}
-    </ul>
-    {% else %}
-    <p class="vazio">Ninguém em turno neste momento.</p>
     {% endif %}
   </section>
   {% endif %}

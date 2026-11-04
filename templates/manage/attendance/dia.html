@@ -52,7 +52,9 @@
                 {% if r.check_out %}{{ r.check_out|date:"H:i" }}{% if r.check_out|date:"Y-m-d" != r.work_date|date:"Y-m-d" %}<span class="text-xs text-ardosia"> (+1)</span>{% endif %}{% elif r.is_unresolved %}<span class="font-semibold text-alerta">por resolver</span>{% else %}<span class="text-ardosia">em turno</span>{% endif %}
                 {% if r.work_area %}<span class="ml-1 font-sans text-xs text-ardosia">{{ r.work_area.name }}</span>{% endif %}
                 {% if r.corrected_by %}<span class="ml-1 font-sans text-xs text-ardosia" title="{{ r.correction_reason }}">(corrigido)</span>{% endif %}
+                {% if r.pk in sobrepostos %}<span class="ml-1 rounded bg-perigo-50 px-1.5 py-0.5 font-sans text-xs font-semibold text-perigo" title="Sobrepõe-se a outro registo desta pessoa: pode ser um erro">sobreposto</span>{% endif %}
                 <a href="{% url 'attendance:corrigir' r.pk %}" class="ml-2 font-sans text-xs text-ardosia underline underline-offset-2 hover:text-carvao">{% if r.corrected_by %}Corrigir · histórico{% else %}Corrigir{% endif %}</a>
+                <a href="{% url 'attendance:corrigir' r.pk %}?apagar=1" class="ml-2 font-sans text-xs text-perigo underline underline-offset-2 hover:text-perigo-700">Apagar</a>
                 {% for p in r.breaks.all %}
                 <span class="block pl-4 text-xs text-ardosia">{{ p.break_type.name }} {{ p.start|date:"H:i" }}&ndash;{% if p.end %}{{ p.end|date:"H:i" }}{% else %}…{% endif %}{% if not p.break_type.paid %} · não paga{% endif %}</span>
                 {% endfor %}

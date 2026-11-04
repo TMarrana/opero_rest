@@ -9,7 +9,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from django.utils.decorators import method_decorator
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views import View
+from django.views.decorators.cache import never_cache
 from django.views.generic import TemplateView
 
 from core import exports
@@ -19,11 +22,40 @@ from core.utils import restaurant_scope, workers_scope
 from workers.models import Worker
 
 from .forms import CorrectionDecisionForm, EntryCorrectionForm
+from . import desvios
 from . import month as mes
 from .models import CorrectionRequest, MonthClose, TimeEntry
-from .services import add_manual_entry, correct_entry, decide_correction
+from .services import add_manual_entry, annul_entry, correct_entry, decide_correction, overlapping
 
 
+def overlapping_entries(request, now=None):
+    """Os registos desta casa, do mês anterior para cá, que se sobrepõem a
+    outro registo da mesma pessoa (em qualquer casa): podem ser erros. Os
+    meses mais antigos já foram fechados."""
+    now = now or timezone.now()
+    desde = mes.previous_month(timezone.localdate(now))
+    workers = workers_scope(request, Worker.objects.all())
+    todos = list(TimeEntry.objects.filter(worker__in=workers, work_date__gte=desde).select_related("worker"))
+    ids = overlapping(todos, now=now)
+    return sorted(
+        (e for e in todos if e.pk in ids and e.restaurant_id == request.restaurant.pk),
+        key=lambda e: (e.worker.full_name, e.check_in),
+    )
+
+
+def _voltar(request, padrao):
+    """Para onde seguir depois de corrigir ou acrescentar: o `voltar` do
+    pedido (ex.: o fecho do mês), se for um caminho deste site; senão
+    `padrao`."""
+    destino = request.POST.get("voltar") or request.GET.get("voltar") or ""
+    if destino and url_has_allowed_host_and_scheme(destino, {request.get_host()}, request.is_secure()):
+        return destino
+    return padrao
+
+
+# As páginas de ponto mostram horas que mudam com cada correção: sem cache,
+# para que voltar atrás no browser não traga horas antigas.
+@method_decorator(never_cache, name="dispatch")
 class TeamDayView(ManagerRequiredMixin, TemplateView):
     """Ponto da equipa num dia de trabalho: quem esteve, quem está em turno
     e o que falta. Um turno que passa a meia-noite aparece só no dia da
@@ -76,6 +108,10 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
                 }
             )
         ctx["linhas"] = linhas
+        ctx["sobrepostos"] = overlapping(
+            TimeEntry.objects.filter(worker__in=workers, check_in__date__range=(dia - datetime.timedelta(days=1), dia + datetime.timedelta(days=1))),
+            now=agora,
+        )
         ctx["dia"] = dia
         ctx["dia_anterior"] = dia - datetime.timedelta(days=1)
         ctx["dia_seguinte"] = dia + datetime.timedelta(days=1)
@@ -153,11 +189,20 @@ class EntryCorrectionView(ManagerRequiredMixin, View):
             pk=pk,
         )
 
-    def _contexto(self, entry, form):
+    def _contexto(self, request, entry, form):
         return {
             "form": form,
             "entry": entry,
             "correcoes": entry.corrections.select_related("corrected_by"),
+            "voltar": _voltar(request, f"{reverse('attendance:dia')}?dia={entry.work_date.isoformat()}"),
+            "sobreposto": entry.pk in overlapping(
+                TimeEntry.objects.filter(
+                    worker=entry.worker,
+                    check_in__range=(entry.check_in - datetime.timedelta(days=2), entry.check_in + datetime.timedelta(days=2)),
+                )
+            ),
+            "mes_fechado": mes.is_closed(entry.worker, entry.work_date),
+            "abrir_apagar": request.GET.get("apagar") == "1",
         }
 
     def get(self, request, pk):
@@ -170,7 +215,7 @@ class EntryCorrectionView(ManagerRequiredMixin, View):
                 else "",
             }
         )
-        return render(request, "manage/attendance/corrigir.html", self._contexto(entry, form))
+        return render(request, "manage/attendance/corrigir.html", self._contexto(request, entry, form))
 
     def post(self, request, pk):
         entry = self._get_entry(request, pk)
@@ -185,11 +230,29 @@ class EntryCorrectionView(ManagerRequiredMixin, View):
                     check_out=form.cleaned_data["check_out"],
                 )
                 messages.success(request, "Registo corrigido")
-                dia = entry.work_date.isoformat()
-                return redirect(f"/gestao/ponto/?dia={dia}")
+                return redirect(_voltar(request, f"{reverse('attendance:dia')}?dia={entry.work_date.isoformat()}"))
             except ValidationError as exc:
                 form.add_error(None, exc.messages[0])
-        return render(request, "manage/attendance/corrigir.html", self._contexto(entry, form))
+        return render(request, "manage/attendance/corrigir.html", self._contexto(request, entry, form))
+
+
+class EntryDeleteView(ManagerRequiredMixin, View):
+    """Apagar um registo que é um erro (ex.: duplicado). Fica guardado, fora
+    das listas e dos totais, com a correção «Registo apagado»."""
+
+    def post(self, request, pk):
+        entry = get_object_or_404(restaurant_scope(request, TimeEntry.objects.select_related("worker")), pk=pk)
+        voltar = _voltar(request, f"{reverse('attendance:dia')}?dia={entry.work_date.isoformat()}")
+        try:
+            annul_entry(entry=entry, user=request.user, reason=request.POST.get("reason", "")[:200])
+        except ValidationError as exc:
+            messages.error(request, exc.messages[0])
+            return redirect(voltar)
+        fim = f"{timezone.localtime(entry.check_out):%H:%M}" if entry.check_out else "sem saída"
+        messages.success(
+            request, f"Registo de {entry.worker.full_name} apagado ({timezone.localtime(entry.check_in):%d/%m %H:%M} → {fim})"
+        )
+        return redirect(voltar)
 
 
 class EntryAddView(ManagerRequiredMixin, View):
@@ -203,7 +266,11 @@ class EntryAddView(ManagerRequiredMixin, View):
         worker = self._get_worker(request, pk)
         dia = parse_date(request.GET.get("dia", "") or "") or timezone.localdate()
         form = EntryCorrectionForm(initial={"check_in": f"{dia.isoformat()}T09:00"})
-        return render(request, "manage/attendance/acrescentar.html", {"form": form, "worker": worker})
+        return render(request, "manage/attendance/acrescentar.html", self._contexto(request, worker, form, dia))
+
+    def _contexto(self, request, worker, form, dia=None):
+        dia = dia or timezone.localdate()
+        return {"form": form, "worker": worker, "voltar": _voltar(request, f"{reverse('attendance:dia')}?dia={dia.isoformat()}")}
 
     def post(self, request, pk):
         worker = self._get_worker(request, pk)
@@ -219,35 +286,16 @@ class EntryAddView(ManagerRequiredMixin, View):
                     restaurant=request.restaurant,
                 )
                 messages.success(request, "Registo acrescentado")
-                dia = entry.work_date.isoformat()
-                return redirect(f"/gestao/ponto/?dia={dia}")
+                return redirect(_voltar(request, f"{reverse('attendance:dia')}?dia={entry.work_date.isoformat()}"))
             except ValidationError as exc:
                 form.add_error(None, exc.messages[0])
-        return render(request, "manage/attendance/acrescentar.html", {"form": form, "worker": worker})
+        return render(request, "manage/attendance/acrescentar.html", self._contexto(request, worker, form))
 
 
 def _desvios(turnos, registos, agora):
-    """Planeado contra realizado (Fase 6): atraso na entrada, saída fora da
-    hora prevista, ou turno previsto sem marcação."""
-    if not turnos:
-        return []
-    tolerancia = datetime.timedelta(minutes=settings.SHIFT_TOLERANCE_MINUTES)
-    inicio = min(t.start_at for t in turnos)
-    fim = max(t.end_at for t in turnos)
-    if not registos:
-        return ["Sem marcação"] if agora > inicio + tolerancia else []
-    desvios = []
-    entrada = min(r.check_in for r in registos)
-    if entrada > inicio + tolerancia:
-        desvios.append(f"Entrou {int((entrada - inicio).total_seconds() // 60)} min depois")
-    saidas = [r.check_out for r in registos if r.check_out]
-    if saidas and all(r.check_out for r in registos):
-        saida = max(saidas)
-        if saida < fim - tolerancia:
-            desvios.append(f"Saiu {int((fim - saida).total_seconds() // 60)} min antes")
-        elif saida > fim + tolerancia:
-            desvios.append(f"Saiu {int((saida - fim).total_seconds() // 60)} min depois")
-    return desvios
+    """Planeado contra realizado, em frases (ver `attendance.desvios`):
+    cada registo compara-se com o turno com que coincide."""
+    return desvios.textos(turnos, registos, agora)
 
 
 def _scoped_requests(request):
@@ -276,6 +324,7 @@ class CorrectionRequestListView(ManagerRequiredMixin, TemplateView):
             .order_by("check_in")
         )
         ctx["form_decisao"] = CorrectionDecisionForm()
+        ctx["sobrepostos"] = overlapping_entries(self.request)
         return ctx
 
 
@@ -306,6 +355,7 @@ def _mes_pedido(request):
         return mes.previous_month(timezone.localdate())
 
 
+@method_decorator(never_cache, name="dispatch")
 class MonthView(ManagerRequiredMixin, View):
     """Fecho do mês: horas por trabalhador, o que falta resolver,
     aprovação (uma a uma ou todos os prontos), reabertura com motivo e
@@ -332,11 +382,13 @@ class MonthView(ManagerRequiredMixin, View):
         }
         linhas = []
         for w in workers:
-            _, total = mes.month_rows(w, escolhido)
+            dias, total = mes.month_rows(w, escolhido)
             falta = mes.pending_items(w, escolhido)
             linhas.append(
                 {
                     "worker": w,
+                    "dias": dias,
+                    "dias_trabalhados": sum(1 for d in dias if d["entradas"]),
                     "total": total,
                     "falta": falta,
                     "pronto": not falta["por_resolver"] and not falta["pedidos"],
@@ -349,6 +401,7 @@ class MonthView(ManagerRequiredMixin, View):
             "manage/attendance/mes.html",
             {
                 "mes": escolhido,
+                "aqui": self._url(escolhido),
                 "mes_anterior": mes.previous_month(escolhido),
                 "mes_seguinte": mes.next_month(escolhido),
                 "pode_aprovar": escolhido < atual,

@@ -8,8 +8,10 @@ consumos registados. Um consumo não se apaga: anula-se, e o stock volta.{% endc
 <a href="{% url 'inventory:lista' %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Stock</a>
 <div class="mt-2 flex flex-wrap items-end justify-between gap-4">
   <h1 class="titulo-pagina">Consumos internos</h1>
+  {% if pode_registar %}
   {% url 'inventory:consumo_novo' as url_novo %}
   {% include "components/botao.html" with variante="acento" label="Registar consumo" href=url_novo %}
+  {% endif %}
 </div>
 <p class="mt-1 text-sm text-ardosia">
   Refeições do pessoal, ofertas, provas e o que o dono leva. Cada consumo tira do stock, valorizado ao custo de referência do dia.
@@ -69,9 +71,10 @@ consumos registados. Um consumo não se apaga: anula-se, e o stock volta.{% endc
     {% if c.note %}<p class="text-sm text-ardosia">{{ c.note }}</p>{% endif %}
     {% if c.cancelled_at %}
     <p class="text-xs text-ardosia">Anulado por {{ c.cancelled_by }} a {{ c.cancelled_at|date:"d/m H:i" }}: {{ c.cancel_reason }}</p>
-    {% else %}
-    <form method="post" action="{% url 'inventory:consumo_anular' c.pk %}" class="mt-1 flex flex-wrap items-center gap-2" x-data="{ aberto: false }">
+    {% elif pode_registar %}
+    <form method="post" action="{% url 'inventory:consumo_anular' c.pk %}" class="mt-1 flex flex-wrap items-center gap-3" x-data="{ aberto: false }">
       {% csrf_token %}
+      <a x-show="!aberto" href="{% url 'inventory:consumo_alterar' c.pk %}" class="text-xs text-ardosia underline underline-offset-2 hover:text-carvao">Alterar</a>
       <button type="button" x-show="!aberto" x-on:click="aberto = true" class="text-xs text-ardosia underline underline-offset-2 hover:text-carvao">Anular</button>
       <input x-show="aberto" x-cloak type="text" name="motivo" required maxlength="200" placeholder="Motivo da anulação" class="campo-input w-64">
       <button x-show="aberto" x-cloak type="submit" class="text-xs font-semibold text-perigo underline underline-offset-2">Anular e repor o stock</button>
@@ -79,7 +82,7 @@ consumos registados. Um consumo não se apaga: anula-se, e o stock volta.{% endc
     {% endif %}
   </article>
   {% empty %}
-  <p class="px-4 py-8 text-center text-sm text-ardosia">Não há consumos registados {% if pessoa %}desta pessoa {% endif %}neste mês. Registe o primeiro.</p>
+  <p class="px-4 py-8 text-center text-sm text-ardosia">Não há consumos registados {% if pessoa %}desta pessoa {% endif %}neste mês.{% if pode_registar %} Registe o primeiro.{% endif %}</p>
   {% endfor %}
 </section>
 {% endblock %}

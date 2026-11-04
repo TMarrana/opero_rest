@@ -7,6 +7,7 @@ app_name = "attendance"
 urlpatterns = [
     path("", views.TeamDayView.as_view(), name="dia"),
     path("registo/<int:pk>/corrigir/", views.EntryCorrectionView.as_view(), name="corrigir"),
+    path("registo/<int:pk>/apagar/", views.EntryDeleteView.as_view(), name="apagar"),
     path("trabalhador/<int:pk>/acrescentar/", views.EntryAddView.as_view(), name="acrescentar"),
     path("pedidos/", views.CorrectionRequestListView.as_view(), name="pedidos"),
     path("mes/", views.MonthView.as_view(), name="mes"),

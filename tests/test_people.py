@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from attendance.models import TimeEntry
-from attendance.services import add_manual_entry, close_shift, correct_entry, open_shift
+from attendance.services import add_manual_entry, close_shift, correct_entry, open_shift, request_correction
 from vacations.models import VacationRequest
 from vacations.services import decide_request
 from workers.models import Worker
@@ -62,10 +62,15 @@ class TestTurnos:
 
 
 class TestCorrecoes:
-    def test_correcao_exige_motivo(self, worker, manager):
+    def test_correcao_do_gerente_sem_motivo(self, worker, manager):
+        """O motivo é opcional para o gerente: o autor fica sempre."""
         entry = open_shift(worker=worker)
-        with pytest.raises(ValidationError):
-            correct_entry(entry=entry, user=manager, reason="  ")
+        corrigido = correct_entry(
+            entry=entry, user=manager, reason="  ", check_out=entry.check_in + datetime.timedelta(hours=8)
+        )
+        assert corrigido.corrected_by == manager
+        assert corrigido.correction_reason == ""
+        assert corrigido.corrections.get().reason == ""
 
     def test_correcao_guarda_autor_motivo_e_data(self, worker, manager):
         """Invariante 5 aplicada às correções de ponto."""
@@ -80,9 +85,22 @@ class TestCorrecoes:
         assert corrigido.corrected_at is not None
         assert corrigido.correction_reason == "esqueceu-se de marcar a saída"
 
-    def test_registo_manual_exige_motivo(self, worker, manager):
+    def test_registo_manual_sem_motivo(self, worker, manager):
+        agora = timezone.now()
+        entry = add_manual_entry(
+            worker=worker, user=manager, check_in=agora - datetime.timedelta(hours=9),
+            check_out=agora - datetime.timedelta(hours=1),
+        )
+        assert entry.corrected_by == manager
+        assert entry.corrections.get().reason == ""
+
+    def test_pedido_do_colaborador_exige_motivo(self, worker):
+        agora = timezone.now()
         with pytest.raises(ValidationError):
-            add_manual_entry(worker=worker, user=manager, reason="", check_in=timezone.now())
+            request_correction(
+                worker=worker, note="  ", check_in=agora - datetime.timedelta(hours=9),
+                check_out=agora - datetime.timedelta(hours=1),
+            )
 
     def test_registo_manual_nasce_auditado(self, worker, manager):
         agora = timezone.now()

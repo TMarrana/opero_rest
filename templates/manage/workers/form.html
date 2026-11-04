@@ -1,7 +1,38 @@
 {% extends "base_manage.html" %}
 {% block title %}{% if worker %}Editar trabalhador{% else %}Novo trabalhador{% endif %}{% endblock %}
 {% block content %}
+{% load interface %}
+{% if worker and worker.restaurant_id == request.restaurant.pk %}
+<div class="flex max-w-xl items-center justify-between gap-4">
+  <h1 class="titulo-pagina">{{ worker.full_name }}</h1>
+  <button type="button" x-data x-on:click="$dispatch('abrir-modal', {id: 'apagar-trabalhador'})"
+          class="btn-icone border-perigo bg-perigo text-white hover:bg-perigo-700"
+          aria-label="Eliminar {{ worker.full_name }}" title="Eliminar trabalhador">{% icone "lixo" %}</button>
+</div>
+{% with titulo_eliminar="Eliminar "|add:worker.full_name|add:"?" %}
+{% if bloqueios %}
+  {% if worker.is_active %}
+  {% url 'workers:desativar' worker.pk as url_desativar %}
+  {% include "components/modal.html" with id="apagar-trabalhador" titulo="Não é possível eliminar" corpo=aviso_bloqueio confirmar_label="Desativar" form_action=url_desativar variante_confirmar="primario" %}
+  {% else %}
+  {% include "components/modal.html" with id="apagar-trabalhador" titulo="Não é possível eliminar" corpo=aviso_bloqueio %}
+  {% endif %}
+{% elif propria %}
+  {% include "components/modal.html" with id="apagar-trabalhador" titulo="Não é possível eliminar" corpo="Esta é a sua ficha: não a pode eliminar." %}
+{% elif conta_protegida %}
+  {% include "components/modal.html" with id="apagar-trabalhador" titulo="Não é possível eliminar" corpo="Esta ficha tem uma conta de Gerente ou de Administrador: só o administrador a pode eliminar." %}
+{% else %}
+  {% url 'workers:apagar' worker.pk as url_apagar %}
+  {% if worker.user %}
+  {% include "components/modal.html" with id="apagar-trabalhador" titulo=titulo_eliminar corpo="Tem a certeza? A ficha, a conta da app e os turnos planeados são eliminados de vez. Não se pode desfazer." confirmar_label="Eliminar" form_action=url_apagar %}
+  {% else %}
+  {% include "components/modal.html" with id="apagar-trabalhador" titulo=titulo_eliminar corpo="Tem a certeza? A ficha e os turnos planeados são eliminados de vez. Não se pode desfazer." confirmar_label="Eliminar" form_action=url_apagar %}
+  {% endif %}
+{% endif %}
+{% endwith %}
+{% else %}
 <h1 class="titulo-pagina">{% if worker %}{{ worker.full_name }}{% else %}Novo trabalhador{% endif %}</h1>
+{% endif %}
 <form method="post" class="mt-6 max-w-xl space-y-5">
   {% csrf_token %}
   <div class="cartao space-y-5 p-6">
@@ -12,7 +43,6 @@
     </div>
     <div class="grid grid-cols-2 gap-4">
       {% include "components/campo.html" with field=form.start_date %}
-      {% include "components/campo.html" with field=form.user %}
     </div>
     {% include "components/campo.html" with field=form.notes %}
     {% if form.other_restaurants %}
@@ -34,4 +64,5 @@
     {% include "components/botao.html" with label="Guardar trabalhador" %}
   </div>
 </form>
+
 {% endblock %}

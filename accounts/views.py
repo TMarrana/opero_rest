@@ -6,7 +6,9 @@ from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core import signing
 from django.shortcuts import redirect, render
-from django.views import View
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.views import View, csrf
 
 from core.middleware import SESSION_KEY, group_url
 from core.mixins import ManagerRequiredMixin
@@ -28,6 +30,23 @@ class LoginView(auth_views.LoginView):
 
 class LogoutView(auth_views.LogoutView):
     pass
+
+
+def csrf_failure(request, reason=""):
+    """CSRF_FAILURE_VIEW. O login roda o token CSRF, por isso um segundo
+    envio do formulário de entrada (duplo toque no telemóvel, ou o ecrã
+    deixado aberto enquanto se entrou noutro separador) chegava a um 403
+    com a sessão já aberta. No login, quem já entrou segue para a sua
+    superfície e quem não entrou volta a um formulário novo. Fora do
+    login, fica o 403 do Django."""
+    if request.path != reverse("accounts:login"):
+        return csrf.csrf_failure(request, reason)
+    seguinte = request.GET.get("next", "")
+    seguro = url_has_allowed_host_and_scheme(seguinte, {request.get_host()}, request.is_secure())
+    if request.user.is_authenticated:
+        return redirect(seguinte if seguro else "accounts:pos_login")
+    messages.info(request, "A página de entrada tinha expirado. Entre outra vez.")
+    return redirect(request.get_full_path())
 
 
 class AddressView(View):

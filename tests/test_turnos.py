@@ -242,7 +242,7 @@ class TestPlaneadoRealizado:
         close_shift(worker=worker, at=timezone.make_aware(datetime.datetime.combine(ontem, T(16))))
         client.force_login(manager)
         html = client.get(reverse("attendance:dia") + f"?dia={ontem.isoformat()}").content.decode()
-        assert "Entrou 25 min depois" in html and "Saiu 60 min antes" in html
+        assert "Entrou 25 min depois" in html and "Saiu 1h antes" in html
 
     def test_sem_marcacao(self, client, restaurant, worker, manager):
         ontem = timezone.localdate() - DIA

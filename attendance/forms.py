@@ -15,11 +15,13 @@ class EntryCorrectionForm(forms.Form):
         input_formats=_FMT,
         help_text="Deixe vazio se o turno ainda está aberto.",
     )
+    # Opcional para o gerente: o seu nome e a hora ficam sempre no
+    # histórico. Só o colaborador tem de dizer porquê ao pedir uma correção.
     reason = forms.CharField(
         label="Motivo da correção",
+        required=False,
         max_length=200,
-        widget=forms.TextInput(attrs={"class": "campo-input", "placeholder": "Ex.: esqueceu-se de marcar a saída"}),
-        error_messages={"required": "O motivo é obrigatório: fica no registo, junto com o seu nome."},
+        widget=forms.TextInput(attrs={"class": "campo-input", "placeholder": "Opcional. Ex.: esqueceu-se de marcar a saída"}),
     )
 
 

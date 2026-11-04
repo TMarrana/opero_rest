@@ -5,7 +5,7 @@
 <div class="flex flex-1 flex-col justify-center">
   <img src="{% static 'img/logo-opero-escuro.png' %}" alt="Opero" class="mx-auto block h-10 w-auto">
 
-  <form method="post" class="cartao mt-8 space-y-5 p-6 sm:p-7">
+  <form method="post" class="cartao mt-8 space-y-5 p-6 sm:p-7" data-envio-unico>
     {% csrf_token %}
     <div>
       <h1 class="font-display text-2xl font-bold">Entrar</h1>

@@ -109,8 +109,6 @@ class TestRegisto:
             _consumo(restaurant, marta, [(cafe, Decimal(1))], manager, day=timezone.localdate() + datetime.timedelta(days=1))
         with pytest.raises(ValidationError, match="pelo menos um artigo"):
             _consumo(restaurant, marta, [(cafe, None)], manager)
-        with pytest.raises(ValidationError, match="deixaria o stock"):
-            _consumo(restaurant, marta, [(cafe, Decimal(101))], manager)
         outra = Restaurant.objects.create(organization=restaurant.organization, name="Baixa", slug="baixa")
         de_fora = _artigo(outra, "Café da Baixa", 5, "0.2", manager)
         with pytest.raises(ValidationError, match="não é um artigo desta casa"):
@@ -181,9 +179,17 @@ class TestAcessos:
         assert client.get(reverse("inventory:consumos")).status_code == 403
         assert client.post(reverse("inventory:consumo_novo"), {}).status_code == 403
 
-    def test_resp_stock_regista_e_so_o_admin_mexe_nas_regras(self, client, restaurant, stock_user, manager, admin_user, cafe, marta):
+    def test_resp_stock_ve_mas_nao_regista_dos_outros_e_so_o_admin_mexe_nas_regras(
+        self, client, restaurant, stock_user, manager, admin_user, cafe, marta
+    ):
+        consumo = _consumo(restaurant, marta, [(cafe, Decimal(1))], manager)
         client.force_login(stock_user)
-        assert client.get(reverse("inventory:consumo_novo")).status_code == 200
+        html = client.get(reverse("inventory:consumos")).content.decode()
+        assert "Café 1 UN" in html and reverse("inventory:consumo_novo") not in html and "Alterar" not in html
+        assert client.get(reverse("inventory:consumo_novo")).status_code == 403
+        assert client.post(reverse("inventory:consumo_novo"), {}).status_code == 403
+        assert client.get(reverse("inventory:consumo_alterar", args=[consumo.pk])).status_code == 403
+        assert client.post(reverse("inventory:consumo_anular", args=[consumo.pk]), {"motivo": "x"}).status_code == 403
         assert client.get(reverse("inventory:consumo_regras")).status_code == 403
         client.force_login(manager)
         assert client.get(reverse("inventory:consumo_regras")).status_code == 403
@@ -211,3 +217,121 @@ class TestAcessos:
         assert "Marta Silva;1;0;0,68;" in texto
         resp = client.post(reverse("inventory:consumo_novo"), {"pessoa": "", "motivo": REFEICAO})
         assert resp.status_code == 400 and "Escolha quem consumiu" in resp.content.decode()
+
+
+class TestStockNegativo:
+    def test_consumo_sem_stock_regista_e_fica_negativo(self, restaurant, manager, cafe, marta):
+        consumo = _consumo(restaurant, marta, [(cafe, Decimal(101))], manager)
+        cafe.refresh_from_db()
+        assert cafe.current_stock == -1 and cafe.needs_count
+        assert consumo.negativos == [(cafe, Decimal(-1))]
+
+    def test_vista_avisa_do_stock_negativo(self, client, restaurant, manager, cafe, marta):
+        client.force_login(manager)
+        resp = client.post(reverse("inventory:consumo_novo"), {
+            "pessoa": marta.pk, "motivo": REFEICAO, "dia": timezone.localdate().isoformat(),
+            "item-0": cafe.pk, "qtd-0": "102",
+        }, follow=True)
+        html = resp.content.decode()
+        assert "Stock negativo: Café em -2 UN" in html
+        assert Item.objects.get(pk=cafe.pk).current_stock == -2
+
+    def test_outros_movimentos_continuam_a_recusar(self, manager, cafe):
+        with pytest.raises(ValidationError, match="deixaria o stock"):
+            register_movement(item=cafe, movement_type=StockMovement.Type.SAIDA, quantity=Decimal(101), user=manager)
+
+
+class TestLinhas:
+    def test_formulario_mostra_tres_linhas_e_aceita_mais(self, client, restaurant, manager, cafe, agua, marta):
+        client.force_login(manager)
+        html = client.get(reverse("inventory:consumo_novo")).content.decode()
+        assert "visiveis: 3," in html and 'aria-label="Acrescentar uma linha"' in html
+        # Uma linha aberta com o + (índice 7) também conta.
+        resp = client.post(reverse("inventory:consumo_novo"), {
+            "pessoa": marta.pk, "motivo": REFEICAO, "dia": timezone.localdate().isoformat(),
+            "item-0": cafe.pk, "qtd-0": "1", "item-7": agua.pk, "qtd-7": "2",
+        })
+        assert resp.status_code == 302
+        assert InternalConsumption.objects.get().lines.count() == 2
+
+    def test_erro_mantem_as_linhas_abertas(self, client, restaurant, manager, cafe, marta):
+        client.force_login(manager)
+        resp = client.post(reverse("inventory:consumo_novo"), {
+            "pessoa": "", "motivo": REFEICAO, "item-4": cafe.pk, "qtd-4": "1",
+        })
+        assert resp.status_code == 400 and "visiveis: 5," in resp.content.decode()
+
+
+class TestAlterar:
+    def test_gerente_altera_consumo_de_outro(self, client, restaurant, manager, cafe, agua, marta):
+        antigo = _consumo(restaurant, marta, [(cafe, Decimal(2))], manager)
+        client.force_login(manager)
+        html = client.get(reverse("inventory:consumo_alterar", args=[antigo.pk])).content.decode()
+        assert f"Alterar consumo {antigo.reference}" in html
+        resp = client.post(reverse("inventory:consumo_alterar", args=[antigo.pk]), {
+            "pessoa": marta.pk, "motivo": REFEICAO, "dia": timezone.localdate().isoformat(),
+            "item-0": cafe.pk, "qtd-0": "1", "item-1": agua.pk, "qtd-1": "1",
+        })
+        assert resp.status_code == 302
+        antigo.refresh_from_db()
+        assert antigo.cancelled_at is not None and antigo.cancel_reason.startswith("Alterado: substituído por CI-")
+        assert Item.objects.get(pk=cafe.pk).current_stock == 99
+        assert Item.objects.get(pk=agua.pk).current_stock == 47
+        assert InternalConsumption.objects.filter(cancelled_at__isnull=True).count() == 1
+
+    def test_alterar_com_erro_nao_muda_nada(self, client, restaurant, manager, cafe, marta):
+        antigo = _consumo(restaurant, marta, [(cafe, Decimal(2))], manager)
+        client.force_login(manager)
+        resp = client.post(reverse("inventory:consumo_alterar", args=[antigo.pk]), {
+            "pessoa": marta.pk, "motivo": REFEICAO, "dia": timezone.localdate().isoformat(),
+        })
+        assert resp.status_code == 400
+        antigo.refresh_from_db()
+        assert antigo.cancelled_at is None and Item.objects.get(pk=cafe.pk).current_stock == 98
+
+
+class TestColaborador:
+    def test_regista_o_seu_consumo_na_app(self, client, restaurant, staff_user, cafe, marta):
+        client.force_login(staff_user)
+        html = client.get(reverse("staff:consumo_novo")).content.decode()
+        assert "visiveis: 3," in html and 'value="DONO"' not in html
+        resp = client.post(reverse("staff:consumo_novo"), {
+            "motivo": REFEICAO, "dia": timezone.localdate().isoformat(), "item-0": cafe.pk, "qtd-0": "1",
+            # Tentar registar em nome de outra pessoa não tem efeito: a pessoa é sempre o próprio.
+            "pessoa": "casa",
+        })
+        assert resp.status_code == 302
+        consumo = InternalConsumption.objects.get()
+        assert consumo.worker == marta and consumo.created_by == staff_user and consumo.restaurant == restaurant
+
+    def test_altera_e_anula_o_seu(self, client, restaurant, staff_user, manager, cafe, marta):
+        consumo = _consumo(restaurant, marta, [(cafe, Decimal(1))], manager)
+        client.force_login(staff_user)
+        resp = client.post(reverse("staff:consumo_alterar", args=[consumo.pk]), {
+            "motivo": REFEICAO, "dia": timezone.localdate().isoformat(), "item-0": cafe.pk, "qtd-0": "3",
+        })
+        assert resp.status_code == 302
+        novo = InternalConsumption.objects.get(cancelled_at__isnull=True)
+        assert novo.worker == marta and Item.objects.get(pk=cafe.pk).current_stock == 97
+        resp = client.post(reverse("staff:consumo_anular", args=[novo.pk]), {})
+        assert resp.status_code == 302
+        assert not InternalConsumption.objects.filter(cancelled_at__isnull=True).exists()
+        assert Item.objects.get(pk=cafe.pk).current_stock == 100
+
+    def test_nao_mexe_nos_consumos_dos_outros(self, client, restaurant, staff_user, manager, cafe, marta, rui):
+        do_rui = _consumo(restaurant, rui, [(cafe, Decimal(1))], manager)
+        client.force_login(staff_user)
+        assert client.get(reverse("staff:consumo_alterar", args=[do_rui.pk])).status_code == 404
+        assert client.post(reverse("staff:consumo_alterar", args=[do_rui.pk]), {
+            "motivo": REFEICAO, "dia": timezone.localdate().isoformat(), "item-0": cafe.pk, "qtd-0": "9",
+        }).status_code == 404
+        assert client.post(reverse("staff:consumo_anular", args=[do_rui.pk]), {}).status_code == 404
+        do_rui.refresh_from_db()
+        assert do_rui.cancelled_at is None
+
+    def test_colaborador_sem_stock_regista_com_aviso(self, client, restaurant, staff_user, cafe, marta):
+        client.force_login(staff_user)
+        resp = client.post(reverse("staff:consumo_novo"), {
+            "motivo": REFEICAO, "dia": timezone.localdate().isoformat(), "item-0": cafe.pk, "qtd-0": "105",
+        }, follow=True)
+        assert "Stock negativo: Café em -5 UN" in resp.content.decode()

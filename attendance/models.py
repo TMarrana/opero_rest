@@ -55,6 +55,16 @@ class TimeEntryQuerySet(models.QuerySet):
         return self.exclude(pk__in=self.unresolved(now).values("pk"))
 
 
+class TimeEntryManager(models.Manager.from_queryset(TimeEntryQuerySet)):
+    """Os registos em vigor: um registo apagado pelo gerente (por ser um
+    erro) não aparece em lado nenhum nem conta para os totais, mas fica
+    guardado, com quem o apagou e quando (invariante 7). Para os ver a
+    todos, `TimeEntry.all_objects`."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(annulled_at__isnull=True)
+
+
 class TimeEntry(TimeStampedModel):
     """Turno de um trabalhador. Invariante 3: um só turno aberto por
     trabalhador, garantido por constraint parcial + validação no serviço.
@@ -104,8 +114,20 @@ class TimeEntry(TimeStampedModel):
     )
     correction_reason = models.CharField("motivo da correção", max_length=200, blank=True)
     corrected_at = models.DateTimeField("corrigido em", null=True, blank=True)
+    # Apagado pelo gerente por ser um erro (ex.: duplicado). Não se apaga da
+    # base de dados: o registo e a correção «Registo apagado» ficam.
+    annulled_at = models.DateTimeField("apagado em", null=True, blank=True)
+    annulled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="apagado por",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
 
-    objects = TimeEntryQuerySet.as_manager()
+    objects = TimeEntryManager()
+    all_objects = TimeEntryQuerySet.as_manager()
 
     class Meta:
         verbose_name = "registo de ponto"
@@ -114,7 +136,7 @@ class TimeEntry(TimeStampedModel):
         constraints = [
             models.UniqueConstraint(
                 fields=["worker"],
-                condition=models.Q(check_out__isnull=True, missing_exit=False),
+                condition=models.Q(check_out__isnull=True, missing_exit=False, annulled_at__isnull=True),
                 name="um_turno_aberto_por_trabalhador",
             ),
             models.CheckConstraint(
@@ -265,6 +287,7 @@ class EntryCorrection(models.Model):
     class Kind(models.TextChoices):
         CRIAR = "CRIAR", "Registo acrescentado"
         ALTERAR = "ALTERAR", "Registo alterado"
+        APAGAR = "APAGAR", "Registo apagado"
 
     entry = models.ForeignKey(
         TimeEntry, verbose_name="registo", on_delete=models.CASCADE, related_name="corrections"
@@ -273,7 +296,8 @@ class EntryCorrection(models.Model):
     corrected_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, verbose_name="corrigido por", on_delete=models.PROTECT, related_name="+"
     )
-    reason = models.CharField("motivo", max_length=200)
+    # Vazio quando o gerente não indicou motivo (só o pedido do colaborador o exige).
+    reason = models.CharField("motivo", max_length=200, blank=True)
     corrected_at = models.DateTimeField("corrigido em", default=timezone.now)
     # Nulos num registo acrescentado, e nas correções anteriores à Fase 5,
     # cujo valor antigo se perdeu (`previous_known` a falso).

@@ -21,7 +21,7 @@
     {% csrf_token %}
     <input type="hidden" name="mes" value="{{ mes|date:'Y-m' }}">
     <input type="hidden" name="acao" value="aprovar_todos">
-    {% include "components/botao.html" with label="Aprovar todos os prontos" %}
+    {% include "components/botao.html" with label="Aprovar todos os pontos" %}
   </form>
   {% else %}
   <p class="text-sm text-ardosia">O mês ainda não terminou: aprova-se a partir do dia 1 do mês seguinte.</p>
@@ -31,7 +31,7 @@
   {% endif %}
 </div>
 
-<div class="mt-6 cartao">
+<div class="mt-6 cartao" x-data="{ detalhe: null }" x-on:keydown.escape.window="detalhe = null">
   {% if linhas %}
   <div class="overflow-x-auto">
     <table class="tabela">
@@ -41,7 +41,11 @@
       <tbody>
         {% for l in linhas %}
         <tr>
-          <td class="font-medium">{{ l.worker.full_name }}</td>
+          <td class="font-medium">
+            <button type="button" x-on:click="detalhe = {{ l.worker.pk }}" aria-haspopup="dialog"
+                    class="text-left hover:text-floresta hover:underline hover:underline-offset-4"
+                    title="Ver as horas dia a dia">{{ l.worker.full_name }}</button>
+          </td>
           <td class="td-dados">{{ l.total|horas }}</td>
           <td class="text-sm">
             {% if l.pronto %}<span class="text-ardosia">—</span>{% else %}
@@ -81,6 +85,72 @@
       </tbody>
     </table>
   </div>
+
+  {% for l in linhas %}
+  <div x-show="detalhe === {{ l.worker.pk }}" x-cloak
+       class="fixed inset-0 z-50 flex items-center justify-center p-4"
+       role="dialog" aria-modal="true" aria-labelledby="detalhe-{{ l.worker.pk }}-titulo">
+    <div class="absolute inset-0 bg-floresta/40 backdrop-blur-[2px]" x-on:click="detalhe = null"></div>
+    <div class="relative flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl bg-superficie shadow-flutuante">
+      <div class="flex items-start justify-between gap-4 border-b border-linha px-6 pb-4 pt-6">
+        <div>
+          <h2 id="detalhe-{{ l.worker.pk }}-titulo" class="font-display text-xl font-bold text-carvao">{{ l.worker.full_name }}</h2>
+          <p class="mt-1 text-sm text-ardosia">
+            {{ mes|date:"F Y"|capfirst }} ·
+            <span class="font-dados font-semibold text-carvao">{{ l.total|horas }}</span>
+            em {{ l.dias_trabalhados }} dia{{ l.dias_trabalhados|pluralize }}
+          </p>
+        </div>
+        <button type="button" x-on:click="detalhe = null" class="btn btn-fantasma btn-sm" aria-label="Fechar">&times;</button>
+      </div>
+      <div class="overflow-y-auto px-6 py-4">
+        {% if l.dias %}
+        <table class="tabela">
+          <thead>
+            <tr><th>Dia</th><th>Entrada e saída</th><th class="th-dados">Pausas</th><th class="th-dados">Horas</th></tr>
+          </thead>
+          <tbody>
+            {% for d in l.dias %}
+            <tr>
+              <td class="whitespace-nowrap">
+                <span class="font-dados">{{ d.dia|date:"d/m" }}</span>
+                <span class="text-xs text-ardosia">{{ d.dia|date:"D" }}</span>
+              </td>
+              <td class="text-sm">
+                {% for e in d.entradas %}
+                <span class="block font-dados">
+                  {{ e.check_in|date:"H:i" }} &rarr; {% if e.check_out %}{% if e.check_out|date:"Y-m-d" != e.check_in|date:"Y-m-d" %}{{ e.check_out|date:"d/m" }} {% endif %}{{ e.check_out|date:"H:i" }}{% else %}em turno{% endif %}
+                  {% if e.work_area %}<span class="font-sans text-xs text-ardosia">· {{ e.work_area.name }}</span>{% endif %}
+                  {% if e.restaurant_id != l.worker.restaurant_id %}<span class="font-sans text-xs text-ardosia">· {{ e.restaurant.name }}</span>{% endif %}
+                  {% if not l.fecho %}<a href="{% url 'attendance:corrigir' e.pk %}?voltar={{ aqui|urlencode }}" class="ml-1 font-sans text-xs text-ardosia underline underline-offset-2 hover:text-carvao">Corrigir</a>{% endif %}
+                </span>
+                {% endfor %}
+                {% if d.ausencia %}<span class="block text-xs text-ardosia">{{ d.ausencia.absence_type.name }}</span>{% endif %}
+              </td>
+              <td class="td-dados">{% if d.entradas %}{{ d.pausas|horas }}{% else %}<span class="text-ardosia">—</span>{% endif %}</td>
+              <td class="td-dados font-semibold">{% if d.entradas %}{{ d.trabalhado|horas }}{% else %}<span class="text-ardosia">—</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr><td colspan="3" class="font-semibold">Total do mês</td><td class="td-dados font-semibold">{{ l.total|horas }}</td></tr>
+          </tfoot>
+        </table>
+        {% else %}
+        <p class="py-8 text-center text-sm text-ardosia">Sem horas registadas neste mês.</p>
+        {% endif %}
+        {% if not l.pronto %}
+        <p class="mt-3 text-xs text-ardosia">Os registos por resolver não contam até terem saída: <a href="{% url 'attendance:pedidos' %}" class="underline underline-offset-2">ver pedidos</a>.</p>
+        {% endif %}
+      </div>
+      {% if not l.fecho %}
+      <div class="flex justify-end border-t border-linha px-6 py-4">
+        <a href="{% url 'attendance:acrescentar' l.worker.pk %}?dia={{ mes|date:'Y-m-d' }}&amp;voltar={{ aqui|urlencode }}" class="link-acao">Acrescentar registo</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
   {% else %}
   <div class="px-6 py-12 text-center text-sm text-ardosia">Ainda não há trabalhadores ativos. Crie-os primeiro em Trabalhadores.</div>
   {% endif %}

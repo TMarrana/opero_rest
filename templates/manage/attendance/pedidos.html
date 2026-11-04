@@ -59,6 +59,26 @@
 </section>
 {% endif %}
 
+{% if sobrepostos %}
+<section class="mt-8" id="sobrepostos">
+  <h2 class="secao-titulo">Registos sobrepostos <span class="font-dados text-base text-perigo">{{ sobrepostos|length }}</span></h2>
+  <p class="mt-1 text-sm text-ardosia">A mesma pessoa não pode estar a trabalhar duas vezes à mesma hora: um destes registos é provavelmente um erro, como um duplicado. Corrija as horas ou apague o que estiver a mais.</p>
+  <div class="mt-3 cartao">
+    <ul class="divide-y divide-linha">
+      {% for r in sobrepostos %}
+      <li class="flex flex-wrap items-baseline justify-between gap-2 px-6 py-3.5 text-sm">
+        <span><span class="font-medium">{{ r.worker.full_name }}</span> · <span class="font-dados">{{ r.check_in|date:"d/m H:i" }} &rarr; {% if r.check_out %}{{ r.check_out|date:"H:i" }}{% else %}sem saída{% endif %}</span>{% if r.corrected_by %} <span class="text-xs text-ardosia">(corrigido)</span>{% endif %}</span>
+        <span class="whitespace-nowrap">
+          <a href="{% url 'attendance:corrigir' r.pk %}?voltar={{ request.path|urlencode }}%23sobrepostos" class="link-texto">Corrigir</a>
+          <a href="{% url 'attendance:corrigir' r.pk %}?apagar=1&voltar={{ request.path|urlencode }}%23sobrepostos" class="ml-3 link-acao-perigo">Apagar</a>
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+{% endif %}
+
 <section class="mt-8">
   <h2 class="secao-titulo">Decididos</h2>
   <div class="mt-3 cartao">

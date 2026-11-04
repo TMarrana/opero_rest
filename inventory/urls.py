@@ -14,6 +14,7 @@ urlpatterns = [
     path("consumos/", consumption_views.ConsumptionListView.as_view(), name="consumos"),
     path("consumos/novo/", consumption_views.ConsumptionCreateView.as_view(), name="consumo_novo"),
     path("consumos/regras/", consumption_views.ConsumptionSettingsView.as_view(), name="consumo_regras"),
+    path("consumos/<int:pk>/alterar/", consumption_views.ConsumptionCreateView.as_view(), name="consumo_alterar"),
     path("consumos/<int:pk>/anular/", consumption_views.ConsumptionCancelView.as_view(), name="consumo_anular"),
     path("contagens/", count_views.CountListView.as_view(), name="contagens"),
     path("contagens/contar/", count_views.CountSheetView.as_view(), name="contagem"),

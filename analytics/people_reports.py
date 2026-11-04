@@ -69,25 +69,17 @@ class Pessoa:
 
 def _desvios(worker, dia, turnos, registos, agora, tolerancia):
     """Os desvios de um trabalhador num dia, face aos turnos publicados
-    desta casa (como `attendance.views._desvios`)."""
-    if not turnos:
-        return []
-    inicio = min(t.start_at for t in turnos)
-    fim = max(t.end_at for t in turnos)
-    previsto = " + ".join(
-        f"{timezone.localtime(t.start_at):%H:%M}–{timezone.localtime(t.end_at):%H:%M}" for t in sorted(turnos, key=lambda t: t.start_at)
-    )
-    if not registos:
-        return [Desvio(dia, worker, "Falta de marcação", None, previsto)] if agora > inicio + tolerancia else []
-    desvios = []
-    entrada = min(r.check_in for r in registos)
-    if entrada > inicio + tolerancia:
-        desvios.append(Desvio(dia, worker, "Atraso", int((entrada - inicio).total_seconds() // 60), previsto))
-    if all(r.check_out for r in registos):
-        saida = max(r.check_out for r in registos)
-        if saida < fim - tolerancia:
-            desvios.append(Desvio(dia, worker, "Saída antes da hora", int((fim - saida).total_seconds() // 60), previsto))
-    return desvios
+    desta casa: cada registo compara-se com o turno com que coincide, como
+    no ecrã do ponto (`attendance.desvios`)."""
+    from attendance import desvios as dv
+
+    tipos = {dv.ATRASO: "Atraso", dv.SAIDA_ANTES: "Saída antes da hora", dv.SEM_MARCACAO: "Falta de marcação"}
+    resultado = []
+    for d in dv.calcular(turnos, registos, agora, tolerancia):
+        if d.tipo in tipos:
+            previsto = f"{timezone.localtime(d.turno.start_at):%H:%M}–{timezone.localtime(d.turno.end_at):%H:%M}"
+            resultado.append(Desvio(dia, worker, tipos[d.tipo], d.minutos, previsto))
+    return resultado
 
 
 def pessoas(restaurant, inicio, fim, agora=None):

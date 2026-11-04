@@ -1,8 +1,9 @@
 /* Service worker do Opero: casca da app do colaborador em cache (Fase 3).
-   Estáticos: cache-first. Páginas: network-first com fallback ao cache.
+   Estáticos com hash no nome: cache-first; sem hash: network-first.
+   Páginas: network-first com fallback ao cache.
    POSTs nunca passam por aqui. Desde a Fase 7 não há fila offline: a app
    só consulta e pede, e o ponto pica-se no tablet. */
-const CACHE = "opero-shell-v21";
+const CACHE = "opero-shell-v24";
 const SHELL = [
   "/static/css/app.css",
   "/static/js/htmx.min.js",
@@ -15,6 +16,27 @@ const SHELL = [
   "/static/fonts/playfair-display-v40-latin-variable.woff2",
   "/static/img/logo-opero-escuro.png",
 ];
+
+// Nome com o hash do ManifestStaticFilesStorage: nome.<12 hex>.extensão.
+const COM_HASH = /\.[0-9a-f]{12}\.[a-z0-9]+$/i;
+
+function guardar(request, resp) {
+  if (resp.ok && !resp.redirected) {
+    const copia = resp.clone();
+    caches.open(CACHE).then((c) => c.put(request, copia));
+  }
+  return resp;
+}
+
+function cacheFirst(request) {
+  return caches.match(request).then((hit) => hit || fetch(request).then((resp) => guardar(request, resp)));
+}
+
+function networkFirst(request) {
+  return fetch(request)
+    .then((resp) => guardar(request, resp))
+    .catch(() => caches.match(request));
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -35,13 +57,11 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (url.pathname.startsWith("/static/")) {
-    event.respondWith(
-      caches.match(request).then((hit) => hit || fetch(request).then((resp) => {
-        const copia = resp.clone();
-        caches.open(CACHE).then((c) => c.put(request, copia));
-        return resp;
-      }))
-    );
+    // Com o hash no nome (produção: app.3f2a9c1b7d4e.css), o ficheiro nunca
+    // muda: cache-first. Sem hash (dev, ou o mesmo nome com conteúdo novo),
+    // vai sempre à rede e a cópia guardada só serve sem ligação. Assim uma
+    // alteração ao CSS ou ao JS aparece logo, sem mudar o nome da cache.
+    event.respondWith(COM_HASH.test(url.pathname) ? cacheFirst(request) : networkFirst(request));
     return;
   }
 

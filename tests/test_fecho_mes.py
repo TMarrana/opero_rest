@@ -180,3 +180,70 @@ def test_aceitacao_fase_5(client, restaurant, worker, manager, mes_passado):
     assert ";19:00;02:30;1:00;6:30;" in csv
     with pytest.raises(ValidationError, match="já foi aprovado"):
         correct_entry(entry=entry, user=manager, reason="x", check_out=_dia(mes_passado, 15, 3))
+
+
+class TestDetalheDoMes:
+    """Pop-up com as horas dia a dia, e correções que voltam ao fecho com
+    as horas novas."""
+
+    def test_detalhe_mostra_os_dias(self, client, worker, manager, mes_passado):
+        open_shift(worker=worker, at=_dia(mes_passado, 3))
+        close_shift(worker=worker, at=_dia(mes_passado, 3, 17))
+        open_shift(worker=worker, at=_dia(mes_passado, 8, 10))
+        close_shift(worker=worker, at=_dia(mes_passado, 8, 14))
+        client.force_login(manager)
+        html = client.get(reverse("attendance:mes") + f"?mes={mes_passado:%Y-%m}").content.decode()
+        assert f'x-on:click="detalhe = {worker.pk}"' in html
+        assert f"03/{mes_passado:%m}" in html and f"08/{mes_passado:%m}" in html
+        assert "em 2 dias" in html
+        assert "12h00" in html  # 8h + 4h
+
+    def test_correcao_volta_ao_fecho_com_as_horas_novas(self, client, worker, manager, mes_passado):
+        open_shift(worker=worker, at=_dia(mes_passado, 4, 9))
+        entry = close_shift(worker=worker, at=_dia(mes_passado, 4, 17))
+        client.force_login(manager)
+        url_mes = reverse("attendance:mes") + f"?mes={mes_passado:%Y-%m}"
+        resp = client.get(url_mes)
+        assert "8h00" in resp.content.decode()
+        assert "no-store" in resp["Cache-Control"]
+        resp = client.post(
+            reverse("attendance:corrigir", args=[entry.pk]),
+            {
+                "check_in": _dia(mes_passado, 4, 9).strftime("%Y-%m-%dT%H:%M"),
+                "check_out": _dia(mes_passado, 4, 13).strftime("%Y-%m-%dT%H:%M"),
+                "reason": "",
+                "voltar": url_mes,
+            },
+        )
+        assert resp.status_code == 302 and resp["Location"] == url_mes
+        html = client.get(url_mes).content.decode()
+        assert "4h00" in html and "8h00" not in html
+
+    def test_voltar_para_fora_do_site_e_ignorado(self, client, worker, manager, mes_passado):
+        open_shift(worker=worker, at=_dia(mes_passado, 4, 9))
+        entry = close_shift(worker=worker, at=_dia(mes_passado, 4, 17))
+        client.force_login(manager)
+        resp = client.post(
+            reverse("attendance:corrigir", args=[entry.pk]),
+            {
+                "check_in": _dia(mes_passado, 4, 9).strftime("%Y-%m-%dT%H:%M"),
+                "check_out": _dia(mes_passado, 4, 12).strftime("%Y-%m-%dT%H:%M"),
+                "voltar": "https://exemplo.com/",
+            },
+        )
+        assert resp["Location"].startswith(reverse("attendance:dia"))
+
+    def test_acrescentar_sem_motivo_pela_vista(self, client, worker, manager, mes_passado):
+        client.force_login(manager)
+        url_mes = reverse("attendance:mes") + f"?mes={mes_passado:%Y-%m}"
+        resp = client.post(
+            reverse("attendance:acrescentar", args=[worker.pk]),
+            {
+                "check_in": _dia(mes_passado, 6, 9).strftime("%Y-%m-%dT%H:%M"),
+                "check_out": _dia(mes_passado, 6, 15).strftime("%Y-%m-%dT%H:%M"),
+                "reason": "",
+                "voltar": url_mes,
+            },
+        )
+        assert resp.status_code == 302 and resp["Location"] == url_mes
+        assert worker.time_entries.get().corrections.get().reason == ""

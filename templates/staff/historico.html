@@ -49,7 +49,7 @@
       </p>
       {% for p in e.breaks.all %}<p class="mt-0.5 text-xs text-ardosia">{{ p.break_type.name }} {{ p.start|date:"H:i" }}&ndash;{% if p.end %}{{ p.end|date:"H:i" }}{% else %}…{% endif %}{% if not p.break_type.paid %} · não paga{% endif %}</p>{% endfor %}
       {% if e.check_out %}<p class="mt-0.5 text-servico">{{ e.worked|horas }}</p>{% endif %}
-      {% if e.corrected_by %}<p class="mt-1 text-xs text-ardosia">corrigido por {{ e.corrected_by }} · {{ e.correction_reason }}</p>{% endif %}
+      {% if e.corrected_by %}<p class="mt-1 text-xs text-ardosia">corrigido por {{ e.corrected_by }}{% if e.correction_reason %} · {{ e.correction_reason }}{% endif %}</p>{% endif %}
       {% if e.pk in com_pedido %}<p class="mt-2">{% include "components/badge.html" with label="correção pendente" variante="ambar" %}</p>
       {% elif not e.is_open or e.missing_exit %}<a href="{% url 'staff:correcao' e.pk %}" class="link-acao mt-2 min-h-toque">Pedir correção</a>{% endif %}
     </article>
