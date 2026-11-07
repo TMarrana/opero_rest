@@ -59,6 +59,7 @@
               <p class="truncate text-xs text-ardosia">{{ request.user.email }}</p>
               <p class="mt-1 text-xs text-ardosia">{% if request.user.is_group_admin %}Admin do grupo{% else %}{{ perfil_ativo }}{% endif %}{% if request.restaurant %} · {{ request.restaurant }}{% endif %}</p>
             </div>
+            <a href="{% url 'staff:home' %}" class="nav-item w-full text-carvao">{% icone "pessoa" "h-5 w-5" %}A minha app</a>
             <form method="post" action="{% url 'accounts:logout' %}" class="border-t border-linha pt-1">
               {% csrf_token %}
               <button type="submit" class="nav-item w-full text-ardosia hover:bg-perigo-50 hover:text-perigo">{% icone "sair" "h-5 w-5" %}Sair</button>

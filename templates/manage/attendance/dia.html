@@ -65,7 +65,7 @@
             <span class="text-sm text-ardosia">Sem registos</span>
             {% endif %}
           </td>
-          <td class="text-right font-dados text-sm">{% if linha.total %}{{ linha.total|horas }}{% else %}—{% endif %}</td>
+          <td class="text-right font-dados text-sm">{% if linha.total %}{{ linha.total|horas }}{% else %}<span class="text-ardosia">0h00</span>{% endif %}</td>
           <td>
             {% if linha.por_resolver %}
             {% include "components/badge.html" with label="Por resolver" variante="alerta" %}

@@ -1,9 +1,10 @@
 {% extends "base_manage.html" %}
+{% load interface %}
 {% block title %}{% if item %}Editar artigo{% else %}Novo artigo{% endif %}{% endblock %}
 {% block content %}
 <h1 class="titulo-pagina">{% if item %}Editar artigo{% else %}Novo artigo{% endif %}</h1>
 {% if item %}
-<p class="mt-1 text-sm text-ardosia">Stock atual: <span class="font-dados">{{ item.current_stock }} {{ item.unit }}</span> — o stock só muda por movimento, não aqui.</p>
+<p class="mt-1 text-sm text-ardosia">Stock atual: <span class="font-dados">{{ item.current_stock|quantidade:item.unit }}</span> — o stock só muda por movimento, não aqui.</p>
 {% else %}
 <p class="mt-1 text-sm text-ardosia">O stock inicial regista-se depois, com um movimento de entrada.</p>
 {% endif %}

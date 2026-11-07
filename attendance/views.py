@@ -1,10 +1,9 @@
 import datetime
 
-from django.conf import settings
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import HttpResponse
-from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -17,30 +16,16 @@ from django.views.generic import TemplateView
 
 from core import exports
 from core.mixins import ManagerRequiredMixin
-from shifts.models import Shift
 from core.utils import restaurant_scope, workers_scope
+from sales.services import dia_de_servico
+from shifts.models import Shift
 from workers.models import Worker
 
-from .forms import CorrectionDecisionForm, EntryCorrectionForm
-from . import desvios
 from . import month as mes
+from .forms import CorrectionDecisionForm, EntryCorrectionForm
 from .models import CorrectionRequest, MonthClose, TimeEntry
+from .selectors import desvios_do_dia, overlapping_entries, tabela_registos, workers_for_month
 from .services import add_manual_entry, annul_entry, correct_entry, decide_correction, overlapping
-
-
-def overlapping_entries(request, now=None):
-    """Os registos desta casa, do mês anterior para cá, que se sobrepõem a
-    outro registo da mesma pessoa (em qualquer casa): podem ser erros. Os
-    meses mais antigos já foram fechados."""
-    now = now or timezone.now()
-    desde = mes.previous_month(timezone.localdate(now))
-    workers = workers_scope(request, Worker.objects.all())
-    todos = list(TimeEntry.objects.filter(worker__in=workers, work_date__gte=desde).select_related("worker"))
-    ids = overlapping(todos, now=now)
-    return sorted(
-        (e for e in todos if e.pk in ids and e.restaurant_id == request.restaurant.pk),
-        key=lambda e: (e.worker.full_name, e.check_in),
-    )
 
 
 def _voltar(request, padrao):
@@ -68,8 +53,9 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        dia = parse_date(self.request.GET.get("dia", "") or "") or timezone.localdate()
         restaurant = self.request.restaurant
+        hoje = dia_de_servico(restaurant)
+        dia = parse_date(self.request.GET.get("dia", "") or "") or hoje
         workers = workers_scope(self.request, Worker.objects.filter(is_active=True))
         entries = (
             TimeEntry.objects.filter(restaurant=restaurant, worker__in=workers)
@@ -101,7 +87,7 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
                     "visita": visita,
                     "registos": registos,
                     "previstos": turnos,
-                    "desvios": _desvios(turnos, do_dia, agora),
+                    "desvios": desvios_do_dia(turnos, do_dia, agora),
                     "em_turno": any(r.is_open for r in registos),
                     "por_resolver": any(r.is_unresolved(now=agora) for r in registos),
                     "total": sum((r.worked(until=agora) for r in do_dia), datetime.timedelta()),
@@ -115,7 +101,7 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
         ctx["dia"] = dia
         ctx["dia_anterior"] = dia - datetime.timedelta(days=1)
         ctx["dia_seguinte"] = dia + datetime.timedelta(days=1)
-        ctx["hoje"] = timezone.localdate()
+        ctx["hoje"] = hoje
         ctx["pedidos_pendentes"] = _scoped_requests(self.request).filter(
             status=CorrectionRequest.Status.PENDENTE
         ).count()
@@ -128,55 +114,12 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
     def get(self, request, *args, **kwargs):
         formato = exports.formato_pedido(request)
         if formato:
-            dia = parse_date(request.GET.get("dia", "") or "") or timezone.localdate()
+            dia = parse_date(request.GET.get("dia", "") or "") or dia_de_servico(request.restaurant)
             inicio, fim = mes.month_range(dia)
             return exports.responder(
                 formato, [tabela_registos(request.restaurant, inicio, fim)], f"ponto-{inicio:%Y-%m}"
             )
         return super().get(request, *args, **kwargs)
-
-
-def tabela_registos(restaurant, inicio, fim):
-    """Os registos de ponto de uma casa num período (Fase 15): um por linha,
-    com as horas como no ecrã. Um registo por resolver conta zero."""
-    agora = timezone.now()
-    entradas = (
-        TimeEntry.objects.filter(restaurant=restaurant, work_date__range=(inicio, fim))
-        .select_related("worker__restaurant", "work_area", "corrected_by")
-        .prefetch_related("breaks__break_type")
-        .order_by("work_date", "worker__full_name", "check_in")
-    )
-    linhas = []
-    for e in entradas:
-        if e.is_unresolved(now=agora):
-            estado = "Por resolver"
-        elif e.is_open:
-            estado = "Em turno"
-        else:
-            estado = ""
-        linhas.append(
-            [
-                e.worker.full_name,
-                e.worker.restaurant.name,
-                e.work_date,
-                e.check_in,
-                e.check_out,
-                e.unpaid_break_time(until=e.check_out or agora),
-                e.worked(until=agora),
-                e.work_area.name if e.work_area else "",
-                e.get_source_display(),
-                estado,
-                str(e.corrected_by) if e.corrected_by else "",
-                e.correction_reason,
-            ]
-        )
-    return exports.Tabela(
-        titulo="Ponto",
-        colunas=["Trabalhador", "Casa principal", "Dia", "Entrada", "Saída", "Pausas não pagas (h)", "Trabalhado (h)",
-                 "Área", "Origem", "Estado", "Corrigido por", "Motivo da correção"],
-        linhas=linhas,
-        formatos=[exports.TEXTO, exports.TEXTO, exports.DATA, exports.DATAHORA, exports.DATAHORA, exports.HORAS, exports.HORAS],
-    )
 
 
 class EntryCorrectionView(ManagerRequiredMixin, View):
@@ -292,12 +235,6 @@ class EntryAddView(ManagerRequiredMixin, View):
         return render(request, "manage/attendance/acrescentar.html", self._contexto(request, worker, form))
 
 
-def _desvios(turnos, registos, agora):
-    """Planeado contra realizado, em frases (ver `attendance.desvios`):
-    cada registo compara-se com o turno com que coincide."""
-    return desvios.textos(turnos, registos, agora)
-
-
 def _scoped_requests(request):
     return restaurant_scope(
         request,
@@ -361,15 +298,16 @@ class MonthView(ManagerRequiredMixin, View):
     aprovação (uma a uma ou todos os prontos), reabertura com motivo e
     exportação CSV."""
 
-    def _workers(self, request):
-        return restaurant_scope(request, Worker.objects.filter(is_active=True))
+    def _workers(self, request, escolhido):
+        """Quem entra no fecho desse mês, incluindo quem já saiu."""
+        return workers_for_month(restaurant_scope(request, Worker.objects.all()), escolhido)
 
     def _url(self, mes_escolhido):
         return f"{reverse('attendance:mes')}?mes={mes_escolhido:%Y-%m}"
 
     def get(self, request):
         escolhido = _mes_pedido(request)
-        workers = self._workers(request)
+        workers = self._workers(request, escolhido)
         if request.GET.get("exportar"):
             conteudo = mes.export_csv(workers, escolhido)
             resp = HttpResponse(conteudo, content_type="text/csv; charset=utf-8")
@@ -391,7 +329,7 @@ class MonthView(ManagerRequiredMixin, View):
                     "dias_trabalhados": sum(1 for d in dias if d["entradas"]),
                     "total": total,
                     "falta": falta,
-                    "pronto": not falta["por_resolver"] and not falta["pedidos"],
+                    "pronto": not any(falta.values()),
                     "fecho": fechos.get(w.pk),
                 }
             )
@@ -416,7 +354,7 @@ class MonthView(ManagerRequiredMixin, View):
 
     def post(self, request):
         escolhido = _mes_pedido(request)
-        workers = self._workers(request)
+        workers = self._workers(request, escolhido)
         acao = request.POST.get("acao")
         try:
             if acao == "aprovar_todos":

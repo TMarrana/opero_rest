@@ -3,8 +3,8 @@
 {% block content %}
 <div class="flex flex-wrap items-end justify-between gap-4">
   <h1 class="titulo-pagina">Categorias</h1>
-  {% include "components/botao.html" with label="Voltar ao stock" variante="fantasma" href="/gestao/stock/" %}
 </div>
+{% include "manage/inventory/_nav.html" %}
 
 <div class="mt-6 grid max-w-4xl gap-6 md:grid-cols-2">
   <div class="cartao">

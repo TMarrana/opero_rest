@@ -10,6 +10,9 @@ Parâmetros:
                     e o botão de fechar diz «Fechar»
   variante_confirmar — "primario" para uma ação que se desfaz (por omissão,
                     perigo)
+  campos_template — template com campos extra, mostrados acima dos botões;
+                    recebe form_id e os campos ligam-se ao POST com
+                    form="{{ form_id }}"
 {% endcomment %}
 <div x-data="{ aberto: false }"
      x-on:abrir-modal.window="if ($event.detail.id === '{{ id }}') aberto = true"
@@ -21,10 +24,11 @@ Parâmetros:
        x-on:keydown.escape.window="aberto = false">
     <h2 id="{{ id }}-titulo" class="font-display text-xl font-bold text-carvao">{{ titulo }}</h2>
     <p class="mt-2 text-sm text-ardosia">{{ corpo }}</p>
+    {% if form_action and campos_template %}{% include campos_template with form_id=id|add:"-form" %}{% endif %}
     <div class="mt-7 flex flex-wrap justify-end gap-3">
       <button type="button" x-on:click="aberto = false" class="btn btn-fantasma">{% if form_action %}Cancelar{% else %}Fechar{% endif %}</button>
       {% if form_action %}
-      <form method="post" action="{{ form_action }}">
+      <form method="post" action="{{ form_action }}" id="{{ id }}-form">
         {% csrf_token %}
         <button type="submit" class="btn {% if variante_confirmar == 'primario' %}btn-primario{% else %}btn-perigo{% endif %}">{{ confirmar_label }}</button>
       </form>

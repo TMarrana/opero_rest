@@ -3,8 +3,8 @@
 {% block content %}
 <div class="flex flex-wrap items-end justify-between gap-4">
   <h1 class="titulo-pagina">Histórico de movimentos</h1>
-  {% include "components/botao.html" with label="Voltar ao stock" variante="fantasma" href="/gestao/stock/" %}
 </div>
+{% include "manage/inventory/_nav.html" %}
 
 <form class="mt-6 flex flex-wrap items-end gap-3"
       hx-get="{% url 'inventory:historico' %}" hx-target="#rail-historico" hx-swap="outerHTML"

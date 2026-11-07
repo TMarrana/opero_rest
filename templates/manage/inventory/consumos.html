@@ -5,8 +5,7 @@
 {% block content %}
 {% comment %}Consumos internos (Fase 12): o mapa do mês por pessoa e os
 consumos registados. Um consumo não se apaga: anula-se, e o stock volta.{% endcomment %}
-<a href="{% url 'inventory:lista' %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Stock</a>
-<div class="mt-2 flex flex-wrap items-end justify-between gap-4">
+<div class="flex flex-wrap items-end justify-between gap-4">
   <h1 class="titulo-pagina">Consumos internos</h1>
   {% if pode_registar %}
   {% url 'inventory:consumo_novo' as url_novo %}
@@ -18,6 +17,7 @@ consumos registados. Um consumo não se apaga: anula-se, e o stock volta.{% endc
   {% if regras.meals_per_shift is not None %}Limite: <span class="font-dados">{{ regras.meals_per_shift }}</span> refeição por turno.{% endif %}
   {% if request.role == "ADMIN" %}<a href="{% url 'inventory:consumo_regras' %}" class="link-texto">Regras</a>{% endif %}
 </p>
+{% include "manage/inventory/_nav.html" %}
 
 <div class="mt-6 flex flex-wrap items-center justify-between gap-4">
   <div class="flex items-center gap-2">
@@ -67,7 +67,7 @@ consumos registados. Um consumo não se apaga: anula-se, e o stock volta.{% endc
   <article class="talao {% if c.cancelled_at %}opacity-60{% endif %}">
     <time class="block text-xs text-ardosia">{{ c.consumed_on|date:"d/m/Y" }} · {{ c.reference }} · registado por {{ c.created_by }}</time>
     <p class="mt-0.5 text-sm font-semibold">{{ c.who }} · {{ c.get_reason_display }}{% if c.over_limit %} · acima do limite{% endif %}{% if c.cancelled_at %} · anulado{% endif %}</p>
-    <p class="text-sm">{% for l in c.lines.all %}{{ l.item.name }} {{ l.quantity|numero }} {{ l.item.unit }}{% if not forloop.last %} · {% endif %}{% endfor %} · {% if c.value is not None %}{{ c.value|euros }}{% else %}sem custo{% endif %}</p>
+    <p class="text-sm">{% for l in c.lines.all %}{{ l.item.name }} {{ l.quantity|quantidade:l.item.unit }}{% if not forloop.last %} · {% endif %}{% endfor %} · {% if c.value is not None %}{{ c.value|euros }}{% else %}sem custo{% endif %}</p>
     {% if c.note %}<p class="text-sm text-ardosia">{{ c.note }}</p>{% endif %}
     {% if c.cancelled_at %}
     <p class="text-xs text-ardosia">Anulado por {{ c.cancelled_by }} a {{ c.cancelled_at|date:"d/m H:i" }}: {{ c.cancel_reason }}</p>

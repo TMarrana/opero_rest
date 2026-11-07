@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import PosProduct, SaleStockMovement, SalesDocument, SalesImport, SalesSettings
+from .models import PosProduct, SalesDocument, SalesImport, SalesSettings, SaleStockMovement
 
 
 @admin.register(SalesSettings)

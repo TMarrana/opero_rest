@@ -1,6 +1,6 @@
 """Fase 0: login e redirecionamento por perfil."""
 import pytest
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 
 pytestmark = pytest.mark.django_db
 
@@ -8,6 +8,20 @@ pytestmark = pytest.mark.django_db
 def test_login_page_renders(client):
     resp = client.get(reverse("accounts:login"))
     assert resp.status_code == 200
+
+
+def test_login_com_campo_de_email(client):
+    html = client.get(reverse("accounts:login")).content.decode()
+    assert 'type="email"' in html and 'autocomplete="username"' in html
+
+
+def test_campo_de_email_sem_correcoes_e_com_o_foco_e_o_limite_do_django():
+    from accounts.forms import LoginForm
+
+    attrs = LoginForm().fields["username"].widget.attrs
+    assert (attrs["inputmode"], attrs["autocapitalize"], attrs["spellcheck"]) == ("email", "none", "false")
+    # Trocar o widget não pode perder o que o AuthenticationForm lá pôs.
+    assert attrs["autofocus"] and attrs["maxlength"]
 
 
 def test_login_com_email_redireciona_gerente_para_backoffice(client, manager):
@@ -114,3 +128,29 @@ def test_falha_csrf_fora_do_login_continua_403(staff_user):
     client.force_login(staff_user)
     resp = client.post(reverse("accounts:logout"))
     assert resp.status_code == 403
+
+
+def test_sair_limpa_a_cache_do_telemovel(client, staff_user):
+    client.force_login(staff_user)
+    r = client.post(reverse("accounts:logout"))
+    assert r["Clear-Site-Data"] == '"cache", "storage"'
+
+
+class TestLimiteLogin:
+    URL = reverse_lazy("accounts:login")
+
+    def test_dez_falhas_bloqueiam_o_email(self, client, manager):
+        for _ in range(10):
+            client.post(self.URL, {"username": "gerente@tasca.pt", "password": "errada"})
+        r = client.post(self.URL, {"username": "GERENTE@tasca.pt", "password": "segredo-de-teste-123"})
+        assert "Demasiadas tentativas" in r.content.decode()
+        assert "_auth_user_id" not in client.session
+
+    def test_entrar_bem_limpa_as_falhas(self, client, manager):
+        for _ in range(9):
+            client.post(self.URL, {"username": "gerente@tasca.pt", "password": "errada"})
+        client.post(self.URL, {"username": "gerente@tasca.pt", "password": "segredo-de-teste-123"})
+        client.logout()
+        client.post(self.URL, {"username": "gerente@tasca.pt", "password": "errada"})
+        r = client.post(self.URL, {"username": "gerente@tasca.pt", "password": "segredo-de-teste-123"})
+        assert r.status_code == 302

@@ -60,7 +60,7 @@ ou da guia, como no ecrã Receções. Valores sem IVA.{% endcomment %}
   <div class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h2 class="cartao-titulo">Evolução do preço · {{ artigo.nome }}</h2>
-      <p class="mt-1 text-sm text-ardosia">Preço unitário em cada receção, por {{ artigo.unidade }}.{% if artigo.variacao is not None %} Do primeiro ao último: <span class="font-dados">{{ artigo.variacao|medida:"pct" }}</span>.{% endif %}</p>
+      <p class="mt-1 text-sm text-ardosia">Preço unitário em cada receção, por {{ artigo.unidade|unidade }}.{% if artigo.variacao is not None %} Do primeiro ao último: <span class="font-dados">{{ artigo.variacao|medida:"pct" }}</span>.{% endif %}</p>
     </div>
     <form method="get" class="flex items-center gap-2">
       <input type="hidden" name="inicio" value="{{ inicio|date:'Y-m-d' }}">
@@ -68,12 +68,12 @@ ou da guia, como no ecrã Receções. Valores sem IVA.{% endcomment %}
       {% for c in escolhidas %}<input type="hidden" name="casa" value="{{ c.pk }}">{% endfor %}
       <label for="artigo" class="sr-only">Artigo</label>
       <select id="artigo" name="artigo" class="campo-input max-w-[16rem]" onchange="this.form.submit()">
-        {% for a in artigos %}<option value="{{ a.nome }}|{{ a.unidade }}" {% if a.nome == artigo.nome and a.unidade == artigo.unidade %}selected{% endif %}>{{ a.nome }} ({{ a.unidade }})</option>{% endfor %}
+        {% for a in artigos %}<option value="{{ a.chave }}" {% if a.chave == artigo.chave %}selected{% endif %}>{{ a.nome }} ({{ a.unidade|unidade }})</option>{% endfor %}
       </select>
       <noscript><button type="submit" class="btn btn-fantasma">Ver</button></noscript>
     </form>
   </div>
-  <div class="mt-4">{% linha_precos artigo.precos artigo.unidade rotulo="Evolução do preço" %}</div>
+  <div class="mt-4">{% linha_precos artigo.precos artigo.unidade|unidade rotulo="Evolução do preço" %}</div>
 </section>
 {% endif %}
 
@@ -88,8 +88,8 @@ ou da guia, como no ecrã Receções. Valores sem IVA.{% endcomment %}
       <tbody>
         {% for a in artigos %}
         <tr>
-          <td class="font-medium"><a href="{% url_exportar a.nome|add:'|'|add:a.unidade 'artigo' %}" class="hover:underline">{{ a.nome }}</a><span class="block text-xs font-normal text-ardosia">{{ a.unidade }}</span></td>
-          <td class="td-dados">{{ a.quantidade|numero:3 }}</td>
+          <td class="font-medium"><a href="{% url_exportar a.nome|add:'|'|add:a.unidade 'artigo' %}" class="hover:underline">{{ a.nome }}</a><span class="block text-xs font-normal text-ardosia">{{ a.unidade|unidade }}</span></td>
+          <td class="td-dados">{{ a.quantidade|quantidade }}</td>
           <td class="td-dados">{{ a.total|euros }}</td>
           <td class="td-dados">{{ a.preco_medio|preco }}</td>
           <td class="td-dados">{{ a.minimo|preco }}</td>

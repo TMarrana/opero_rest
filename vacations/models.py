@@ -48,7 +48,7 @@ class VacationRequest(TimeStampedModel):
         CANCELADO = "CANCELADO", "Cancelado"
 
     worker = models.ForeignKey(
-        "workers.Worker", verbose_name="trabalhador", on_delete=models.CASCADE, related_name="vacation_requests"
+        "workers.Worker", verbose_name="trabalhador", on_delete=models.PROTECT, related_name="vacation_requests"
     )
     absence_type = models.ForeignKey(
         AbsenceType, verbose_name="tipo", on_delete=models.PROTECT, related_name="requests"

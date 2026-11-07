@@ -7,7 +7,7 @@ escolhe-se primeiro (GET), porque os artigos possíveis são os dessa casa.{% en
 <a href="{% url 'inventory:lista' %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Stock</a>
 <h1 class="mt-2 titulo-pagina">Transferir {{ item.name }}</h1>
 <p class="subtitulo-pagina">
-  Stock em {{ request.restaurant }}: <span class="font-dados font-semibold text-carvao">{{ item.current_stock }} {{ item.unit }}</span>.
+  Stock em {{ request.restaurant }}: <span class="font-dados font-semibold text-carvao">{{ item.current_stock|quantidade:item.unit }}</span>.
   Sai daqui e entra na outra casa, no mesmo momento, e fica no histórico das duas.
 </p>
 

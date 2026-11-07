@@ -1,5 +1,7 @@
 from django.utils.functional import SimpleLazyObject
 
+from core.permissions import PESSOAS, secoes_visiveis
+
 # Secção do rail do backoffice em que cada página vive, pelo início do endereço.
 _SECOES = (
     ("/gestao/grupo/", "grupo"),
@@ -23,7 +25,11 @@ def casa(request):
     from accounts.models import User
 
     role = getattr(request, "role", None)
-    ctx = {"perfil_ativo": User.Role(role).label if role else "", "nav_secao": _secao(request.path)}
+    ctx = {
+        "perfil_ativo": User.Role(role).label if role else "",
+        "nav_secao": _secao(request.path),
+        "secoes": secoes_visiveis(role),
+    }
     if role and getattr(request, "restaurant", None) is not None:
         ctx["contadores"] = SimpleLazyObject(lambda: _contadores(request))
     return ctx
@@ -51,7 +57,7 @@ def _contadores(request):
         .filter(current_stock__lte=F("minimum_stock"))
         .count(),
     }
-    if request.role in ("ADMIN", "MANAGER"):
+    if request.role in PESSOAS:
         pedidos = restaurant_scope(
             request, CorrectionRequest.objects.filter(status=CorrectionRequest.Status.PENDENTE)
         ).count()

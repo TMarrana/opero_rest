@@ -19,7 +19,7 @@ from inventory.services import register_count, register_movement
 from recipes import services as fichas
 from recipes.models import Recipe
 from sales import sintetico, stock
-from sales.models import PosProduct, SaleStockMovement, SalesSettings
+from sales.models import PosProduct, SalesSettings, SaleStockMovement
 from sales.services import import_saft
 from sales.sintetico import Doc
 

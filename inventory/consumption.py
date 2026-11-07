@@ -15,9 +15,9 @@ Quem regista (decidido a 2026-11-04): qualquer trabalhador regista, altera
 e anula os seus consumos, na app do colaborador; só o Gerente e o Admin
 mexem nos consumos dos outros e nos da casa.
 """
-import re
 import csv
 import io
+import re
 from collections import defaultdict
 from decimal import Decimal
 

@@ -1,8 +1,10 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from django.utils.text import capfirst
 
 from core.models import Restaurant
 
+from .formatos import normalizar_contacto
 from .models import Worker
 
 _INPUT = {"class": "campo-input"}
@@ -54,6 +56,14 @@ class WorkerForm(forms.ModelForm):
         self.fields["other_restaurants"].queryset = outras.distinct().order_by("name")
         if not self.fields["other_restaurants"].queryset.exists():
             del self.fields["other_restaurants"]
+
+    def clean_job_title(self):
+        """«copeiro» fica «Copeiro», ao lado de «Sala» e «Cozinha»."""
+        return capfirst(self.cleaned_data["job_title"].strip())
+
+    def clean_contact(self):
+        """Os telefones portugueses ficam todos «+351 965 852 489»."""
+        return normalizar_contacto(self.cleaned_data["contact"])
 
 
 class KioskCodeForm(forms.Form):

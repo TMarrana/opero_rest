@@ -5,13 +5,14 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.views import View
 from django.views.generic import TemplateView
 
+from accounts.services import dar_acesso, perfil_na_casa
 from core.mixins import ManagerRequiredMixin
 from core.utils import restaurant_scope, workers_scope
-
-from accounts.services import dar_acesso, perfil_na_casa
 
 from .forms import AccountCreateForm, AccountRoleForm, KioskCodeForm, WorkerForm, roles_que_gere
 from .models import Worker
@@ -81,11 +82,19 @@ class WorkerFormView(ManagerRequiredMixin, View):
         if restaurant is None:
             messages.error(request, "Ainda não há restaurante configurado. Crie-o no admin primeiro.")
             return redirect("workers:lista")
+        # Lido antes da validação: o is_valid() já escreve o POST na instância.
+        estava_ativo = worker is not None and worker.is_active
         form = WorkerForm(request.POST, instance=worker, restaurant=restaurant)
         if not form.is_valid():
             return render(request, "manage/workers/form.html", self._contexto(request, form, worker))
         novo = form.save(commit=False)
         novo.restaurant = restaurant
+        if novo.is_active:
+            novo.end_date = None  # reativar apaga a data de saída
+        elif estava_ativo:
+            # Tirar o visto de «ativo» é uma saída hoje, como o Desativar sem
+            # data; sem ela, a ficha saía do fecho do mês (attendance.selectors).
+            novo.end_date = timezone.localdate()
         novo.save()
         form.save_m2m()
         messages.success(request, "Trabalhador guardado" if worker else "Trabalhador criado")
@@ -114,8 +123,24 @@ class WorkerDeactivateView(ManagerRequiredMixin, View):
 
     def post(self, request, pk):
         worker = _worker_do_gerente(request, pk)
+        valor = request.POST.get("data_saida", "").strip()
+        if valor:
+            try:
+                saida = parse_date(valor)
+            except ValueError:  # bem formada mas inexistente, como 2026-02-31
+                saida = None
+            if saida is None:
+                messages.error(request, "A data de saída não é válida. Indique um dia no formato AAAA-MM-DD.")
+                return redirect("workers:editar", pk=pk)
+            if saida > timezone.localdate():
+                # Desativar é já: a ficha deixava de picar nos dias que ainda faltam.
+                messages.error(request, "A data de saída não pode ser no futuro. Desative a ficha no último dia de trabalho.")
+                return redirect("workers:editar", pk=pk)
+        else:
+            saida = timezone.localdate()
         worker.is_active = False
-        worker.save(update_fields=["is_active", "updated_at"])
+        worker.end_date = saida
+        worker.save(update_fields=["is_active", "end_date", "updated_at"])
         messages.success(request, f"{worker.full_name} desativado")
         return redirect("workers:lista")
 

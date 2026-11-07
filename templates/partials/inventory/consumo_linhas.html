@@ -1,4 +1,4 @@
-{% comment %}
+{% load interface %}{% comment %}
 Linhas de um consumo (backoffice e app do colaborador). Mostra `visiveis`
 linhas (3 por omissão) e o botão + abre a seguinte, até ao máximo de
 `linhas`. As linhas escondidas vão vazias e ficam de fora.
@@ -19,7 +19,7 @@ Parâmetros: linhas, visiveis, artigos (com `disponivel`).
         <td>
           <select x-ref="sel" x-on:change="ler()" name="item-{{ l.n }}" class="campo-input" aria-label="Artigo da linha {{ forloop.counter }}">
             <option value="">—</option>
-            {% for a in artigos %}<option value="{{ a.pk }}" data-stock="{{ a.disponivel|stringformat:'s' }}" data-unidade="{{ a.unit }}"{% if l.item == a.pk|stringformat:"s" %} selected{% endif %}>{{ a.name }} ({{ a.unit }}){% if a.reference_cost is None %} · sem custo{% endif %}</option>{% endfor %}
+            {% for a in artigos %}<option value="{{ a.pk }}" data-stock="{{ a.disponivel|stringformat:'s' }}" data-unidade="{{ a.unit|unidade }}"{% if l.item == a.pk|stringformat:"s" %} selected{% endif %}>{{ a.name }} ({{ a.unit|unidade }}){% if a.reference_cost is None %} · sem custo{% endif %}</option>{% endfor %}
           </select>
           <p x-show="falta" x-cloak class="mt-1 text-xs font-medium text-alerta-700" role="status">
             O stock fica negativo (<span x-text="stock > 0 ? 'há' : 'já está em'"></span> <span class="font-dados" x-text="stock.toLocaleString('pt-PT')"></span> <span x-text="unidade"></span>).

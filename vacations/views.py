@@ -60,6 +60,7 @@ class VacationListView(ManagerRequiredMixin, TemplateView):
                 p.saldo = balance(p.worker, p.start_date.year)["disponiveis"]
                 p.excede_saldo = p.days_taken > p.saldo
         ctx["pendentes"] = pendentes
+        ctx["hoje"] = timezone.localdate()
         ctx["historico"] = historico[:100]
         ctx["workers"] = restaurant_scope(self.request, Worker.objects.filter(is_active=True))
         ctx["estados"] = [

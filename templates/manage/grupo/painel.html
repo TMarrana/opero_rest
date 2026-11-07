@@ -2,55 +2,49 @@
 {% load vendas %}
 {% block title %}Grupo{% endblock %}
 {% block content %}
-{% comment %}Painel do grupo (Fase 9): uma linha por casa, com os sinais do
+{% comment %}Painel do grupo (Fase 9): um cartão por casa, com os sinais do
 dashboard de cada uma. Para agir, abre-se a casa, que passa a ser a ativa.{% endcomment %}
 <h1 class="titulo-pagina">{{ request.user.organization }}</h1>
 {% if request.user.organization.address %}<p class="mt-1 text-sm text-ardosia">Endereço: <span class="font-dados">{{ request.user.organization.address }}</span>. É aqui que entram as contas do grupo e que se ativam os tablets.</p>{% endif %}
 {% include "manage/grupo/_nav.html" %}
 
-<div class="mt-6 cartao">
-  <div class="overflow-x-auto">
-    <table class="tabela">
-      <thead>
-        <tr>
-          <th>Casa</th>
-          <th class="text-right">Stock baixo</th>
-          <th class="text-right">Em turno</th>
-          <th class="text-right">Por resolver</th>
-          <th class="text-right">Férias pendentes</th>
-          <th class="text-right">Correções pendentes</th>
-          <th class="text-right">{{ mes_por_fechar|date:"F" }} por aprovar</th>
-          <th class="text-right">Vendas de {{ mes_atual|date:"F" }}</th>
-          <th><span class="sr-only">Abrir</span></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for l in linhas %}
-        <tr>
-          <td class="font-medium">{{ l.casa.name }}{% if l.casa == request.restaurant %} <span class="text-xs font-normal text-ardosia">· casa ativa</span>{% endif %}</td>
-          <td class="td-dados text-right {% if l.stock_baixo %}font-semibold text-alerta{% endif %}">{{ l.stock_baixo }}</td>
-          <td class="td-dados text-right">{{ l.em_turno }}</td>
-          <td class="td-dados text-right {% if l.por_resolver %}font-semibold{% endif %}">{{ l.por_resolver }}</td>
-          <td class="td-dados text-right {% if l.ferias_pendentes %}font-semibold{% endif %}">{{ l.ferias_pendentes }}</td>
-          <td class="td-dados text-right {% if l.correcoes_pendentes %}font-semibold{% endif %}">{{ l.correcoes_pendentes }}</td>
-          <td class="td-dados text-right {% if l.por_aprovar %}font-semibold{% endif %}">{{ l.por_aprovar }}</td>
-          <td class="td-dados text-right">{% if l.ultimo_dia_vendas %}{{ l.vendas_mes|euros }}<span class="block text-xs text-ardosia">até {{ l.ultimo_dia_vendas|date:"d/m" }}</span>{% else %}<span class="text-ardosia">—</span>{% endif %}</td>
-          <td class="whitespace-nowrap text-right">
-            {% if l.casa != request.restaurant %}
-            <form method="post" action="{% url 'dashboard:mudar_casa' %}" class="inline">
-              {% csrf_token %}
-              <input type="hidden" name="casa" value="{{ l.casa.pk }}">
-              <button type="submit" class="link-acao">Abrir</button>
-            </form>
-            {% else %}
-            <a href="{% url 'dashboard:home' %}" class="link-acao">Abrir</a>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+<div class="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+  {% for l in linhas %}
+  <section class="cartao flex flex-col" aria-labelledby="casa-{{ l.casa.pk }}">
+    <div class="cartao-cabecalho">
+      <h2 id="casa-{{ l.casa.pk }}" class="cartao-titulo">{{ l.casa.name }}</h2>
+      {% if l.casa == request.restaurant %}<span class="text-xs text-ardosia">Casa ativa</span>{% endif %}
+    </div>
+    <dl class="grid flex-1 grid-cols-[1fr_auto] gap-x-4 gap-y-2.5 px-6 py-4 text-sm">
+      <dt class="text-ardosia">Stock baixo</dt>
+      <dd class="text-right font-dados {% if l.stock_baixo %}font-semibold text-alerta{% endif %}">{{ l.stock_baixo }}</dd>
+      <dt class="text-ardosia">Em turno</dt>
+      <dd class="text-right font-dados">{{ l.em_turno }}</dd>
+      <dt class="text-ardosia">Ponto por resolver</dt>
+      <dd class="text-right font-dados {% if l.por_resolver %}font-semibold text-alerta{% endif %}">{{ l.por_resolver }}</dd>
+      <dt class="text-ardosia">Férias pendentes</dt>
+      <dd class="text-right font-dados {% if l.ferias_pendentes %}font-semibold{% endif %}">{{ l.ferias_pendentes }}</dd>
+      <dt class="text-ardosia">Correções pendentes</dt>
+      <dd class="text-right font-dados {% if l.correcoes_pendentes %}font-semibold{% endif %}">{{ l.correcoes_pendentes }}</dd>
+      <dt class="text-ardosia">{{ mes_por_fechar|date:"F" }} por aprovar</dt>
+      <dd class="text-right font-dados {% if l.por_aprovar %}font-semibold{% endif %}">{{ l.por_aprovar }}</dd>
+      <dt class="text-ardosia">{{ l.vendas.legenda }}</dt>
+      <dd class="whitespace-nowrap text-right font-dados font-semibold">{% if l.vendas.valor is None %}<span class="font-normal text-ardosia">—</span>{% else %}{{ l.vendas.valor|euros }}{% endif %}</dd>
+    </dl>
+    <div class="flex justify-end border-t border-linha px-6 py-4">
+      {% if l.casa != request.restaurant %}
+      <form method="post" action="{% url 'dashboard:mudar_casa' %}">
+        {% csrf_token %}
+        <input type="hidden" name="casa" value="{{ l.casa.pk }}">
+        {% include "components/botao.html" with label="Abrir" tamanho="sm" %}
+      </form>
+      {% else %}
+      {% url 'dashboard:home' as url_dashboard %}
+      {% include "components/botao.html" with label="Abrir" tamanho="sm" href=url_dashboard %}
+      {% endif %}
+    </div>
+  </section>
+  {% endfor %}
 </div>
 <p class="mt-3 text-sm text-ardosia">Abrir muda a casa ativa e leva ao dashboard dessa casa.</p>
 {% endblock %}

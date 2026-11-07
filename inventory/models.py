@@ -200,7 +200,7 @@ class InternalConsumption(TimeStampedModel):
         DONO = "DONO", "Dono"
 
     restaurant = models.ForeignKey(
-        "core.Restaurant", verbose_name="restaurante", on_delete=models.CASCADE, related_name="consumptions"
+        "core.Restaurant", verbose_name="restaurante", on_delete=models.PROTECT, related_name="consumptions"
     )
     # Sem trabalhador, foi a casa: ofertas, provas, o dono.
     worker = models.ForeignKey(

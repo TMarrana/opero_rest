@@ -6,7 +6,12 @@
 estado do dia é só para leitura; o ponto pica-se no tablet.{% endcomment %}
 <header class="flex items-center justify-between">
   <img src="{% static 'img/logo-opero-escuro.png' %}" alt="Opero" class="block h-7 w-auto">
-  <p class="font-dados text-sm text-ardosia">{% now "H:i · l" %}</p>
+  <div class="flex items-center gap-2">
+    <p class="font-dados text-sm text-ardosia">{% now "H:i · l" %}</p>
+    {% if request.user.is_backoffice %}
+    <a href="{% url 'accounts:pos_login' %}" class="inline-flex min-h-toque items-center rounded-full px-4 text-sm font-semibold text-floresta transition-colors hover:bg-neutro-100">Gestão</a>
+    {% endif %}
+  </div>
 </header>
 
 <section class="cartao-perfil mt-5 p-5" aria-label="Estado de hoje">

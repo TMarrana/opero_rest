@@ -2,10 +2,9 @@
 {% load interface vendas %}
 {% block title %}Dashboard{% endblock %}
 {% block content %}
-{% now "G" as hora %}{% now "l, j \d\e F" as hoje_extenso %}
 <div>
-  <h1 class="titulo-pagina">{% with h=hora|add:0 %}{% if h < 12 %}Bom dia{% elif h < 20 %}Boa tarde{% else %}Boa noite{% endif %}{% endwith %}, {{ request.user.first_name|default:request.user }}.</h1>
-  <p class="subtitulo-pagina">{{ hoje_extenso|capfirst }} · {{ request.restaurant }}</p>
+  <h1 class="titulo-pagina">{{ saudacao }}, {{ request.user.first_name|default:request.user }}.</h1>
+  <p class="subtitulo-pagina">{{ dia_servico|date:"l, j \d\e F"|capfirst }} · {{ request.restaurant }}</p>
 </div>
 
 {# Os números do dia, um clique do seu módulo (o topo do dashboard do EMBER). #}
@@ -25,11 +24,12 @@
     <span><span class="block font-dados text-2xl font-bold leading-tight {% if contador_baixo %}text-alerta{% endif %}">{{ contador_baixo }}</span><span class="block text-xs text-ardosia">Abaixo do mínimo</span></span>
   </a>
   {% if ve_pessoas %}
-  <a href="{% url 'sales:vendas' %}" class="cartao cartao-link flex items-center gap-4 p-6">
+  {# Sem valor (nada importado, ou nada deste mês), o cartão leva a importar o SAF-T. #}
+  <a href="{% if vendas.valor is None %}{% url 'sales:importar' %}{% else %}{% url 'sales:vendas' %}{% endif %}" class="cartao cartao-link flex items-center gap-4 p-6">
     <span class="mosaico mosaico-floresta">{% icone "talao" %}</span>
     <span class="min-w-0">
-      <span class="block whitespace-nowrap font-dados text-xl font-bold leading-tight">{% if ultimo_dia_vendas %}{{ vendas_mes|euros }}{% else %}—{% endif %}</span>
-      <span class="block text-xs text-ardosia">Vendas de {% now "F" %}{% if ultimo_dia_vendas %} · até {{ ultimo_dia_vendas|date:"d/m" }}{% endif %}</span>
+      <span class="block whitespace-nowrap font-dados text-xl font-bold leading-tight">{% if vendas.valor is None %}—{% else %}{{ vendas.valor|euros }}{% endif %}</span>
+      <span class="block text-xs text-ardosia">{{ vendas.legenda }}</span>
     </span>
   </a>
   {% else %}
@@ -62,9 +62,9 @@
         <div class="flex gap-4 pt-3">
           <div class="w-52 shrink-0"></div>
           <div class="relative h-5 flex-1 text-[11px] text-ardosia">
-            {% for h in escala.horas %}
+            {% for h in escala.horas %}{% if not h.oculta %}
             <span class="absolute -translate-x-1/2 font-dados" style="left: {{ h.pos }}%">{{ h.hora }}</span>
-            {% endfor %}
+            {% endif %}{% endfor %}
             {% if escala.agora is not None %}
             <span class="absolute -translate-x-1/2 -top-0.5 rounded bg-chama px-1 font-dados font-semibold text-white" style="left: {{ escala.agora }}%">{{ escala.agora_txt }}</span>
             {% endif %}
@@ -137,9 +137,9 @@
         <span class="mosaico h-10 w-10 bg-alerta-50 text-alerta">{% icone "pacote" "h-[18px] w-[18px]" %}</span>
         <span class="min-w-0 flex-1">
           <span class="block truncate text-sm font-semibold">{{ item.name }}</span>
-          <span class="block text-xs text-ardosia">Mínimo <span class="font-dados">{{ item.minimum_stock }} {{ item.unit }}</span>{% if item.category %} · {{ item.category.name }}{% endif %}</span>
+          <span class="block text-xs text-ardosia">Mínimo <span class="font-dados">{{ item.minimum_stock|quantidade:item.unit }}</span>{% if item.category %} · {{ item.category.name }}{% endif %}</span>
         </span>
-        <span class="font-dados text-sm font-semibold text-alerta">{{ item.current_stock }} {{ item.unit }}</span>
+        <span class="font-dados text-sm font-semibold text-alerta">{{ item.current_stock|quantidade:item.unit }}</span>
       </li>
       {% endfor %}
     </ul>
@@ -169,7 +169,7 @@
           <span class="block truncate text-sm font-semibold">{{ mov.item.name }}</span>
           <span class="block truncate text-xs text-ardosia">{{ mov.get_movement_type_display }} · <span class="font-dados">{{ mov.occurred_at|date:"d M · H:i" }}</span> · {{ mov.created_by }}</span>
         </span>
-        <span class="font-dados text-sm font-semibold {% if mov.signed_quantity > 0 %}text-servico{% endif %}">{% if mov.signed_quantity > 0 %}+{% endif %}{{ mov.signed_quantity }} {{ mov.item.unit }}</span>
+        <span class="font-dados text-sm font-semibold {% if mov.signed_quantity > 0 %}text-servico{% endif %}">{% if mov.signed_quantity > 0 %}+{% endif %}{{ mov.signed_quantity|quantidade:mov.item.unit }}</span>
       </li>
       {% endfor %}
     </ul>
@@ -181,24 +181,24 @@
   {% if ve_pessoas %}
   <section class="cartao">
     <div class="cartao-cabecalho">
-      <h2 class="cartao-titulo">Férias pendentes</h2>
-      <a href="{% url 'vacations:lista' %}" class="link-ver">Decidir {% icone "seguinte" "h-4 w-4" %}</a>
+      <h2 class="cartao-titulo">Em férias</h2>
+      <a href="{% url 'vacations:lista' %}" class="link-ver">Férias {% icone "seguinte" "h-4 w-4" %}</a>
     </div>
-    {% if ferias_pendentes %}
+    {% if em_ferias %}
     <ul class="divide-y divide-linha">
-      {% for p in ferias_pendentes %}
+      {% for p in em_ferias %}
       <li class="flex items-center gap-4 px-6 py-3.5">
         <span class="avatar h-10 w-10 text-xs">{{ p.worker.full_name|iniciais }}</span>
         <span class="min-w-0 flex-1">
           <span class="block truncate text-sm font-semibold">{{ p.worker.full_name }}</span>
           <span class="block font-dados text-xs text-ardosia">{{ p.start_date|date:"d M" }} &rarr; {{ p.end_date|date:"d M" }}</span>
         </span>
-        {% include "components/badge.html" with label="Por decidir" variante="ambar" %}
+        {% include "components/badge.html" with label=p.absence_type.name variante="servico" %}
       </li>
       {% endfor %}
     </ul>
     {% else %}
-    <p class="vazio">Não há pedidos pendentes.</p>
+    <p class="vazio">Ninguém está de férias hoje.</p>
     {% endif %}
   </section>
   {% endif %}

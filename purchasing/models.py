@@ -163,7 +163,7 @@ class Receipt(TimeStampedModel):
     """Uma receção de mercadoria, com ou sem encomenda. Não se apaga."""
 
     restaurant = models.ForeignKey(
-        "core.Restaurant", verbose_name="restaurante", on_delete=models.CASCADE, related_name="receipts"
+        "core.Restaurant", verbose_name="restaurante", on_delete=models.PROTECT, related_name="receipts"
     )
     supplier = models.ForeignKey(Supplier, verbose_name="fornecedor", on_delete=models.PROTECT, related_name="receipts")
     order = models.ForeignKey(

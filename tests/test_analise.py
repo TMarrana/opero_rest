@@ -175,6 +175,17 @@ class TestAcesso:
 
 
 class TestPeriodoEExportacao:
+    def test_periodo_por_omissao_e_o_ultimo_mes_com_vendas(self, rf):
+        from analytics.views import periodo
+
+        inicio, fim, mes = periodo(rf.get("/gestao/analise/"), por_omissao=datetime.date(2026, 9, 25))
+        assert (inicio, fim) == (datetime.date(2026, 9, 1), datetime.date(2026, 9, 30))
+
+    def test_analise_abre_no_ultimo_mes_com_vendas(self, client, grupo, admin_user):
+        # As vendas do `grupo` são do mês passado; o mês corrente ainda não tem nenhuma.
+        client.force_login(admin_user)
+        assert client.get(reverse("analytics:inicio")).context["mes"] == MES
+
     def test_date_range(self, client, grupo, admin_user):
         a, _ = grupo
         client.force_login(admin_user)

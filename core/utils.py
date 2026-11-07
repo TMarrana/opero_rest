@@ -2,6 +2,18 @@ from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
 
+# Os meses em português escrevem-se com minúscula; o filtro `date:"F"` do
+# Django dá-os com maiúscula («Vendas de Novembro»).
+MESES = (
+    "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+    "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+)
+
+
+def nome_do_mes(dia):
+    """«novembro» para qualquer dia de novembro."""
+    return MESES[dia.month - 1]
+
 
 def restaurant_scope(request, qs, field="restaurant"):
     """
@@ -31,8 +43,8 @@ def parse_decimal(texto, campo="O valor"):
         return None
     try:
         valor = Decimal(texto)
-    except InvalidOperation:
-        raise ValidationError(f"{campo} «{texto}» não é um número.")
+    except InvalidOperation as exc:
+        raise ValidationError(f"{campo} «{texto}» não é um número.") from exc
     if valor < 0:
         raise ValidationError(f"{campo} não pode ser negativo.")
     return valor

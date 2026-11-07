@@ -8,13 +8,15 @@ sessão (Fase 7), por isso aqui só chegam sessões de email e password.
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 
+from core import permissions
+
 
 class RoleRequiredMixin(LoginRequiredMixin):
     """Exige um dos perfis em allowed_roles, na casa ativa do pedido
     (Fase 9, `core.middleware.ActiveRestaurantMiddleware`). Sem acesso a
     nenhuma casa, o perfil é None e o pedido é recusado."""
 
-    allowed_roles: tuple = ()
+    allowed_roles: tuple | frozenset = ()
 
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
@@ -26,21 +28,13 @@ class RoleRequiredMixin(LoginRequiredMixin):
 class AdminRequiredMixin(RoleRequiredMixin):
     """Só Admin: gestão de utilizadores e configuração da casa."""
 
-    def dispatch(self, request, *args, **kwargs):
-        from accounts.models import User
-
-        self.allowed_roles = (User.Role.ADMIN,)
-        return super().dispatch(request, *args, **kwargs)
+    allowed_roles = permissions.ADMIN
 
 
 class ManagerRequiredMixin(RoleRequiredMixin):
     """Admin ou Gerente: trabalhadores, ponto da equipa, férias."""
 
-    def dispatch(self, request, *args, **kwargs):
-        from accounts.models import User
-
-        self.allowed_roles = (User.Role.ADMIN, User.Role.MANAGER)
-        return super().dispatch(request, *args, **kwargs)
+    allowed_roles = permissions.PESSOAS
 
 
 class StockRequiredMixin(RoleRequiredMixin):
@@ -48,14 +42,10 @@ class StockRequiredMixin(RoleRequiredMixin):
     Admin, Gerente ou Responsável de stock.
     ⚠ Pressuposto a validar com AT (secção 7): o gerente pode criar
     artigos e registar movimentos. Restringir depois é retirar
-    User.Role.MANAGER desta lista.
+    User.Role.MANAGER de `core.permissions.STOCK`.
     """
 
-    def dispatch(self, request, *args, **kwargs):
-        from accounts.models import User
-
-        self.allowed_roles = (User.Role.ADMIN, User.Role.MANAGER, User.Role.STOCK)
-        return super().dispatch(request, *args, **kwargs)
+    allowed_roles = permissions.STOCK
 
 
 class StaffViewMixin(LoginRequiredMixin):

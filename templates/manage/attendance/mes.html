@@ -49,9 +49,11 @@
           <td class="td-dados">{{ l.total|horas }}</td>
           <td class="text-sm">
             {% if l.pronto %}<span class="text-ardosia">—</span>{% else %}
-            <a href="{% url 'attendance:pedidos' %}" class="link-acao-perigo">
+            {% if l.falta.por_resolver or l.falta.pedidos %}<a href="{% url 'attendance:pedidos' %}" class="link-acao-perigo">
               {% if l.falta.por_resolver %}{{ l.falta.por_resolver }} registo{{ l.falta.por_resolver|pluralize }}{% endif %}{% if l.falta.por_resolver and l.falta.pedidos %} · {% endif %}{% if l.falta.pedidos %}{{ l.falta.pedidos }} pedido{{ l.falta.pedidos|pluralize }}{% endif %}
             </a>{% endif %}
+            {# Quem entrou no último dia e ainda não saiu: o mês só se aprova depois da saída. #}
+            {% if l.falta.em_turno %}<span class="block text-ardosia">Ainda em turno</span>{% endif %}{% endif %}
           </td>
           <td class="text-sm">
             {% if l.fecho %}

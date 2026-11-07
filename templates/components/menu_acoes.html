@@ -1,0 +1,36 @@
+{% comment %}
+Menu «Mais ações» de uma linha (secção 4: a ação principal da linha fica à
+vista, em verde; as outras vêm para aqui). Usa-se pela tag de bloco da
+biblioteca `interface`, com ligações e formulários lá dentro:
+  {% menu_acoes %}
+    <a href="…" class="nav-item w-full">Editar</a>
+    <form method="post" action="…">{% csrf_token %}<button type="submit" class="nav-item w-full">Arquivar</button></form>
+  {% endmenu_acoes %}
+Abre com um clique ou com Enter; fecha com Esc (o foco volta ao botão), com
+um clique fora, e quando a página rola ou muda de tamanho. A lista é `fixed`
+e posiciona-se pelo botão, para o `overflow` do cartão e da tabela não a
+cortar; abre para cima quando não cabe por baixo.
+{% endcomment %}
+<div class="inline-block text-left"
+     x-data="{ aberto: false,
+               alternar() { this.aberto ? this.fechar() : this.abrir() },
+               abrir() {
+                 this.aberto = true
+                 this.$nextTick(() => {
+                   const b = this.$refs.botao.getBoundingClientRect(), p = this.$refs.painel
+                   const acima = b.bottom + p.offsetHeight + 8 > window.innerHeight && b.top > p.offsetHeight + 8
+                   p.style.top = (acima ? b.top - p.offsetHeight - 4 : b.bottom + 4) + 'px'
+                   p.style.right = (document.documentElement.clientWidth - b.right) + 'px'
+                 })
+               },
+               fechar(foco) { if (!this.aberto) return; this.aberto = false; if (foco) this.$refs.botao.focus() } }"
+     x-on:click.outside="fechar()" x-on:keydown.escape="fechar(true)"
+     x-on:scroll.window="fechar()" x-on:resize.window="fechar()">
+  <button type="button" x-ref="botao" class="link-acao"
+          aria-haspopup="true" aria-expanded="false" x-bind:aria-expanded="aberto" aria-controls="{{ id }}"
+          x-on:click="alternar()">{{ rotulo }}</button>
+  <div id="{{ id }}" x-ref="painel" x-show="aberto" x-cloak x-transition.opacity.duration.150ms
+       class="fixed z-40 w-56 rounded-2xl border border-linha bg-superficie p-1.5 text-left shadow-flutuante">
+    {{ conteudo }}
+  </div>
+</div>

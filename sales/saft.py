@@ -126,8 +126,8 @@ def open_upload(f):
         return f
     try:
         arquivo = zipfile.ZipFile(f)
-    except zipfile.BadZipFile:
-        raise SaftError("O .zip está danificado. Exporte o ficheiro outra vez.")
+    except zipfile.BadZipFile as exc:
+        raise SaftError("O .zip está danificado. Exporte o ficheiro outra vez.") from exc
     xmls = [i for i in arquivo.infolist() if not i.is_dir() and i.filename.lower().endswith(".xml")]
     if len(xmls) != 1:
         raise SaftError("O .zip tem de ter um só ficheiro XML, o SAF-T.")
@@ -165,15 +165,15 @@ def _decimal(elem, path, default=None):
         raise SaftError(f"Falta o campo {path} num documento.")
     try:
         return Decimal(valor)
-    except InvalidOperation:
-        raise SaftError(f"O campo {path} tem um valor que não é um número: {valor}.")
+    except InvalidOperation as exc:
+        raise SaftError(f"O campo {path} tem um valor que não é um número: {valor}.") from exc
 
 
 def _date(valor, campo):
     try:
         return datetime.date.fromisoformat(valor)
-    except ValueError:
-        raise SaftError(f"O campo {campo} tem uma data inválida: {valor or 'vazio'}.")
+    except ValueError as exc:
+        raise SaftError(f"O campo {campo} tem uma data inválida: {valor or 'vazio'}.") from exc
 
 
 def _header(elem):
@@ -207,8 +207,8 @@ def _document(elem):
     entrada = _text(elem, "SystemEntryDate")
     try:
         hora = datetime.datetime.fromisoformat(entrada)
-    except ValueError:
-        raise SaftError(f"O documento {numero} tem uma hora inválida: {entrada or 'vazia'}.")
+    except ValueError as exc:
+        raise SaftError(f"O documento {numero} tem uma hora inválida: {entrada or 'vazia'}.") from exc
     return Document(
         number=numero,
         doc_type=_text(elem, "InvoiceType"),
@@ -264,10 +264,10 @@ def parse(raw, on_header=None):
             elif nome in _SKIP:
                 elem.clear()
             pilha.pop()
-    except DefusedXmlException:
-        raise SaftError("O ficheiro traz declarações (DTD ou entidades) que um SAF-T não tem. Não foi lido.")
+    except DefusedXmlException as exc:
+        raise SaftError("O ficheiro traz declarações (DTD ou entidades) que um SAF-T não tem. Não foi lido.") from exc
     except ParseError as exc:
-        raise SaftError(f"O ficheiro não é um XML válido ({exc}). Confirme que é o SAF-T exportado pelo POS.")
+        raise SaftError(f"O ficheiro não é um XML válido ({exc}). Confirme que é o SAF-T exportado pelo POS.") from exc
     if header is None:
         raise SaftError("O ficheiro não tem o cabeçalho do SAF-T. Confirme que é o SAF-T exportado pelo POS.")
     return Saft(

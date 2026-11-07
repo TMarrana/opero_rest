@@ -9,6 +9,8 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
+from attendance.month import ensure_open, month_start, next_month
+
 from .holidays import national_holidays
 from .models import Allowance, BlockedPeriod, Holiday, VacationRequest
 
@@ -112,6 +114,39 @@ def blocking_period(worker, absence_type, start, end):
     )
 
 
+def overlapping_approved(worker, start, end, exclude=None):
+    """Ausências aprovadas do trabalhador que se cruzam com [start, end],
+    extremos incluídos. Duas aprovadas sobrepostas descontariam o saldo duas
+    vezes."""
+    cruzadas = VacationRequest.objects.filter(
+        worker=worker, status=VacationRequest.Status.APROVADO, start_date__lte=end, end_date__gte=start
+    ).select_related("absence_type")
+    if exclude is not None:
+        cruzadas = cruzadas.exclude(pk=exclude.pk)
+    return cruzadas
+
+
+def _ensure_months_open(worker, start, end):
+    """Recusa a alteração se algum dos meses que a ausência toca estiver
+    aprovado (invariante 8)."""
+    mes = month_start(start)
+    while mes <= month_start(end):
+        ensure_open(worker, mes)
+        mes = next_month(mes)
+
+
+def _ensure_can_approve(worker, start, end, exclude=None):
+    """Uma ausência só fica aprovada se nenhum dos meses que toca estiver
+    aprovado e se não se sobrepuser a outra aprovada."""
+    _ensure_months_open(worker, start, end)
+    outra = overlapping_approved(worker, start, end, exclude=exclude).order_by("start_date").first()
+    if outra is not None:
+        raise ValidationError(
+            f"Sobrepõe-se a {outra.absence_type.name} de {outra.start_date:%d/%m} a {outra.end_date:%d/%m}, "
+            "já aprovada. Recuse este pedido ou cancele a outra ausência."
+        )
+
+
 def create_request(*, worker, absence_type, start_date, end_date, half_day=False, note="", created_by=None):
     """Pedido de ausência.
 
@@ -120,6 +155,9 @@ def create_request(*, worker, absence_type, start_date, end_date, half_day=False
     - Um tipo que não precisa de aprovação fica aprovado logo (R-051).
     - Um pedido num período bloqueado é recusado na submissão, com o
       motivo (R-060). O gerente não está sujeito a esta regra.
+    - Uma ausência que nasce aprovada não toca num mês aprovado nem se
+      sobrepõe a outra aprovada. Um pedido pendente sobreposto aceita-se,
+      com o aviso visual da invariante 6.
     - Meio dia só num dia e em tipos que o permitam."""
     if absence_type.restaurant_id != worker.restaurant_id or absence_type.archived_at is not None:
         raise ValidationError("Escolha um tipo de ausência em uso.")
@@ -146,6 +184,8 @@ def create_request(*, worker, absence_type, start_date, end_date, half_day=False
         days_taken=dias,
         request_note=note.strip(),
     )
+    if created_by is not None or not absence_type.requires_approval:
+        _ensure_can_approve(worker, start_date, end_date)
     if created_by is not None:
         pedido.status = VacationRequest.Status.APROVADO
         pedido.decided_by = created_by
@@ -168,6 +208,8 @@ def decide_request(*, request_obj, user, approve, note=""):
         pedido = VacationRequest.objects.select_for_update().get(pk=request_obj.pk)
         if pedido.status != VacationRequest.Status.PENDENTE:
             raise ValidationError("Este pedido já foi decidido.")
+        if approve:
+            _ensure_can_approve(pedido.worker, pedido.start_date, pedido.end_date, exclude=pedido)
         pedido.status = VacationRequest.Status.APROVADO if approve else VacationRequest.Status.RECUSADO
         pedido.decided_by = user
         pedido.decided_at = timezone.now()
@@ -225,6 +267,7 @@ def cancel_by_manager(*, request_obj, user):
         pedido = VacationRequest.objects.select_for_update().get(pk=request_obj.pk)
         if not manager_can_cancel(pedido):
             raise ValidationError("Só se cancelam ausências aprovadas que ainda não acabaram.")
+        _ensure_months_open(pedido.worker, pedido.start_date, pedido.end_date)
         pedido.status = VacationRequest.Status.CANCELADO
         pedido.cancelled_at = timezone.now()
         pedido.cancelled_by = user

@@ -29,7 +29,15 @@ class LoginView(auth_views.LoginView):
 
 
 class LogoutView(auth_views.LogoutView):
-    pass
+    def post(self, request, *args, **kwargs):
+        """Além de terminar a sessão, apaga a cache e o armazenamento do
+        navegador deste site. Sem isto, o service worker do telemóvel
+        partilhado mostrava as páginas /equipa/ de quem saiu, sem rede.
+        O registo do service worker também cai e volta a fazer-se na
+        visita seguinte."""
+        resp = super().post(request, *args, **kwargs)
+        resp["Clear-Site-Data"] = '"cache", "storage"'
+        return resp
 
 
 def csrf_failure(request, reason=""):

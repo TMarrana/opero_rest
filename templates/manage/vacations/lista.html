@@ -29,11 +29,14 @@
             <td class="td-dados">{{ p.days_taken }}{% if p.saldo is not None %}<span class="block text-xs text-ardosia">saldo {{ p.saldo }}</span>{% endif %}</td>
             <td class="text-ardosia">{{ p.request_note|default:"—" }}</td>
             <td class="space-y-1">
+              {% if p.end_date < hoje %}
+              {% include "components/badge.html" with label="Datas já passaram" variante="alerta" %}
+              {% endif %}
               {% if p.has_overlap %}
               {% include "components/badge.html" with label="Sobrepõe aprovado" variante="alerta" %}
               {% elif p.excede_saldo %}
               {% include "components/badge.html" with label="Acima do saldo" variante="alerta" %}
-              {% else %}
+              {% elif p.end_date >= hoje %}
               <span class="text-sm text-ardosia">—</span>
               {% endif %}
             </td>

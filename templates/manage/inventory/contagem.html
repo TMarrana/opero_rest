@@ -41,13 +41,13 @@ diferença para o stock registado entra como um ajuste de origem contagem.{% end
           <tr>
             <td class="font-medium">{{ a.name }}{% if a.needs_count %} {% include "components/badge.html" with label="Stock negativo, contar" variante="alerta" %}{% endif %}</td>
             <td class="text-ardosia">{{ a.category.name }}</td>
-            <td class="td-dados">{{ a.current_stock|numero:3 }} {{ a.unit }}</td>
+            <td class="td-dados">{{ a.current_stock|quantidade:a.unit }}</td>
             <td class="td-dados">
               <label class="sr-only" for="contado_{{ a.pk }}">Contado de {{ a.name }}</label>
               <span class="inline-flex items-center gap-2">
                 <input type="text" inputmode="decimal" name="contado_{{ a.pk }}" id="contado_{{ a.pk }}" value="{{ a.valor }}"
                        class="campo-input w-28 text-right font-dados" autocomplete="off">
-                <span class="w-9 text-left text-sm text-ardosia">{{ a.unit }}</span>
+                <span class="w-9 text-left text-sm text-ardosia">{{ a.unit|unidade }}</span>
               </span>
             </td>
           </tr>

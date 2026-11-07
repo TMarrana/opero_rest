@@ -11,6 +11,7 @@ from attendance import month as mes
 from attendance.models import BreakType, CorrectionRequest, MonthClose
 from attendance.services import (
     add_manual_entry,
+    annul_entry,
     close_shift,
     correct_entry,
     decide_correction,
@@ -19,6 +20,7 @@ from attendance.services import (
     request_correction,
     start_break,
 )
+from core.utils import nome_do_mes
 from workers.models import Worker
 
 pytestmark = pytest.mark.django_db
@@ -68,6 +70,23 @@ class TestAprovacao:
     def test_mes_atual_nao_se_aprova(self, worker, manager):
         with pytest.raises(ValidationError, match="já terminou"):
             mes.approve_month(worker=worker, month=timezone.localdate(), user=manager)
+
+    def test_de_madrugada_quem_esta_em_turno_impede_a_aprovacao(self, worker, manager, mes_passado):
+        """Dia 1 à 1h: quem entrou às 20h do último dia do mês ainda não picou
+        a saída. Aprovar fechava o mês, e o tablet recusava-lhe depois a saída."""
+        fim = mes.month_range(mes_passado)[1]
+        open_shift(worker=worker, at=_local(fim.year, fim.month, fim.day, 20))
+        dia1 = mes.next_month(mes_passado)
+        agora = _local(dia1.year, dia1.month, 1, 1)
+        with pytest.raises(ValidationError, match="ainda está em turno"):
+            mes.approve_month(worker=worker, month=mes_passado, user=manager, now=agora)
+        assert mes.pending_items(worker, mes_passado, now=agora) == {"por_resolver": 0, "em_turno": 1, "pedidos": 0}
+
+    def test_fecho_mostra_quem_ainda_esta_em_turno(self, client, worker, manager):
+        entrada = open_shift(worker=worker, at=timezone.now() - H)
+        client.force_login(manager)
+        html = client.get(reverse("attendance:mes") + f"?mes={entrada.work_date:%Y-%m}").content.decode()
+        assert "Ainda em turno" in html
 
     def test_aprovar_todos_os_prontos(self, restaurant, worker, manager, mes_passado):
         outro = Worker.objects.create(restaurant=restaurant, full_name="Rui")
@@ -143,7 +162,7 @@ class TestExportacao:
     def test_dashboard_avisa_mes_por_fechar(self, client, worker, manager, mes_passado):
         client.force_login(manager)
         html = client.get(reverse("dashboard:home")).content.decode()
-        assert "está por fechar" in html
+        assert f"O mês de <span class=\"font-dados\">{nome_do_mes(mes_passado)} de {mes_passado.year}</span> está por fechar" in html
         mes.approve_month(worker=worker, month=mes_passado, user=manager)
         assert "está por fechar" not in client.get(reverse("dashboard:home")).content.decode()
 
@@ -247,3 +266,143 @@ class TestDetalheDoMes:
         )
         assert resp.status_code == 302 and resp["Location"] == url_mes
         assert worker.time_entries.get().corrections.get().reason == ""
+
+
+class TestQuemEntraNoMes:
+    def test_quem_saiu_a_meio_do_mes_entra_no_fecho_e_no_csv(self, client, manager, restaurant, mes_passado):
+        w = Worker.objects.create(restaurant=restaurant, full_name="Rita Saiu")
+        add_manual_entry(worker=w, user=manager, check_in=_dia(mes_passado, 3), check_out=_dia(mes_passado, 3, 17))
+        w.is_active, w.end_date = False, _dia(mes_passado, 15).date()
+        w.save()
+        client.force_login(manager)
+        url = reverse("attendance:mes") + f"?mes={mes_passado:%Y-%m}"
+        assert "Rita Saiu" in client.get(url).content.decode()
+        mes.approve_month(worker=w, month=mes_passado, user=manager)
+        assert "Rita Saiu" in client.get(url + "&exportar=csv").content.decode()
+
+    def test_quem_comeca_depois_do_mes_nao_esta_por_aprovar(self, client, manager, restaurant, mes_passado):
+        Worker.objects.create(
+            restaurant=restaurant, full_name="Jorge Novo", start_date=timezone.localdate().replace(day=1)
+        )
+        client.force_login(manager)
+        url = reverse("attendance:mes") + f"?mes={mes_passado:%Y-%m}"
+        assert "Jorge Novo" not in client.get(url).content.decode()
+        assert "por fechar" not in client.get(reverse("dashboard:home")).content.decode()
+
+    def test_desativar_guarda_a_data_de_saida(self, client, manager, restaurant):
+        w = Worker.objects.create(restaurant=restaurant, full_name="Ana Sai")
+        client.force_login(manager)
+        client.post(reverse("workers:desativar", args=[w.pk]), {"data_saida": "2026-10-31"})
+        w.refresh_from_db()
+        assert not w.is_active and w.end_date == datetime.date(2026, 10, 31)
+
+    def test_desativar_sem_data_usa_hoje(self, client, manager, restaurant):
+        w = Worker.objects.create(restaurant=restaurant, full_name="Ana Sai")
+        client.force_login(manager)
+        client.post(reverse("workers:desativar", args=[w.pk]), {"data_saida": ""})
+        w.refresh_from_db()
+        assert not w.is_active and w.end_date == timezone.localdate()
+
+    def test_data_de_saida_invalida_nao_desativa(self, client, manager, restaurant):
+        w = Worker.objects.create(restaurant=restaurant, full_name="Ana Sai")
+        client.force_login(manager)
+        resp = client.post(reverse("workers:desativar", args=[w.pk]), {"data_saida": "31/02/2026"}, follow=True)
+        w.refresh_from_db()
+        assert w.is_active and w.end_date is None
+        assert "data de saída" in resp.content.decode()
+
+    def test_data_de_saida_no_futuro_nao_desativa(self, client, manager, restaurant):
+        """Desativar é já: com uma data futura, a pessoa deixava logo de picar
+        nos dias que ainda lhe faltam trabalhar."""
+        w = Worker.objects.create(restaurant=restaurant, full_name="Ana Sai")
+        client.force_login(manager)
+        amanha = timezone.localdate() + datetime.timedelta(days=1)
+        resp = client.post(reverse("workers:desativar", args=[w.pk]), {"data_saida": amanha.isoformat()}, follow=True)
+        w.refresh_from_db()
+        assert w.is_active and w.end_date is None
+        assert "A data de saída não pode ser no futuro" in resp.content.decode()
+
+    def test_ficha_com_historico_pede_a_data_de_saida_ao_desativar(self, client, manager, restaurant, mes_passado):
+        w = Worker.objects.create(restaurant=restaurant, full_name="Ana Historico")
+        add_manual_entry(worker=w, user=manager, check_in=_dia(mes_passado, 3), check_out=_dia(mes_passado, 3, 17))
+        client.force_login(manager)
+        html = client.get(reverse("workers:editar", args=[w.pk])).content.decode()
+        hoje = f"{timezone.localdate():%Y-%m-%d}"
+        assert 'name="data_saida"' in html and f'value="{hoje}"' in html and f'max="{hoje}"' in html
+        assert 'form="apagar-trabalhador-form"' in html and 'id="apagar-trabalhador-form"' in html
+
+    def test_reativar_limpa_a_data_de_saida(self, client, manager, restaurant):
+        w = Worker.objects.create(
+            restaurant=restaurant,
+            full_name="Ana Volta",
+            job_title="Sala",
+            contact="912345678",
+            start_date=datetime.date(2025, 1, 2),
+            is_active=False,
+            end_date=datetime.date(2026, 1, 31),
+        )
+        client.force_login(manager)
+        resp = client.post(
+            reverse("workers:editar", args=[w.pk]),
+            {
+                "full_name": "Ana Volta",
+                "job_title": "Sala",
+                "contact": "912345678",
+                "start_date": "2025-01-02",
+                "is_active": "on",
+            },
+        )
+        assert resp.status_code == 302
+        w.refresh_from_db()
+        assert w.is_active and w.end_date is None
+
+    def test_desativar_pela_caixa_da_ficha_guarda_hoje_como_saida(self, client, manager, restaurant):
+        """Tirar o visto de «Trabalhador ativo» é uma saída, como o botão
+        Desativar sem data. Sem data de saída, quem não picou nesse mês
+        desaparecia do fecho e do CSV."""
+        from attendance.selectors import workers_for_month
+
+        w = Worker.objects.create(
+            restaurant=restaurant, full_name="Ana Sai", job_title="Sala", contact="912345678",
+            start_date=datetime.date(2025, 1, 2),
+        )
+        client.force_login(manager)
+        dados = {"full_name": "Ana Sai", "job_title": "Sala", "contact": "912345678", "start_date": "2025-01-02"}
+        assert client.post(reverse("workers:editar", args=[w.pk]), dados).status_code == 302
+        w.refresh_from_db()
+        assert not w.is_active and w.end_date == timezone.localdate()
+        assert w in workers_for_month(Worker.objects.all(), timezone.localdate())
+
+    def test_editar_ficha_ja_inativa_mantem_a_data_de_saida(self, client, manager, restaurant):
+        w = Worker.objects.create(
+            restaurant=restaurant, full_name="Ana Saiu", job_title="Sala", contact="912345678",
+            start_date=datetime.date(2025, 1, 2), is_active=False, end_date=datetime.date(2026, 1, 31),
+        )
+        client.force_login(manager)
+        dados = {"full_name": "Ana Saiu", "job_title": "Sala", "contact": "912345678", "start_date": "2025-01-02",
+                 "notes": "Pode voltar no verão"}
+        assert client.post(reverse("workers:editar", args=[w.pk]), dados).status_code == 302
+        w.refresh_from_db()
+        assert not w.is_active and w.end_date == datetime.date(2026, 1, 31)
+
+    def test_seletor_ignora_registos_anulados_e_saidas_anteriores(self, manager, restaurant, mes_passado):
+        from attendance.selectors import workers_for_month
+
+        anulado = Worker.objects.create(restaurant=restaurant, full_name="Anulado", is_active=False)
+        entrada = add_manual_entry(
+            worker=anulado, user=manager, check_in=_dia(mes_passado, 3), check_out=_dia(mes_passado, 3, 17)
+        )
+        annul_entry(entry=entrada, user=manager, reason="engano")
+        com_registo = Worker.objects.create(restaurant=restaurant, full_name="Com registo", is_active=False)
+        add_manual_entry(
+            worker=com_registo, user=manager, check_in=_dia(mes_passado, 4), check_out=_dia(mes_passado, 4, 17)
+        )
+        Worker.objects.create(restaurant=restaurant, full_name="Ativo")
+        Worker.objects.create(
+            restaurant=restaurant,
+            full_name="Saiu antes",
+            is_active=False,
+            end_date=mes_passado - datetime.timedelta(days=1),
+        )
+        nomes = [w.full_name for w in workers_for_month(Worker.objects.all(), mes_passado)]
+        assert nomes == ["Ativo", "Com registo"]

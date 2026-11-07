@@ -193,6 +193,13 @@ class TestPermissoesPessoas:
 
 
 class TestFluxoBackoffice:
+    def test_dia_sem_registos_mostra_0h00_no_trabalhado(self, client, worker, manager):
+        client.force_login(manager)
+        corpo = client.get(reverse("attendance:dia")).content.decode()
+        linha = corpo[corpo.index(worker.full_name):]
+        linha = linha[:linha.index("</tr>")]
+        assert "Sem registos" in linha and ">0h00<" in linha
+
     def test_dia_mostra_por_resolver_de_dia_anterior(self, client, worker, manager):
         open_shift(worker=worker, at=timezone.now() - datetime.timedelta(days=1, hours=2))
         client.force_login(manager)

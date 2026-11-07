@@ -120,6 +120,23 @@ STORAGES = {
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Logs para a consola (o alojamento recolhe o stdout). Erros de pedidos
+# (500) saem com traceback.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simples": {"format": "%(asctime)s %(levelname)s %(name)s %(message)s"},
+    },
+    "handlers": {
+        "consola": {"class": "logging.StreamHandler", "formatter": "simples"},
+    },
+    "loggers": {
+        "django": {"handlers": ["consola"], "level": "INFO"},
+        "django.request": {"handlers": ["consola"], "level": "ERROR", "propagate": False},
+    },
+}
+
 # Ponto (Fase 5). Horas a partir das quais uma entrada sem saída fica por
 # resolver e deixa de contar para os totais (R-013). Valor provisório,
 # a decidir com a AT (secção 12 do plano).

@@ -1,0 +1,8 @@
+{% comment %}Campo da data de saída no modal de desativar (fora do <form> do
+modal, ligado a ele por form=). Por omissão, hoje, e nunca depois de hoje:
+desativar é já (workers.views.WorkerDeactivateView).{% endcomment %}
+<div class="mt-4 space-y-1.5">
+  <label for="data-saida" class="block text-sm font-medium text-carvao">Data de saída</label>
+  <input id="data-saida" type="date" name="data_saida" form="{{ form_id }}" value="{% now 'Y-m-d' %}" max="{% now 'Y-m-d' %}" class="campo-input font-dados">
+  <p class="text-xs text-ardosia">O último dia em que trabalhou. Até lá, entra no fecho do mês.</p>
+</div>

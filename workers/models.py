@@ -41,6 +41,7 @@ class Worker(TimeStampedModel):
         related_name="worker",
     )
     start_date = models.DateField("data de início", null=True, blank=True)
+    end_date = models.DateField("data de saída", null=True, blank=True)
     notes = models.TextField("notas", blank=True)
     # Código de ponto do tablet partilhado (Fase 7), guardado com o hasher
     # de passwords. É da ficha e não da conta: quem não tem conta pica na

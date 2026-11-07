@@ -1,3 +1,7 @@
+import datetime
+import math
+
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import F
@@ -6,13 +10,19 @@ from django.utils import timezone
 from django.views import View
 from django.views.generic import TemplateView
 
-from accounts.models import BACKOFFICE_ROLES
-from attendance.models import CorrectionRequest, TimeEntry
+from accounts.models import BACKOFFICE_ROLES, User
+from attendance.models import CorrectionRequest, MonthClose, TimeEntry
+from attendance.month import month_range, previous_month
+from attendance.selectors import desvios_do_dia, overlapping_entries, workers_for_month
 from core.middleware import SESSION_KEY
 from core.mixins import GroupAdminRequiredMixin, RoleRequiredMixin
-from core.utils import restaurant_scope, workers_scope
+from core.utils import nome_do_mes, restaurant_scope, workers_scope
 from inventory.models import Item, StockMovement
+from sales.reports import resumo, ultimo_dia
+from sales.services import dia_de_servico
+from shifts.models import Shift
 from vacations.models import VacationRequest
+from workers.models import Worker
 
 # O dashboard avisa quando o último dia de vendas importado tem mais do que isto.
 VENDAS_ATRASO_DIAS = 7
@@ -25,14 +35,16 @@ class DashboardView(RoleRequiredMixin, TemplateView):
     template_name = "manage/dashboard.html"
 
     def dispatch(self, request, *args, **kwargs):
-        from accounts.models import User
-
         self.allowed_roles = (User.Role.ADMIN, User.Role.MANAGER, User.Role.STOCK)
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         request = self.request
+
+        # De madrugada, «hoje» ainda é o dia de serviço anterior e a saudação é «Boa noite».
+        ctx["dia_servico"] = dia_de_servico(request.restaurant)
+        ctx["saudacao"] = saudacao(timezone.localtime().hour)
 
         itens_baixos = (
             restaurant_scope(request, Item.objects.filter(is_active=True))
@@ -60,8 +72,19 @@ class DashboardView(RoleRequiredMixin, TemplateView):
                 .order_by("start_date"),
                 field="worker__restaurant",
             )
-            ctx["ferias_pendentes"] = pendentes[:6]
+            # Quem está fora hoje: ausências aprovadas que apanham o dia de hoje.
+            hoje = ctx["dia_servico"]
             ctx["ferias_pendentes_total"] = pendentes.count()
+            ctx["ferias_pendentes_passadas"] = pendentes.filter(end_date__lt=hoje).count()
+            ctx["em_ferias"] = restaurant_scope(
+                request,
+                VacationRequest.objects.filter(
+                    status=VacationRequest.Status.APROVADO, start_date__lte=hoje, end_date__gte=hoje
+                )
+                .select_related("worker", "absence_type")
+                .order_by("end_date", "worker__full_name"),
+                field="worker__restaurant",
+            )
             entradas = restaurant_scope(request, TimeEntry.objects.all())
             ctx["em_turno"] = (
                 entradas.filter(check_out__isnull=True).resolved().select_related("worker").order_by("check_in")
@@ -69,23 +92,19 @@ class DashboardView(RoleRequiredMixin, TemplateView):
             ctx["por_resolver"] = entradas.unresolved().count()
             # Aviso de mês por fechar: a partir do dia 1, até todos os
             # trabalhadores ativos terem o mês anterior aprovado.
-            from attendance.models import MonthClose
-            from attendance.month import previous_month
-            from workers.models import Worker
-
             anterior = previous_month(timezone.localdate())
-            ativos = restaurant_scope(request, Worker.objects.filter(is_active=True))
+            do_mes = workers_for_month(restaurant_scope(request, Worker.objects.all()), anterior)
             aprovados = MonthClose.objects.filter(
-                worker__in=ativos, month=anterior, reopened_at__isnull=True
+                worker__in=do_mes, month=anterior, reopened_at__isnull=True
             ).count()
             ctx["mes_por_fechar"] = anterior
-            ctx["por_aprovar"] = ativos.count() - aprovados
+            ctx["por_aprovar"] = do_mes.count() - aprovados
             # Vendas (Fase 10): avisa quando o último dia importado ficou para trás.
-            from attendance.month import month_range
-            from sales.reports import resumo, ultimo_dia
-
             ctx["ultimo_dia_vendas"] = ultimo_dia(request.restaurant)
-            ctx["vendas_mes"] = resumo(request.restaurant, *month_range(timezone.localdate())).total
+            mes_vendas = timezone.localdate()
+            ctx["vendas"] = cartao_vendas(
+                resumo(request.restaurant, *month_range(mes_vendas)).total, ctx["ultimo_dia_vendas"], mes_vendas
+            )
             if ctx["ultimo_dia_vendas"] is not None:
                 atraso = (timezone.localdate() - ctx["ultimo_dia_vendas"]).days
                 ctx["vendas_atraso"] = atraso if atraso > VENDAS_ATRASO_DIAS else 0
@@ -93,29 +112,40 @@ class DashboardView(RoleRequiredMixin, TemplateView):
                 request, CorrectionRequest.objects.filter(status=CorrectionRequest.Status.PENDENTE)
             ).count()
             ctx.update(turnos_de_hoje(request))
-            from attendance.views import overlapping_entries
-
             ctx["sobrepostos"] = len(overlapping_entries(request))
         return ctx
 
 
+def cartao_vendas(total, ultimo_dia, hoje):
+    """O cartão das vendas do mês de `hoje`. Sem nada importado, ou sem
+    nenhum dia deste mês, não há valor (o cartão mostra «—», não um 0,00 €
+    que se lê como zero vendas) e a legenda diz porquê."""
+    if ultimo_dia is None:
+        return {"valor": None, "legenda": "Ainda não há vendas importadas"}
+    mes = nome_do_mes(hoje)
+    if ultimo_dia < hoje.replace(day=1):
+        return {"valor": None, "legenda": f"Sem vendas de {mes} · último dia {ultimo_dia:%d/%m}"}
+    return {"valor": total, "legenda": f"Vendas de {mes} · até {ultimo_dia:%d/%m}"}
+
+
+def saudacao(hora):
+    """«Boa noite» de madrugada (antes das 5h) e a partir das 20h; «Bom dia»
+    até ao meio-dia; «Boa tarde» no resto."""
+    if hora < 5 or hora >= 20:
+        return "Boa noite"
+    return "Bom dia" if hora < 12 else "Boa tarde"
+
+
 def turnos_de_hoje(request, agora=None):
-    """Os turnos publicados de hoje nesta casa, um por pessoa, com o ponto ao
+    """Os turnos publicados de hoje (o dia de serviço: de madrugada, antes da
+    hora de corte, ainda é o dia anterior) nesta casa, um por pessoa, com o ponto ao
     lado: em turno, já saiu, em falta (passou a hora de entrada mais a
     tolerância e não picou) ou ainda por entrar. Quem picou sem turno
     planeado aparece no fim. As ausências aprovadas tiram o turno da lista
     (fica em reserva, R-033)."""
-    import datetime
-
-    from django.conf import settings
-
-    from attendance.views import _desvios
-    from shifts.models import Shift
-    from workers.models import Worker
-
     agora = agora or timezone.now()
-    dia = timezone.localdate(agora)
     casa = request.restaurant
+    dia = dia_de_servico(casa, agora)
     tolerancia = datetime.timedelta(minutes=settings.SHIFT_TOLERANCE_MINUTES)
     workers = workers_scope(request, Worker.objects.all())
 
@@ -152,7 +182,7 @@ def turnos_de_hoje(request, agora=None):
                 "turnos": previstos,
                 "registos": do_dia,
                 "estado": estado,
-                "desvios": [d for d in _desvios(previstos, do_dia, agora) if d != "Sem marcação"],
+                "desvios": [d for d in desvios_do_dia(previstos, do_dia, agora) if d != "Sem marcação"],
             }
         )
     sem_turno = [
@@ -180,6 +210,10 @@ TONS = {
 }
 
 
+# Largura, em pontos percentuais da escala, que a etiqueta «agora» tapa de cada lado.
+ETIQUETA_AGORA_PONTOS = 4
+
+
 def _pct(fracao):
     """Percentagem para um `style`: em texto, com ponto decimal (o Django
     escreveria vírgula, à portuguesa, e o CSS não a lê)."""
@@ -191,9 +225,6 @@ def _escala(linhas, dia, agora):
     primeiro turno ou entrada até depois do último fim (no mínimo 8 horas;
     um turno que passa a meia-noite estica para lá das 24). Acrescenta a
     cada linha as barras do turno e do ponto, em percentagem da largura."""
-    import datetime
-    import math
-
     zero = timezone.make_aware(datetime.datetime.combine(dia, datetime.time()))
 
     def horas(momento):
@@ -232,12 +263,18 @@ def _escala(linhas, dia, agora):
         ]
     passo = 1 if total <= 12 else 2
     agora_h = horas(agora)
+    agora_pos = 100 * (agora_h - inicio) / total if inicio <= agora_h <= fim else None
+
+    def oculta(h):
+        """A etiqueta «agora» tapa as horas a menos de 4 pontos percentuais."""
+        return agora_pos is not None and abs(100 * (h - inicio) / total - agora_pos) < ETIQUETA_AGORA_PONTOS
+
     return {
         "horas": [
-            {"hora": f"{h % 24:02d}h", "pos": _pct((h - inicio) / total)}
+            {"hora": f"{h % 24:02d}h", "pos": _pct((h - inicio) / total), "oculta": oculta(h)}
             for h in range(inicio, fim + 1, passo)
         ],
-        "agora": _pct((agora_h - inicio) / total) if inicio <= agora_h <= fim else None,
+        "agora": _pct((agora_h - inicio) / total) if agora_pos is not None else None,
         "agora_txt": f"{timezone.localtime(agora):%H:%M}",
     }
 
@@ -259,18 +296,12 @@ class SwitchRestaurantView(LoginRequiredMixin, View):
 
 def _sinais(restaurant):
     """Os sinais do dashboard de uma casa, em números (painel do grupo)."""
-    from attendance.models import MonthClose
-    from attendance.month import previous_month
-    from workers.models import Worker
-
     entradas = TimeEntry.objects.filter(restaurant=restaurant)
-    ativos = Worker.objects.filter(restaurant=restaurant, is_active=True)
     anterior = previous_month(timezone.localdate())
-    aprovados = MonthClose.objects.filter(worker__in=ativos, month=anterior, reopened_at__isnull=True).count()
-    from attendance.month import month_range
-    from sales.reports import resumo, ultimo_dia
-
-    vendas_mes = resumo(restaurant, *month_range(timezone.localdate())).total
+    do_mes = workers_for_month(Worker.objects.filter(restaurant=restaurant), anterior)
+    aprovados = MonthClose.objects.filter(worker__in=do_mes, month=anterior, reopened_at__isnull=True).count()
+    hoje = timezone.localdate()
+    vendas = cartao_vendas(resumo(restaurant, *month_range(hoje)).total, ultimo_dia(restaurant), hoje)
     return {
         "casa": restaurant,
         "stock_baixo": Item.objects.filter(restaurant=restaurant, is_active=True, current_stock__lte=F("minimum_stock")).count(),
@@ -282,9 +313,8 @@ def _sinais(restaurant):
         "correcoes_pendentes": CorrectionRequest.objects.filter(
             restaurant=restaurant, status=CorrectionRequest.Status.PENDENTE
         ).count(),
-        "por_aprovar": ativos.count() - aprovados,
-        "vendas_mes": vendas_mes,
-        "ultimo_dia_vendas": ultimo_dia(restaurant),
+        "por_aprovar": do_mes.count() - aprovados,
+        "vendas": vendas,
     }
 
 
@@ -296,9 +326,6 @@ class GroupDashboardView(GroupAdminRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        from attendance.month import previous_month
-
         ctx["linhas"] = [_sinais(casa) for casa in self.request.casas]
         ctx["mes_por_fechar"] = previous_month(timezone.localdate())
-        ctx["mes_atual"] = timezone.localdate()
         return ctx

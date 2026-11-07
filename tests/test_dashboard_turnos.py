@@ -8,7 +8,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from attendance.services import close_shift, open_shift
-from dashboard.views import turnos_de_hoje
+from dashboard.views import saudacao, turnos_de_hoje
+from sales.services import dia_de_servico
 from shifts.models import Shift
 from shifts.services import create_shift
 from workers.models import Worker
@@ -66,7 +67,7 @@ def test_linha_do_tempo(restaurant, equipa):
     open_shift(worker=equipa["Ana"], at=hora(10, 30))
     r = turnos_de_hoje(SimpleNamespace(restaurant=restaurant), agora=hora(12))
     escala = r["escala"]
-    assert escala["horas"][0] == {"hora": "10h", "pos": "0.00"}
+    assert escala["horas"][0] == {"hora": "10h", "pos": "0.00", "oculta": False}
     # Das 10h à 1h da noite (15 h): marcas de 2 em 2 horas, a última à meia-noite.
     assert [h["hora"] for h in escala["horas"]] == ["10h", "12h", "14h", "16h", "18h", "20h", "22h", "00h"]
     assert escala["agora"] == "13.33" and escala["agora_txt"] == "12:00"
@@ -93,9 +94,55 @@ def test_so_os_turnos_desta_casa(restaurant, equipa):
     assert r["turnos_hoje"] == []
 
 
+SEXTA = datetime.date(2026, 11, 6)
+SABADO = datetime.date(2026, 11, 7)
+
+
+def _sabado(h, m):
+    return timezone.make_aware(datetime.datetime(2026, 11, 7, h, m))
+
+
+def test_de_madrugada_mostra_o_servico_da_noite(restaurant, equipa):
+    turno(restaurant, equipa["Ana"], datetime.time(20), datetime.time(2), dia=SEXTA)
+    r = turnos_de_hoje(SimpleNamespace(restaurant=restaurant), agora=_sabado(1, 30))
+    assert [l["worker"] for l in r["turnos_hoje"]] == [equipa["Ana"]]
+
+
+def test_etiqueta_agora_esconde_a_hora_por_baixo(restaurant, equipa):
+    # Escala das 11h às 26h (02h de sábado), de 2 em 2 horas: «01h» fica a 93,3%
+    # e a hora atual (01:21) a 95,7%, a menos de 4 pontos.
+    turno(restaurant, equipa["Ana"], datetime.time(11), datetime.time(16), dia=SEXTA)
+    turno(restaurant, equipa["Bruno"], datetime.time(20), datetime.time(2), dia=SEXTA)
+    r = turnos_de_hoje(SimpleNamespace(restaurant=restaurant), agora=_sabado(1, 21))
+    horas = {h["hora"]: h["oculta"] for h in r["escala"]["horas"]}
+    assert horas["01h"] is True and horas["23h"] is False
+
+
+def test_sem_marcador_agora_nenhuma_hora_fica_oculta(restaurant, equipa):
+    # Às 03h de sábado a escala de sexta (10h–24h) já não chega à hora atual.
+    turno(restaurant, equipa["Ana"], datetime.time(10), datetime.time(14), dia=SEXTA)
+    r = turnos_de_hoje(SimpleNamespace(restaurant=restaurant), agora=_sabado(3, 0))
+    assert r["escala"]["agora"] is None
+    assert not any(h["oculta"] for h in r["escala"]["horas"])
+
+
+@pytest.mark.parametrize("h,texto", [(1, "Boa noite"), (4, "Boa noite"), (5, "Bom dia"), (9, "Bom dia"),
+                                     (12, "Boa tarde"), (15, "Boa tarde"), (19, "Boa tarde"), (20, "Boa noite"), (21, "Boa noite")])
+def test_saudacao(h, texto):
+    assert saudacao(h) == texto
+
+
+def test_dia_de_servico_de_madrugada_e_o_dia_anterior(restaurant):
+    assert dia_de_servico(restaurant, agora=_sabado(1, 30)) == SEXTA
+
+
+def test_dia_de_servico_depois_do_corte_e_o_proprio_dia(restaurant):
+    assert dia_de_servico(restaurant, agora=_sabado(5, 0)) == SABADO
+
+
 class TestCard:
     def test_gerente_ve_o_card(self, client, restaurant, manager, equipa):
-        hoje = timezone.localdate()
+        hoje = dia_de_servico(restaurant)
         turno(restaurant, equipa["Carla"], datetime.time(0, 1), datetime.time(23, 59), dia=hoje)
         client.force_login(manager)
         html = client.get(reverse("dashboard:home")).content.decode()

@@ -29,6 +29,14 @@ def service_date(local_entry, cutoff_hour):
     return (local_entry - datetime.timedelta(hours=cutoff_hour)).date()
 
 
+def dia_de_servico(restaurant, agora=None):
+    """O «hoje» de uma casa: de madrugada, antes da hora de corte, ainda é o
+    dia de serviço anterior (o jantar das 20h segue às 01h). Os registos de
+    ponto mantêm o `work_date` do dia civil; só muda o que os ecrãs chamam hoje."""
+    local = timezone.localtime(agora or timezone.now())
+    return service_date(local, SalesSettings.for_restaurant(restaurant).day_cutoff_hour)
+
+
 def _check_header(restaurant):
     def check(header):
         if not header.version.startswith("1.04"):
@@ -94,7 +102,7 @@ def import_saft(*, restaurant, upload, user):
     try:
         ficheiro = saft.parse(saft.open_upload(upload), on_header=_check_header(restaurant))
     except saft.SaftError as exc:
-        raise ValidationError(str(exc))
+        raise ValidationError(str(exc)) from exc
     if not ficheiro.has_sales_invoices:
         raise ValidationError(
             "O ficheiro não traz documentos de venda (SalesInvoices). Exporte o SAF-T de faturação, e não o de contabilidade."

@@ -293,6 +293,7 @@ class TestTransferencias:
             {"destino": casa_b.pk, "destination_item": "novo", "quantity": "5", "note": "falta para o jantar"},
         )
         assert resp.status_code == 302
+        assert "Transferido: 5 kg de Arroz para Tasca da Baixa" in client.get(resp.url).content.decode()
         novo = Item.objects.get(restaurant=casa_b, name="Arroz")
         assert novo.current_stock == Decimal("5") and novo.unit == Item.Unit.KG
         assert novo.category.name == "Mercearia"

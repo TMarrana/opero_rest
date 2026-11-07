@@ -6,9 +6,15 @@ que falhe sem rede. Uso: ``{% icone "pacote" %}`` ou
 ``{% icone "relogio" "h-4 w-4 text-ardosia" %}``.
 """
 
+import uuid
+
 from django import template
+from django.template.loader import render_to_string
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
+
+from core.formatos import quantidade, unidade
+from core.utils import nome_do_mes
 
 register = template.Library()
 
@@ -94,6 +100,13 @@ def iniciais(nome):
     return (partes[0][0] + partes[-1][0]).upper()
 
 
+# «outubro»: o mês por extenso e em minúscula ({{ mes|nome_do_mes }}).
+register.filter("nome_do_mes", nome_do_mes)
+# «4 kg», «0,22 L»: {{ item.current_stock|quantidade:item.unit }}; só a unidade: {{ item.unit|unidade }}.
+register.filter("quantidade", quantidade)
+register.filter("unidade", unidade)
+
+
 @register.simple_tag(takes_context=True)
 def url_exportar(context, formato, chave="exportar"):
     """O endereço da página com os mesmos filtros e o formato de exportação
@@ -103,6 +116,16 @@ def url_exportar(context, formato, chave="exportar"):
         query.pop(k, None)
     query[chave] = formato
     return "?" + query.urlencode()
+
+
+@register.simple_block_tag
+def menu_acoes(content, rotulo="Mais ações"):
+    """As ações de uma linha que não são a principal, num menu «Mais ações»
+    ({% menu_acoes %}…{% endmenu_acoes %}; ver components/menu_acoes.html)."""
+    return render_to_string(
+        "components/menu_acoes.html",
+        {"conteudo": content, "rotulo": rotulo, "id": f"menu-acoes-{uuid.uuid4().hex[:8]}"},
+    )
 
 
 @register.inclusion_tag("components/exportar.html", takes_context=True)

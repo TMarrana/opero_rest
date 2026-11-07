@@ -6,8 +6,8 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 
-from core.models import Organization, Restaurant
 from core.middleware import subdomain_of
+from core.models import Organization, Restaurant
 from workers.models import Worker
 
 from .quiosque import ativar_tablet
