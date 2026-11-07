@@ -9,6 +9,9 @@
     <p class="mt-3 text-sm text-ardosia">A sua conta ainda não está ligada a uma ficha de trabalhador. Peça ao gerente para a associar em Trabalhadores.</p>
   </div>
 </div>
+{% if request.user.is_backoffice %}
+<a href="{% url 'dashboard:home' %}" class="btn btn-primario mt-6 w-full">Ir para a gestão</a>
+{% endif %}
 <form method="post" action="{% url 'accounts:logout' %}" class="mt-6">
   {% csrf_token %}
   <button type="submit" class="flex min-h-toque w-full items-center justify-center gap-2 rounded-full text-sm font-semibold text-ardosia transition-colors hover:bg-perigo-50 hover:text-perigo">{% icone "sair" "h-5 w-5" %}Sair</button>

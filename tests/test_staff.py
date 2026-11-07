@@ -322,6 +322,33 @@ class TestAppColaborador:
         assert resp.status_code == 200
         assert "Falta a ficha de trabalhador" in resp.content.decode()
 
+    def test_sem_ficha_com_backoffice_tem_caminho_para_a_gestao(self, client, manager):
+        client.force_login(manager)
+        html = client.get(reverse("staff:home")).content.decode()
+        assert f'href="{reverse("dashboard:home")}"' in html
+        assert "Ir para a gestão" in html
+        assert "Sair" in html
+
+    def test_colaborador_sem_backoffice_nao_ve_a_gestao(self, client, marta, staff_user):
+        client.force_login(staff_user)
+        for url in [reverse("staff:home"), reverse("staff:historico")]:
+            html = client.get(url).content.decode()
+            assert f'href="{reverse("dashboard:home")}"' not in html
+            assert "Gestão" not in html
+
+    def test_cabecalho_da_app_liga_a_gestao_ao_backoffice(self, client, manager, restaurant):
+        Worker.objects.create(restaurant=restaurant, full_name="Gerente Teste", user=manager)
+        client.force_login(manager)
+        html = client.get(reverse("staff:historico")).content.decode()
+        assert f'href="{reverse("dashboard:home")}"' in html
+        assert ">Gestão<" in html
+
+    def test_gestao_tem_a_minha_app_no_menu_da_conta(self, client, manager):
+        client.force_login(manager)
+        html = client.get(reverse("dashboard:home")).content.decode()
+        assert f'href="{reverse("staff:home")}"' in html
+        assert "A minha app" in html
+
     def test_staff_app_has_no_mark_button(self, client, marta, staff_user):
         client.force_login(staff_user)
         corpo = client.get(reverse("staff:home")).content.decode()
