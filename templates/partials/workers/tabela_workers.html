@@ -8,13 +8,15 @@
       </thead>
       <tbody>
         {% for w in workers %}
-        <tr {% if not w.is_active %}class="opacity-50"{% endif %}>
-          <td><span class="flex items-center gap-3"><span class="avatar h-9 w-9 text-xs">{{ w.full_name|iniciais }}</span><span><span class="block font-semibold">{{ w.full_name }}</span>{% if w.restaurant_id != request.restaurant.pk %}<span class="block text-xs text-ardosia">Casa principal: {{ w.restaurant.name }}</span>{% endif %}</span></span></td>
-          <td class="text-ardosia">{{ w.job_title|default:"—" }}</td>
-          <td class="whitespace-nowrap text-ardosia">{{ w.contact|default:"—" }}</td>
-          <td>{% if w.has_code %}{% include "components/badge.html" with label="Definido" variante="neutro" %}{% else %}<span class="text-sm text-ardosia">—</span>{% endif %}</td>
-          <td>{% if w.user %}{% include "components/badge.html" with label="Com conta" variante="neutro" %}{% else %}<span class="text-sm text-ardosia">—</span>{% endif %}</td>
-          <td>{% if w.is_active %}{% include "components/badge.html" with label="Ativo" variante="servico" %}{% else %}{% include "components/badge.html" with label="Inativo" %}{% endif %}</td>
+        {# Inativo: esbatem-se as células, menos a das ações; um opacity no <tr> passava para o painel «Mais ações». #}
+        {% with esbatido=w.is_active|yesno:",opacity-50" %}
+        <tr>
+          <td class="{{ esbatido }}"><span class="flex items-center gap-3"><span class="avatar h-9 w-9 text-xs">{{ w.full_name|iniciais }}</span><span><span class="block font-semibold">{{ w.full_name }}</span>{% if w.restaurant_id != request.restaurant.pk %}<span class="block text-xs text-ardosia">Casa principal: {{ w.restaurant.name }}</span>{% endif %}</span></span></td>
+          <td class="text-ardosia {{ esbatido }}">{{ w.job_title|default:"—" }}</td>
+          <td class="whitespace-nowrap text-ardosia {{ esbatido }}">{{ w.contact|default:"—" }}</td>
+          <td class="{{ esbatido }}">{% if w.has_code %}{% include "components/badge.html" with label="Definido" variante="neutro" %}{% else %}<span class="text-sm text-ardosia">—</span>{% endif %}</td>
+          <td class="{{ esbatido }}">{% if w.user %}{% include "components/badge.html" with label="Com conta" variante="neutro" %}{% else %}<span class="text-sm text-ardosia">—</span>{% endif %}</td>
+          <td class="{{ esbatido }}">{% if w.is_active %}{% include "components/badge.html" with label="Ativo" variante="servico" %}{% else %}{% include "components/badge.html" with label="Inativo" %}{% endif %}</td>
           <td class="whitespace-nowrap text-right">
             {% if w.restaurant_id != request.restaurant.pk %}
             <span class="text-sm text-ardosia">A ficha é de {{ w.restaurant.name }}</span>
@@ -30,6 +32,7 @@
             {% endif %}
           </td>
         </tr>
+        {% endwith %}
         {% endfor %}
       </tbody>
     </table>

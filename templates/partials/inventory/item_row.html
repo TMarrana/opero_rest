@@ -1,9 +1,9 @@
-{% load interface %}<tr id="item-{{ item.pk }}" {% if oob %}hx-swap-oob="true"{% endif %} {% if not item.is_active %}class="opacity-50"{% endif %}>
-  <td class="font-medium">{{ item.name }}{% if not item.is_active %} <span class="text-xs text-ardosia">(inativo)</span>{% endif %}</td>
-  <td class="text-ardosia">{{ item.category.name }}</td>
-  <td class="td-dados">{{ item.current_stock|quantidade:item.unit }}</td>
-  <td class="td-dados text-ardosia">{{ item.minimum_stock|quantidade:item.unit }}</td>
-  <td>
+{% load interface %}{# Inativo: esbatem-se as células, menos a das ações; um opacity no <tr> passava para o painel «Mais ações». #}{% with esbatido=item.is_active|yesno:",opacity-50" %}<tr id="item-{{ item.pk }}" {% if oob %}hx-swap-oob="true"{% endif %}>
+  <td class="font-medium {{ esbatido }}">{{ item.name }}{% if not item.is_active %} <span class="text-xs text-ardosia">(inativo)</span>{% endif %}</td>
+  <td class="text-ardosia {{ esbatido }}">{{ item.category.name }}</td>
+  <td class="td-dados {{ esbatido }}">{{ item.current_stock|quantidade:item.unit }}</td>
+  <td class="td-dados text-ardosia {{ esbatido }}">{{ item.minimum_stock|quantidade:item.unit }}</td>
+  <td class="{{ esbatido }}">
     {% if item.needs_count %}
     {% include "components/badge.html" with label="Stock negativo, contar" variante="alerta" %}
     {% elif item.is_low %}
@@ -24,4 +24,4 @@
       {% endmenu_acoes %}
     </div>
   </td>
-</tr>
+</tr>{% endwith %}
