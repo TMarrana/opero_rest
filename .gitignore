@@ -15,6 +15,7 @@ media/
 
 # Ferramentas locais
 /tools/tailwindcss.exe
+/tools/tailwindcss
 /tools/cloudflared.exe
 
 # IDE / SO
