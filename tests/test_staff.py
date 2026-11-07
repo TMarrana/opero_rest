@@ -448,8 +448,8 @@ class TestDashboard:
     def test_comando_demo_e_idempotente(self, db):
         from django.core.management import call_command
 
-        call_command("demo", verbosity=0)
-        call_command("demo", verbosity=0)
+        call_command("demo", verbosity=0, forcar=True)
+        call_command("demo", verbosity=0, forcar=True)
         from core.models import Restaurant
 
         assert Restaurant.objects.filter(slug="tasca-da-esquina").count() == 1

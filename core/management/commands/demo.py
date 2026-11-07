@@ -5,6 +5,8 @@ completo de cada perfil. Idempotente: correr duas vezes não duplica.
 
     python manage.py demo
 
+So corre com DEBUG=True; num ambiente de demonstracao, --forcar.
+
 Contas criadas (password de todas: demo1234):
     admin@tasca.pt · gerente@tasca.pt · stock@tasca.pt · marta@tasca.pt
     dono@tasca.pt (Admin do grupo, Fase 9)
@@ -17,8 +19,9 @@ Ribeira. O gerente tem acesso às duas.
 import datetime
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from attendance.services import add_manual_entry, open_shift
@@ -37,7 +40,20 @@ PASSWORD = "demo1234"
 class Command(BaseCommand):
     help = "Cria dados de demonstração para o percurso dos quatro perfis."
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--forcar",
+            action="store_true",
+            help="Corre mesmo com DEBUG=False (so para ambientes de demonstracao).",
+        )
+
     def handle(self, *args, **options):
+        # Cria um superutilizador com password conhecida: nunca em producao.
+        if not settings.DEBUG and not options["forcar"]:
+            raise CommandError(
+                "O demo so corre em desenvolvimento (DEBUG=True). "
+                "Use --forcar num ambiente de demonstracao."
+            )
         restaurant, criado = Restaurant.objects.get_or_create(
             slug="tasca-da-esquina", defaults={"name": "Tasca da Esquina"}
         )
