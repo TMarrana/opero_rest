@@ -6,18 +6,23 @@ from decimal import Decimal
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.db.models import ProtectedError
 from django.urls import reverse
 from django.utils import timezone
 
-from attendance.services import open_shift
+from attendance.services import add_manual_entry, annul_entry, open_shift
+from core.models import Restaurant
 from inventory import consumption
 from inventory.models import Category, InternalConsumption, Item, StockMovement
 from inventory.services import register_movement
 from workers.models import Worker
+from workers.services import delete_blockers, delete_worker
 
 pytestmark = pytest.mark.django_db
 User = get_user_model()
 
+H = datetime.timedelta(hours=1)
 FICHA = {"full_name": "Ana Lopes", "job_title": "Sala", "contact": "912345678", "start_date": "2026-01-05", "is_active": "on"}
 
 
@@ -131,3 +136,38 @@ class TestApagar:
         assert client.post(reverse("workers:desativar", args=[ana.pk])).status_code == 403
         ana.refresh_from_db()
         assert ana.is_active
+
+
+class TestRegistosProtegidos:
+    """Os registos com valor legal não se apagam em cascata, nem por código."""
+
+    def test_ficha_com_registos_nao_se_apaga_nem_por_codigo(self, restaurant, manager):
+        w = Worker.objects.create(restaurant=restaurant, full_name="Rui Registo")
+        agora = timezone.now()
+        add_manual_entry(worker=w, user=manager, check_in=agora - 3 * H, check_out=agora - H)
+        with pytest.raises(ProtectedError):
+            w.delete()
+
+    def test_casa_com_registos_nao_se_apaga(self):
+        # Nenhuma conta aponta para a casa: só o registo de ponto a protege.
+        casa = Restaurant.objects.create(name="Casa Protegida", slug="casa-protegida")
+        outra = Restaurant.objects.create(name="Outra Casa", slug="outra-casa")
+        gerente = User.objects.create_user(
+            email="gerente@outra.pt", password="segredo-de-teste-123", restaurant=outra, role=User.Role.MANAGER
+        )
+        w = Worker.objects.create(restaurant=casa, full_name="Rui Registo")
+        agora = timezone.now()
+        add_manual_entry(worker=w, user=gerente, check_in=agora - 3 * H, check_out=agora - H)
+        with pytest.raises(ProtectedError):
+            casa.delete()
+
+    def test_registo_apagado_tambem_impede_apagar_a_ficha(self, restaurant, manager):
+        w = Worker.objects.create(restaurant=restaurant, full_name="Rui Registo")
+        agora = timezone.now()
+        entrada = add_manual_entry(worker=w, user=manager, check_in=agora - 3 * H, check_out=agora - H)
+        annul_entry(entry=entrada, user=manager, reason="engano")
+        assert not w.time_entries.exists()  # fora das listas, mas guardado
+        assert delete_blockers(w) == ["1 registo de ponto"]
+        with pytest.raises(ValidationError):
+            delete_worker(worker=w, user=manager)
+        assert Worker.objects.filter(pk=w.pk).exists()

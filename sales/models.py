@@ -81,7 +81,7 @@ class SalesImport(TimeStampedModel):
     """Uma importação de um ficheiro SAF-T numa casa."""
 
     restaurant = models.ForeignKey(
-        "core.Restaurant", verbose_name="restaurante", on_delete=models.CASCADE, related_name="sales_imports"
+        "core.Restaurant", verbose_name="restaurante", on_delete=models.PROTECT, related_name="sales_imports"
     )
     file_name = models.CharField("ficheiro", max_length=200)
     file_hash = models.CharField("hash do ficheiro", max_length=64, db_index=True)
@@ -157,7 +157,7 @@ class SalesDocument(TimeStampedModel):
     SALE_TYPES = (Type.FT, Type.FS, Type.FR)
 
     restaurant = models.ForeignKey(
-        "core.Restaurant", verbose_name="restaurante", on_delete=models.CASCADE, related_name="sales_documents"
+        "core.Restaurant", verbose_name="restaurante", on_delete=models.PROTECT, related_name="sales_documents"
     )
     sales_import = models.ForeignKey(
         SalesImport, verbose_name="importação", on_delete=models.PROTECT, related_name="documents"

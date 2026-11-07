@@ -78,12 +78,12 @@ class TimeEntry(TimeStampedModel):
         GERENTE = "GERENTE", "Gerente"
 
     worker = models.ForeignKey(
-        "workers.Worker", verbose_name="trabalhador", on_delete=models.CASCADE, related_name="time_entries"
+        "workers.Worker", verbose_name="trabalhador", on_delete=models.PROTECT, related_name="time_entries"
     )
     # A casa onde picou, que pode não ser a principal (Fase 9). Por omissão,
     # a casa principal do trabalhador.
     restaurant = models.ForeignKey(
-        "core.Restaurant", verbose_name="casa", on_delete=models.CASCADE, related_name="time_entries"
+        "core.Restaurant", verbose_name="casa", on_delete=models.PROTECT, related_name="time_entries"
     )
     check_in = models.DateTimeField("entrada")
     check_out = models.DateTimeField("saída", null=True, blank=True)
@@ -331,7 +331,7 @@ class CorrectionRequest(TimeStampedModel):
         RECUSADO = "RECUSADO", "Recusado"
 
     worker = models.ForeignKey(
-        "workers.Worker", verbose_name="trabalhador", on_delete=models.CASCADE, related_name="correction_requests"
+        "workers.Worker", verbose_name="trabalhador", on_delete=models.PROTECT, related_name="correction_requests"
     )
     entry = models.ForeignKey(
         TimeEntry,
@@ -344,7 +344,7 @@ class CorrectionRequest(TimeStampedModel):
     # Quem decide é o gerente desta casa: a do registo, ou, num registo
     # que falta, a casa onde o colaborador diz que trabalhou (Fase 9).
     restaurant = models.ForeignKey(
-        "core.Restaurant", verbose_name="casa", on_delete=models.CASCADE, related_name="correction_requests"
+        "core.Restaurant", verbose_name="casa", on_delete=models.PROTECT, related_name="correction_requests"
     )
     kind = models.CharField("tipo", max_length=10, choices=Kind.choices)
     old_check_in = models.DateTimeField("entrada registada", null=True, blank=True)
@@ -396,10 +396,10 @@ class MonthClose(TimeStampedModel):
     mês aprova-se de novo com uma linha nova."""
 
     restaurant = models.ForeignKey(
-        "core.Restaurant", verbose_name="restaurante", on_delete=models.CASCADE, related_name="month_closes"
+        "core.Restaurant", verbose_name="restaurante", on_delete=models.PROTECT, related_name="month_closes"
     )
     worker = models.ForeignKey(
-        "workers.Worker", verbose_name="trabalhador", on_delete=models.CASCADE, related_name="month_closes"
+        "workers.Worker", verbose_name="trabalhador", on_delete=models.PROTECT, related_name="month_closes"
     )
     month = models.DateField("mês")  # sempre o dia 1
     approved_by = models.ForeignKey(
