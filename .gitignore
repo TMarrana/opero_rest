@@ -30,3 +30,4 @@ htmlcov/
 # Estudo de engenharia reversa (repo git proprio)
 /re-factorial/
 /re-factorial-handoff-*.zip
+/saft-teste/
