@@ -71,6 +71,23 @@ class TestAprovacao:
         with pytest.raises(ValidationError, match="já terminou"):
             mes.approve_month(worker=worker, month=timezone.localdate(), user=manager)
 
+    def test_de_madrugada_quem_esta_em_turno_impede_a_aprovacao(self, worker, manager, mes_passado):
+        """Dia 1 à 1h: quem entrou às 20h do último dia do mês ainda não picou
+        a saída. Aprovar fechava o mês, e o tablet recusava-lhe depois a saída."""
+        fim = mes.month_range(mes_passado)[1]
+        open_shift(worker=worker, at=_local(fim.year, fim.month, fim.day, 20))
+        dia1 = mes.next_month(mes_passado)
+        agora = _local(dia1.year, dia1.month, 1, 1)
+        with pytest.raises(ValidationError, match="ainda está em turno"):
+            mes.approve_month(worker=worker, month=mes_passado, user=manager, now=agora)
+        assert mes.pending_items(worker, mes_passado, now=agora) == {"por_resolver": 0, "em_turno": 1, "pedidos": 0}
+
+    def test_fecho_mostra_quem_ainda_esta_em_turno(self, client, worker, manager):
+        entrada = open_shift(worker=worker, at=timezone.now() - H)
+        client.force_login(manager)
+        html = client.get(reverse("attendance:mes") + f"?mes={entrada.work_date:%Y-%m}").content.decode()
+        assert "Ainda em turno" in html
+
     def test_aprovar_todos_os_prontos(self, restaurant, worker, manager, mes_passado):
         outro = Worker.objects.create(restaurant=restaurant, full_name="Rui")
         open_shift(worker=outro, at=_dia(mes_passado, 10))

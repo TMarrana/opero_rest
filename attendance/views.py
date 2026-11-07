@@ -329,7 +329,7 @@ class MonthView(ManagerRequiredMixin, View):
                     "dias_trabalhados": sum(1 for d in dias if d["entradas"]),
                     "total": total,
                     "falta": falta,
-                    "pronto": not falta["por_resolver"] and not falta["pedidos"],
+                    "pronto": not any(falta.values()),
                     "fecho": fechos.get(w.pk),
                 }
             )

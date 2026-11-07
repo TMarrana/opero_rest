@@ -50,35 +50,46 @@ def ensure_open(worker, *days):
             )
 
 
-def pending_items(worker, month):
-    """O que impede a aprovação: registos por resolver e pedidos de
-    correção pendentes no mês."""
+def pending_items(worker, month, now=None):
+    """O que impede a aprovação: registos por resolver, o turno que ainda
+    está a decorrer e pedidos de correção pendentes no mês. O turno aberto
+    conta porque, de madrugada no dia 1, quem entrou no último dia ainda não
+    picou a saída, e um mês aprovado já não a aceitava (ensure_open)."""
     inicio, fim = month_range(month)
-    por_resolver = TimeEntry.objects.filter(worker=worker, work_date__range=(inicio, fim)).unresolved()
+    abertos = TimeEntry.objects.filter(worker=worker, work_date__range=(inicio, fim), check_out__isnull=True)
     pedidos = CorrectionRequest.objects.filter(worker=worker, status=CorrectionRequest.Status.PENDENTE).filter(
         Q(entry__work_date__range=(inicio, fim))
         | Q(entry__isnull=True, new_check_in__date__range=(inicio, fim))
     )
-    return {"por_resolver": por_resolver.count(), "pedidos": pedidos.count()}
+    return {
+        "por_resolver": abertos.unresolved(now).count(),
+        "em_turno": abertos.resolved(now).count(),
+        "pedidos": pedidos.count(),
+    }
 
 
-def approve_month(*, worker, month, user):
+def approve_month(*, worker, month, user, now=None):
     month = month_start(month)
-    if month >= month_start(timezone.localdate()):
+    if month >= month_start(timezone.localdate(now)):
         raise ValidationError("Só se aprova um mês que já terminou.")
     with transaction.atomic():
         if MonthClose.objects.select_for_update().filter(
             worker=worker, month=month, reopened_at__isnull=True
         ).exists():
             raise ValidationError(f"O mês de {worker.full_name} já está aprovado.")
-        falta = pending_items(worker, month)
+        falta = pending_items(worker, month, now)
+        motivos = []
         if falta["por_resolver"] or falta["pedidos"]:
             partes = []
             if falta["por_resolver"]:
                 partes.append(f"{falta['por_resolver']} registo(s) por resolver")
             if falta["pedidos"]:
                 partes.append(f"{falta['pedidos']} pedido(s) de correção pendente(s)")
-            raise ValidationError(f"{worker.full_name}: faltam {' e '.join(partes)}.")
+            motivos.append(f"{worker.full_name}: faltam {' e '.join(partes)}.")
+        if falta["em_turno"]:
+            motivos.append(f"{worker.full_name} ainda está em turno: aprove o mês depois de picar a saída do turno.")
+        if motivos:
+            raise ValidationError(" ".join(motivos))
         return MonthClose.objects.create(
             restaurant=worker.restaurant, worker=worker, month=month, approved_by=user
         )
