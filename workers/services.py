@@ -19,6 +19,7 @@ def delete_blockers(worker):
     contagens = [
         # Também os apagados: ficam guardados (invariante 7).
         (TimeEntry.all_objects.filter(worker=worker).count(), "registo de ponto", "registos de ponto"),
+        (worker.correction_requests.count(), "pedido de correção", "pedidos de correção"),
         (worker.month_closes.count(), "fecho do mês", "fechos do mês"),
         (worker.vacation_requests.count(), "pedido de férias ou ausência", "pedidos de férias ou ausências"),
         (worker.consumptions.count(), "consumo", "consumos"),

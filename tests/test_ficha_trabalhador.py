@@ -11,6 +11,7 @@ from django.db.models import ProtectedError
 from django.urls import reverse
 from django.utils import timezone
 
+from attendance.models import CorrectionRequest
 from attendance.services import add_manual_entry, annul_entry, open_shift
 from core.models import Restaurant
 from inventory import consumption
@@ -170,4 +171,18 @@ class TestRegistosProtegidos:
         assert delete_blockers(w) == ["1 registo de ponto"]
         with pytest.raises(ValidationError):
             delete_worker(worker=w, user=manager)
+        assert Worker.objects.filter(pk=w.pk).exists()
+
+    def test_pedido_de_correcao_sem_registo_impede_apagar_a_ficha(self, restaurant, manager):
+        """Um pedido de acrescentar registo não cria registo de ponto, mas a
+        ficha tem de ficar guardada na mesma."""
+        w = Worker.objects.create(restaurant=restaurant, full_name="Rui Registo")
+        agora = timezone.now()
+        CorrectionRequest.objects.create(
+            worker=w, restaurant=restaurant, kind=CorrectionRequest.Kind.CRIAR,
+            new_check_in=agora - 3 * H, new_check_out=agora - H, note="esqueci-me de picar",
+        )
+        with pytest.raises(ValidationError):
+            delete_worker(worker=w, user=manager)
+        assert delete_blockers(w) == ["1 pedido de correção"]
         assert Worker.objects.filter(pk=w.pk).exists()
