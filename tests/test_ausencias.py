@@ -280,17 +280,40 @@ class TestMesAprovadoESobreposicao:
         assert pedido.status == VacationRequest.Status.PENDENTE
 
     def test_ausencia_que_atravessa_um_mes_aprovado_e_recusada(self, worker, manager, baixa, mes_passado):
-        """Basta um dos meses tocados estar aprovado, mesmo não sendo o do início."""
+        """Basta um dos meses tocados estar aprovado, mesmo não sendo o do início:
+        a ausência começa no mês anterior (aberto) e entra no mês aprovado."""
         mes.approve_month(worker=worker, month=mes_passado, user=manager)
-        ultimo = mes.next_month(mes_passado) - DIA
+        antes = mes.previous_month(mes_passado)
         with pytest.raises(ValidationError, match="já foi aprovado"):
             create_request(
                 worker=worker,
                 absence_type=baixa,
-                start_date=ultimo - DIA,
-                end_date=ultimo + 5 * DIA,
+                start_date=mes_passado - 2 * DIA,
+                end_date=mes_passado + 2 * DIA,
                 created_by=manager,
             )
+        assert not mes.is_closed(worker, antes)
+        assert not VacationRequest.objects.filter(worker=worker).exists()
+
+    def test_cancelar_ausencia_que_so_toca_num_mes_aprovado_depois_do_inicio(
+        self, worker, manager, baixa, mes_passado
+    ):
+        """A ausência começa no mês anterior (aberto), atravessa o mês aprovado
+        e acaba no mês corrente: cancelar muda o mês aprovado."""
+        pedido = create_request(
+            worker=worker,
+            absence_type=baixa,
+            start_date=mes_passado - 2 * DIA,
+            end_date=timezone.localdate() + 3 * DIA,
+            created_by=manager,
+        )
+        assert pedido.status == VacationRequest.Status.APROVADO
+        mes.approve_month(worker=worker, month=mes_passado, user=manager)
+        assert not mes.is_closed(worker, pedido.start_date)
+        with pytest.raises(ValidationError, match="já foi aprovado"):
+            cancel_by_manager(request_obj=pedido, user=manager)
+        pedido.refresh_from_db()
+        assert pedido.status == VacationRequest.Status.APROVADO
 
     def test_cancelar_ausencia_aprovada_respeita_mes_aprovado(self, worker, manager, ferias, mes_passado):
         dia = primeiro_dia_util(worker, mes_passado)
