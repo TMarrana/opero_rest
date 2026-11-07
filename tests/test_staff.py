@@ -329,6 +329,13 @@ class TestAppColaborador:
         assert "Ir para a gestão" in html
         assert "Sair" in html
 
+    def test_inicio_com_ficha_e_backoffice_tem_a_gestao(self, client, manager, restaurant):
+        Worker.objects.create(restaurant=restaurant, full_name="Gerente Teste", user=manager)
+        client.force_login(manager)
+        html = client.get(reverse("staff:home")).content.decode()
+        assert f'href="{reverse("dashboard:home")}"' in html
+        assert ">Gestão<" in html
+
     def test_colaborador_sem_backoffice_nao_ve_a_gestao(self, client, marta, staff_user):
         client.force_login(staff_user)
         for url in [reverse("staff:home"), reverse("staff:historico")]:
