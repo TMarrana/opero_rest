@@ -21,27 +21,11 @@ from sales.services import dia_de_servico
 from shifts.models import Shift
 from workers.models import Worker
 
-from . import desvios
 from . import month as mes
 from .forms import CorrectionDecisionForm, EntryCorrectionForm
 from .models import CorrectionRequest, MonthClose, TimeEntry
-from .selectors import workers_for_month
+from .selectors import desvios_do_dia, overlapping_entries, tabela_registos, workers_for_month
 from .services import add_manual_entry, annul_entry, correct_entry, decide_correction, overlapping
-
-
-def overlapping_entries(request, now=None):
-    """Os registos desta casa, do mês anterior para cá, que se sobrepõem a
-    outro registo da mesma pessoa (em qualquer casa): podem ser erros. Os
-    meses mais antigos já foram fechados."""
-    now = now or timezone.now()
-    desde = mes.previous_month(timezone.localdate(now))
-    workers = workers_scope(request, Worker.objects.all())
-    todos = list(TimeEntry.objects.filter(worker__in=workers, work_date__gte=desde).select_related("worker"))
-    ids = overlapping(todos, now=now)
-    return sorted(
-        (e for e in todos if e.pk in ids and e.restaurant_id == request.restaurant.pk),
-        key=lambda e: (e.worker.full_name, e.check_in),
-    )
 
 
 def _voltar(request, padrao):
@@ -103,7 +87,7 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
                     "visita": visita,
                     "registos": registos,
                     "previstos": turnos,
-                    "desvios": _desvios(turnos, do_dia, agora),
+                    "desvios": desvios_do_dia(turnos, do_dia, agora),
                     "em_turno": any(r.is_open for r in registos),
                     "por_resolver": any(r.is_unresolved(now=agora) for r in registos),
                     "total": sum((r.worked(until=agora) for r in do_dia), datetime.timedelta()),
@@ -136,49 +120,6 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
                 formato, [tabela_registos(request.restaurant, inicio, fim)], f"ponto-{inicio:%Y-%m}"
             )
         return super().get(request, *args, **kwargs)
-
-
-def tabela_registos(restaurant, inicio, fim):
-    """Os registos de ponto de uma casa num período (Fase 15): um por linha,
-    com as horas como no ecrã. Um registo por resolver conta zero."""
-    agora = timezone.now()
-    entradas = (
-        TimeEntry.objects.filter(restaurant=restaurant, work_date__range=(inicio, fim))
-        .select_related("worker__restaurant", "work_area", "corrected_by")
-        .prefetch_related("breaks__break_type")
-        .order_by("work_date", "worker__full_name", "check_in")
-    )
-    linhas = []
-    for e in entradas:
-        if e.is_unresolved(now=agora):
-            estado = "Por resolver"
-        elif e.is_open:
-            estado = "Em turno"
-        else:
-            estado = ""
-        linhas.append(
-            [
-                e.worker.full_name,
-                e.worker.restaurant.name,
-                e.work_date,
-                e.check_in,
-                e.check_out,
-                e.unpaid_break_time(until=e.check_out or agora),
-                e.worked(until=agora),
-                e.work_area.name if e.work_area else "",
-                e.get_source_display(),
-                estado,
-                str(e.corrected_by) if e.corrected_by else "",
-                e.correction_reason,
-            ]
-        )
-    return exports.Tabela(
-        titulo="Ponto",
-        colunas=["Trabalhador", "Casa principal", "Dia", "Entrada", "Saída", "Pausas não pagas (h)", "Trabalhado (h)",
-                 "Área", "Origem", "Estado", "Corrigido por", "Motivo da correção"],
-        linhas=linhas,
-        formatos=[exports.TEXTO, exports.TEXTO, exports.DATA, exports.DATAHORA, exports.DATAHORA, exports.HORAS, exports.HORAS],
-    )
 
 
 class EntryCorrectionView(ManagerRequiredMixin, View):
@@ -292,12 +233,6 @@ class EntryAddView(ManagerRequiredMixin, View):
             except ValidationError as exc:
                 form.add_error(None, exc.messages[0])
         return render(request, "manage/attendance/acrescentar.html", self._contexto(request, worker, form))
-
-
-def _desvios(turnos, registos, agora):
-    """Planeado contra realizado, em frases (ver `attendance.desvios`):
-    cada registo compara-se com o turno com que coincide."""
-    return desvios.textos(turnos, registos, agora)
 
 
 def _scoped_requests(request):

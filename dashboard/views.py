@@ -1,3 +1,7 @@
+import datetime
+import math
+
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import F
@@ -6,14 +10,19 @@ from django.utils import timezone
 from django.views import View
 from django.views.generic import TemplateView
 
-from accounts.models import BACKOFFICE_ROLES
-from attendance.models import CorrectionRequest, TimeEntry
+from accounts.models import BACKOFFICE_ROLES, User
+from attendance.models import CorrectionRequest, MonthClose, TimeEntry
+from attendance.month import month_range, previous_month
+from attendance.selectors import desvios_do_dia, overlapping_entries, workers_for_month
 from core.middleware import SESSION_KEY
 from core.mixins import GroupAdminRequiredMixin, RoleRequiredMixin
 from core.utils import nome_do_mes, restaurant_scope, workers_scope
 from inventory.models import Item, StockMovement
+from sales.reports import resumo, ultimo_dia
 from sales.services import dia_de_servico
+from shifts.models import Shift
 from vacations.models import VacationRequest
+from workers.models import Worker
 
 # O dashboard avisa quando o último dia de vendas importado tem mais do que isto.
 VENDAS_ATRASO_DIAS = 7
@@ -26,8 +35,6 @@ class DashboardView(RoleRequiredMixin, TemplateView):
     template_name = "manage/dashboard.html"
 
     def dispatch(self, request, *args, **kwargs):
-        from accounts.models import User
-
         self.allowed_roles = (User.Role.ADMIN, User.Role.MANAGER, User.Role.STOCK)
         return super().dispatch(request, *args, **kwargs)
 
@@ -85,11 +92,6 @@ class DashboardView(RoleRequiredMixin, TemplateView):
             ctx["por_resolver"] = entradas.unresolved().count()
             # Aviso de mês por fechar: a partir do dia 1, até todos os
             # trabalhadores ativos terem o mês anterior aprovado.
-            from attendance.models import MonthClose
-            from attendance.month import previous_month
-            from attendance.selectors import workers_for_month
-            from workers.models import Worker
-
             anterior = previous_month(timezone.localdate())
             do_mes = workers_for_month(restaurant_scope(request, Worker.objects.all()), anterior)
             aprovados = MonthClose.objects.filter(
@@ -98,9 +100,6 @@ class DashboardView(RoleRequiredMixin, TemplateView):
             ctx["mes_por_fechar"] = anterior
             ctx["por_aprovar"] = do_mes.count() - aprovados
             # Vendas (Fase 10): avisa quando o último dia importado ficou para trás.
-            from attendance.month import month_range
-            from sales.reports import resumo, ultimo_dia
-
             ctx["ultimo_dia_vendas"] = ultimo_dia(request.restaurant)
             mes_vendas = timezone.localdate()
             ctx["vendas"] = cartao_vendas(
@@ -113,8 +112,6 @@ class DashboardView(RoleRequiredMixin, TemplateView):
                 request, CorrectionRequest.objects.filter(status=CorrectionRequest.Status.PENDENTE)
             ).count()
             ctx.update(turnos_de_hoje(request))
-            from attendance.views import overlapping_entries
-
             ctx["sobrepostos"] = len(overlapping_entries(request))
         return ctx
 
@@ -146,14 +143,6 @@ def turnos_de_hoje(request, agora=None):
     tolerância e não picou) ou ainda por entrar. Quem picou sem turno
     planeado aparece no fim. As ausências aprovadas tiram o turno da lista
     (fica em reserva, R-033)."""
-    import datetime
-
-    from django.conf import settings
-
-    from attendance.views import _desvios
-    from shifts.models import Shift
-    from workers.models import Worker
-
     agora = agora or timezone.now()
     casa = request.restaurant
     dia = dia_de_servico(casa, agora)
@@ -193,7 +182,7 @@ def turnos_de_hoje(request, agora=None):
                 "turnos": previstos,
                 "registos": do_dia,
                 "estado": estado,
-                "desvios": [d for d in _desvios(previstos, do_dia, agora) if d != "Sem marcação"],
+                "desvios": [d for d in desvios_do_dia(previstos, do_dia, agora) if d != "Sem marcação"],
             }
         )
     sem_turno = [
@@ -236,9 +225,6 @@ def _escala(linhas, dia, agora):
     primeiro turno ou entrada até depois do último fim (no mínimo 8 horas;
     um turno que passa a meia-noite estica para lá das 24). Acrescenta a
     cada linha as barras do turno e do ponto, em percentagem da largura."""
-    import datetime
-    import math
-
     zero = timezone.make_aware(datetime.datetime.combine(dia, datetime.time()))
 
     def horas(momento):
@@ -310,18 +296,10 @@ class SwitchRestaurantView(LoginRequiredMixin, View):
 
 def _sinais(restaurant):
     """Os sinais do dashboard de uma casa, em números (painel do grupo)."""
-    from attendance.models import MonthClose
-    from attendance.month import previous_month
-    from attendance.selectors import workers_for_month
-    from workers.models import Worker
-
     entradas = TimeEntry.objects.filter(restaurant=restaurant)
     anterior = previous_month(timezone.localdate())
     do_mes = workers_for_month(Worker.objects.filter(restaurant=restaurant), anterior)
     aprovados = MonthClose.objects.filter(worker__in=do_mes, month=anterior, reopened_at__isnull=True).count()
-    from attendance.month import month_range
-    from sales.reports import resumo, ultimo_dia
-
     hoje = timezone.localdate()
     vendas = cartao_vendas(resumo(restaurant, *month_range(hoje)).total, ultimo_dia(restaurant), hoje)
     return {
@@ -348,8 +326,6 @@ class GroupDashboardView(GroupAdminRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        from attendance.month import previous_month
-
         ctx["linhas"] = [_sinais(casa) for casa in self.request.casas]
         ctx["mes_por_fechar"] = previous_month(timezone.localdate())
         return ctx

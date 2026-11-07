@@ -21,6 +21,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.utils import timezone
 
+from attendance import desvios as dv
 from attendance.models import TimeEntry
 from shifts.models import Shift
 from vacations.models import VacationRequest
@@ -71,8 +72,6 @@ def _desvios(worker, dia, turnos, registos, agora, tolerancia):
     """Os desvios de um trabalhador num dia, face aos turnos publicados
     desta casa: cada registo compara-se com o turno com que coincide, como
     no ecrã do ponto (`attendance.desvios`)."""
-    from attendance import desvios as dv
-
     tipos = {dv.ATRASO: "Atraso", dv.SAIDA_ANTES: "Saída antes da hora", dv.SEM_MARCACAO: "Falta de marcação"}
     resultado = []
     for d in dv.calcular(turnos, registos, agora, tolerancia):
