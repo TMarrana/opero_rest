@@ -405,7 +405,9 @@ def test_pendente_com_datas_passadas_assinalado(client, manager, restaurant):
 
 
 def test_dashboard_conta_pendentes_com_datas_passadas(client, manager, restaurant):
-    hoje = timezone.localdate()
+    from sales.services import dia_de_servico
+
+    hoje = dia_de_servico(restaurant)  # o «hoje» do dashboard
     dia = datetime.timedelta(days=1)
     tipo = AbsenceType.objects.get(restaurant=restaurant, name="Férias")
     passado = Worker.objects.create(restaurant=restaurant, full_name="Rui Passado")

@@ -12,6 +12,7 @@ from core.middleware import SESSION_KEY
 from core.mixins import GroupAdminRequiredMixin, RoleRequiredMixin
 from core.utils import restaurant_scope, workers_scope
 from inventory.models import Item, StockMovement
+from sales.services import dia_de_servico
 from vacations.models import VacationRequest
 
 # O dashboard avisa quando o último dia de vendas importado tem mais do que isto.
@@ -33,6 +34,10 @@ class DashboardView(RoleRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         request = self.request
+
+        # De madrugada, «hoje» ainda é o dia de serviço anterior e a saudação é «Boa noite».
+        ctx["dia_servico"] = dia_de_servico(request.restaurant)
+        ctx["saudacao"] = saudacao(timezone.localtime().hour)
 
         itens_baixos = (
             restaurant_scope(request, Item.objects.filter(is_active=True))
@@ -61,7 +66,7 @@ class DashboardView(RoleRequiredMixin, TemplateView):
                 field="worker__restaurant",
             )
             # Quem está fora hoje: ausências aprovadas que apanham o dia de hoje.
-            hoje = timezone.localdate()
+            hoje = ctx["dia_servico"]
             ctx["ferias_pendentes_total"] = pendentes.count()
             ctx["ferias_pendentes_passadas"] = pendentes.filter(end_date__lt=hoje).count()
             ctx["em_ferias"] = restaurant_scope(
@@ -111,8 +116,17 @@ class DashboardView(RoleRequiredMixin, TemplateView):
         return ctx
 
 
+def saudacao(hora):
+    """«Boa noite» de madrugada (antes das 5h) e a partir das 20h; «Bom dia»
+    até ao meio-dia; «Boa tarde» no resto."""
+    if hora < 5 or hora >= 20:
+        return "Boa noite"
+    return "Bom dia" if hora < 12 else "Boa tarde"
+
+
 def turnos_de_hoje(request, agora=None):
-    """Os turnos publicados de hoje nesta casa, um por pessoa, com o ponto ao
+    """Os turnos publicados de hoje (o dia de serviço: de madrugada, antes da
+    hora de corte, ainda é o dia anterior) nesta casa, um por pessoa, com o ponto ao
     lado: em turno, já saiu, em falta (passou a hora de entrada mais a
     tolerância e não picou) ou ainda por entrar. Quem picou sem turno
     planeado aparece no fim. As ausências aprovadas tiram o turno da lista
@@ -126,8 +140,8 @@ def turnos_de_hoje(request, agora=None):
     from workers.models import Worker
 
     agora = agora or timezone.now()
-    dia = timezone.localdate(agora)
     casa = request.restaurant
+    dia = dia_de_servico(casa, agora)
     tolerancia = datetime.timedelta(minutes=settings.SHIFT_TOLERANCE_MINUTES)
     workers = workers_scope(request, Worker.objects.all())
 
@@ -192,6 +206,10 @@ TONS = {
 }
 
 
+# Largura, em pontos percentuais da escala, que a etiqueta «agora» tapa de cada lado.
+ETIQUETA_AGORA_PONTOS = 4
+
+
 def _pct(fracao):
     """Percentagem para um `style`: em texto, com ponto decimal (o Django
     escreveria vírgula, à portuguesa, e o CSS não a lê)."""
@@ -244,12 +262,18 @@ def _escala(linhas, dia, agora):
         ]
     passo = 1 if total <= 12 else 2
     agora_h = horas(agora)
+    agora_pos = 100 * (agora_h - inicio) / total if inicio <= agora_h <= fim else None
+
+    def oculta(h):
+        """A etiqueta «agora» tapa as horas a menos de 4 pontos percentuais."""
+        return agora_pos is not None and abs(100 * (h - inicio) / total - agora_pos) < ETIQUETA_AGORA_PONTOS
+
     return {
         "horas": [
-            {"hora": f"{h % 24:02d}h", "pos": _pct((h - inicio) / total)}
+            {"hora": f"{h % 24:02d}h", "pos": _pct((h - inicio) / total), "oculta": oculta(h)}
             for h in range(inicio, fim + 1, passo)
         ],
-        "agora": _pct((agora_h - inicio) / total) if inicio <= agora_h <= fim else None,
+        "agora": _pct((agora_h - inicio) / total) if agora_pos is not None else None,
         "agora_txt": f"{timezone.localtime(agora):%H:%M}",
     }
 

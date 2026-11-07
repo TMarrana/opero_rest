@@ -19,6 +19,7 @@ from core.models import Restaurant
 from inventory.consumption import register_consumption
 from inventory.models import Category, InternalConsumption, Item, StockMovement
 from inventory.services import register_movement
+from sales.services import dia_de_servico
 from shifts import services as turnos
 from shifts.models import Shift
 from tests.quiosque import ativar_tablet, escrever_codigo, picar
@@ -113,7 +114,7 @@ class TestQuiosque:
 
 class TestPontoNoBackoffice:
     def test_each_house_sees_only_its_entries(self, client, restaurant, casa_b, manager, gerente_b, marta):
-        hoje = timezone.localdate()
+        hoje = dia_de_servico(casa_b)  # o dia que o ecrã do ponto abre por omissão
         open_shift(worker=marta, at=_quando(hoje, 0), restaurant=casa_b)
         _na_casa(client, gerente_b, casa_b)
         corpo = client.get(reverse("attendance:dia")).content.decode()

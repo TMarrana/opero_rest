@@ -17,6 +17,7 @@ from django.views.generic import TemplateView
 from core import exports
 from core.mixins import ManagerRequiredMixin
 from core.utils import restaurant_scope, workers_scope
+from sales.services import dia_de_servico
 from shifts.models import Shift
 from workers.models import Worker
 
@@ -68,8 +69,9 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        dia = parse_date(self.request.GET.get("dia", "") or "") or timezone.localdate()
         restaurant = self.request.restaurant
+        hoje = dia_de_servico(restaurant)
+        dia = parse_date(self.request.GET.get("dia", "") or "") or hoje
         workers = workers_scope(self.request, Worker.objects.filter(is_active=True))
         entries = (
             TimeEntry.objects.filter(restaurant=restaurant, worker__in=workers)
@@ -115,7 +117,7 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
         ctx["dia"] = dia
         ctx["dia_anterior"] = dia - datetime.timedelta(days=1)
         ctx["dia_seguinte"] = dia + datetime.timedelta(days=1)
-        ctx["hoje"] = timezone.localdate()
+        ctx["hoje"] = hoje
         ctx["pedidos_pendentes"] = _scoped_requests(self.request).filter(
             status=CorrectionRequest.Status.PENDENTE
         ).count()
@@ -128,7 +130,7 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
     def get(self, request, *args, **kwargs):
         formato = exports.formato_pedido(request)
         if formato:
-            dia = parse_date(request.GET.get("dia", "") or "") or timezone.localdate()
+            dia = parse_date(request.GET.get("dia", "") or "") or dia_de_servico(request.restaurant)
             inicio, fim = mes.month_range(dia)
             return exports.responder(
                 formato, [tabela_registos(request.restaurant, inicio, fim)], f"ponto-{inicio:%Y-%m}"
