@@ -116,6 +116,12 @@ def test_falha_csrf_fora_do_login_continua_403(staff_user):
     assert resp.status_code == 403
 
 
+def test_sair_limpa_a_cache_do_telemovel(client, staff_user):
+    client.force_login(staff_user)
+    r = client.post(reverse("accounts:logout"))
+    assert r["Clear-Site-Data"] == '"cache", "storage"'
+
+
 class TestLimiteLogin:
     URL = reverse_lazy("accounts:login")
 
