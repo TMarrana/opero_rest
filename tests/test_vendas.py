@@ -19,6 +19,7 @@ from sales.models import PosProduct, SalesDocument, SalesImport, SalesLine, Sale
 from sales.services import import_saft
 from sales.sintetico import Doc
 from shifts.models import Shift
+from shifts.services import create_shift
 from workers.models import Worker
 
 pytestmark = pytest.mark.django_db
@@ -310,6 +311,14 @@ class TestServicos:
         # Os totais por dia não mudam com o corte.
         linhas, totais = reports.por_dia(casa, INICIO, FIM)
         assert totais["horas"] == datetime.timedelta(hours=13, minutes=30)
+
+    def test_horas_previstas_so_ate_hoje(self, casa, manager):
+        w = Worker.objects.create(restaurant=casa, full_name="Ana Futuro")
+        amanha = timezone.localdate() + datetime.timedelta(days=1)
+        turno = create_shift(restaurant=casa, worker=w, day=amanha, start=datetime.time(12), end=datetime.time(16))
+        Shift.objects.filter(pk=turno.pk).update(state=Shift.State.PUBLICADO)
+        horas = reports.horas_trabalhadas(casa, timezone.localdate(), amanha)
+        assert amanha not in horas
 
     def test_regras_recusam_uma_hora_de_madrugada(self, client, casa, admin_user):
         client.force_login(admin_user)

@@ -118,7 +118,7 @@ def horas_por_servico(restaurant, inicio, fim, hora_mudanca=None):
     for dia in _dias(inicio, fim):
         if dia in reais and sum(reais[dia], datetime.timedelta()):
             horas[dia] = (reais[dia], False)
-        elif dia in previstas and sum(previstas[dia], datetime.timedelta()):
+        elif dia in previstas and dia <= timezone.localdate(agora) and sum(previstas[dia], datetime.timedelta()):
             horas[dia] = (previstas[dia], True)
     return horas
 
