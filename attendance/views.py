@@ -24,6 +24,7 @@ from . import desvios
 from . import month as mes
 from .forms import CorrectionDecisionForm, EntryCorrectionForm
 from .models import CorrectionRequest, MonthClose, TimeEntry
+from .selectors import workers_for_month
 from .services import add_manual_entry, annul_entry, correct_entry, decide_correction, overlapping
 
 
@@ -360,15 +361,16 @@ class MonthView(ManagerRequiredMixin, View):
     aprovação (uma a uma ou todos os prontos), reabertura com motivo e
     exportação CSV."""
 
-    def _workers(self, request):
-        return restaurant_scope(request, Worker.objects.filter(is_active=True))
+    def _workers(self, request, escolhido):
+        """Quem entra no fecho desse mês, incluindo quem já saiu."""
+        return workers_for_month(restaurant_scope(request, Worker.objects.all()), escolhido)
 
     def _url(self, mes_escolhido):
         return f"{reverse('attendance:mes')}?mes={mes_escolhido:%Y-%m}"
 
     def get(self, request):
         escolhido = _mes_pedido(request)
-        workers = self._workers(request)
+        workers = self._workers(request, escolhido)
         if request.GET.get("exportar"):
             conteudo = mes.export_csv(workers, escolhido)
             resp = HttpResponse(conteudo, content_type="text/csv; charset=utf-8")
@@ -415,7 +417,7 @@ class MonthView(ManagerRequiredMixin, View):
 
     def post(self, request):
         escolhido = _mes_pedido(request)
-        workers = self._workers(request)
+        workers = self._workers(request, escolhido)
         acao = request.POST.get("acao")
         try:
             if acao == "aprovar_todos":

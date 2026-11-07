@@ -13,7 +13,7 @@
 {% if bloqueios %}
   {% if worker.is_active %}
   {% url 'workers:desativar' worker.pk as url_desativar %}
-  {% include "components/modal.html" with id="apagar-trabalhador" titulo="Não é possível eliminar" corpo=aviso_bloqueio confirmar_label="Desativar" form_action=url_desativar variante_confirmar="primario" %}
+  {% include "components/modal.html" with id="apagar-trabalhador" titulo="Não é possível eliminar" corpo=aviso_bloqueio confirmar_label="Desativar" form_action=url_desativar variante_confirmar="primario" campos_template="partials/workers/data_saida.html" %}
   {% else %}
   {% include "components/modal.html" with id="apagar-trabalhador" titulo="Não é possível eliminar" corpo=aviso_bloqueio %}
   {% endif %}

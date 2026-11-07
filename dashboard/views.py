@@ -81,15 +81,16 @@ class DashboardView(RoleRequiredMixin, TemplateView):
             # trabalhadores ativos terem o mês anterior aprovado.
             from attendance.models import MonthClose
             from attendance.month import previous_month
+            from attendance.selectors import workers_for_month
             from workers.models import Worker
 
             anterior = previous_month(timezone.localdate())
-            ativos = restaurant_scope(request, Worker.objects.filter(is_active=True))
+            do_mes = workers_for_month(restaurant_scope(request, Worker.objects.all()), anterior)
             aprovados = MonthClose.objects.filter(
-                worker__in=ativos, month=anterior, reopened_at__isnull=True
+                worker__in=do_mes, month=anterior, reopened_at__isnull=True
             ).count()
             ctx["mes_por_fechar"] = anterior
-            ctx["por_aprovar"] = ativos.count() - aprovados
+            ctx["por_aprovar"] = do_mes.count() - aprovados
             # Vendas (Fase 10): avisa quando o último dia importado ficou para trás.
             from attendance.month import month_range
             from sales.reports import resumo, ultimo_dia
@@ -271,12 +272,13 @@ def _sinais(restaurant):
     """Os sinais do dashboard de uma casa, em números (painel do grupo)."""
     from attendance.models import MonthClose
     from attendance.month import previous_month
+    from attendance.selectors import workers_for_month
     from workers.models import Worker
 
     entradas = TimeEntry.objects.filter(restaurant=restaurant)
-    ativos = Worker.objects.filter(restaurant=restaurant, is_active=True)
     anterior = previous_month(timezone.localdate())
-    aprovados = MonthClose.objects.filter(worker__in=ativos, month=anterior, reopened_at__isnull=True).count()
+    do_mes = workers_for_month(Worker.objects.filter(restaurant=restaurant), anterior)
+    aprovados = MonthClose.objects.filter(worker__in=do_mes, month=anterior, reopened_at__isnull=True).count()
     from attendance.month import month_range
     from sales.reports import resumo, ultimo_dia
 
@@ -292,7 +294,7 @@ def _sinais(restaurant):
         "correcoes_pendentes": CorrectionRequest.objects.filter(
             restaurant=restaurant, status=CorrectionRequest.Status.PENDENTE
         ).count(),
-        "por_aprovar": ativos.count() - aprovados,
+        "por_aprovar": do_mes.count() - aprovados,
         "vendas_mes": vendas_mes,
         "ultimo_dia_vendas": ultimo_dia(restaurant),
     }
