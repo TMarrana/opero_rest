@@ -393,3 +393,28 @@ class TestMesAprovadoESobreposicao:
         decide_request(request_obj=pedido, user=manager, approve=True)
         pedido.refresh_from_db()
         assert pedido.status == VacationRequest.Status.APROVADO
+
+
+def test_pendente_com_datas_passadas_assinalado(client, manager, restaurant):
+    w = Worker.objects.create(restaurant=restaurant, full_name="Rui Atrasado")
+    tipo = AbsenceType.objects.get(restaurant=restaurant, name="Férias")
+    ontem = timezone.localdate() - datetime.timedelta(days=1)
+    VacationRequest.objects.create(worker=w, absence_type=tipo, start_date=ontem, end_date=ontem)
+    client.force_login(manager)
+    assert "Datas já passaram" in client.get(reverse("vacations:lista")).content.decode()
+
+
+def test_dashboard_conta_pendentes_com_datas_passadas(client, manager, restaurant):
+    hoje = timezone.localdate()
+    dia = datetime.timedelta(days=1)
+    tipo = AbsenceType.objects.get(restaurant=restaurant, name="Férias")
+    passado = Worker.objects.create(restaurant=restaurant, full_name="Rui Passado")
+    futuro = Worker.objects.create(restaurant=restaurant, full_name="Ana Futura")
+    VacationRequest.objects.create(worker=passado, absence_type=tipo, start_date=hoje - 2 * dia, end_date=hoje - dia)
+    VacationRequest.objects.create(worker=futuro, absence_type=tipo, start_date=hoje + 3 * dia, end_date=hoje + 5 * dia)
+    client.force_login(manager)
+    html = client.get(reverse("dashboard:home")).content.decode()
+    assert (
+        '<span class="font-dados font-semibold">2</span> pedidos de férias por decidir, '
+        '<span class="font-dados font-semibold">1</span> com datas passadas'
+    ) in html

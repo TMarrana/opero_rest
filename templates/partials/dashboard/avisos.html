@@ -22,7 +22,7 @@ leva até elas (secção 9).{% endcomment %}
     {% if ferias_pendentes_total %}
     <li><a href="{% url 'vacations:lista' %}" class="flex items-center gap-4 px-6 py-3.5 text-sm transition-colors hover:bg-neutro-50">
       <span class="mosaico h-10 w-10 bg-ambar-50 text-ambar-700">{% icone "calendario" "h-[18px] w-[18px]" %}</span>
-      <span class="flex-1"><span class="font-dados font-semibold">{{ ferias_pendentes_total }}</span> pedido{{ ferias_pendentes_total|pluralize }} de férias por decidir</span>
+      <span class="flex-1"><span class="font-dados font-semibold">{{ ferias_pendentes_total }}</span> pedido{{ ferias_pendentes_total|pluralize }} de férias por decidir{% if ferias_pendentes_passadas %}, <span class="font-dados font-semibold">{{ ferias_pendentes_passadas }}</span> com datas passadas{% endif %}</span>
       <span class="link-acao">Decidir</span></a></li>
     {% endif %}
     {% if pedidos_correcao %}

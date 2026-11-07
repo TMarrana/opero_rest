@@ -60,9 +60,10 @@ class DashboardView(RoleRequiredMixin, TemplateView):
                 .order_by("start_date"),
                 field="worker__restaurant",
             )
-            ctx["ferias_pendentes_total"] = pendentes.count()
             # Quem está fora hoje: ausências aprovadas que apanham o dia de hoje.
             hoje = timezone.localdate()
+            ctx["ferias_pendentes_total"] = pendentes.count()
+            ctx["ferias_pendentes_passadas"] = pendentes.filter(end_date__lt=hoje).count()
             ctx["em_ferias"] = restaurant_scope(
                 request,
                 VacationRequest.objects.filter(
