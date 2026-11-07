@@ -29,7 +29,7 @@ próprio, com o valor ao custo. O próprio regista, altera e anula os seus.{% en
   {% for c in consumos %}
   <article class="talao" data-consumo>
     <time class="block text-xs text-ardosia">{{ c.consumed_on|date:"D d/m" }} · {{ c.get_reason_display }}</time>
-    <p class="mt-0.5 text-sm font-semibold">{% for l in c.lines.all %}{{ l.item.name }} {{ l.quantity|numero }} {{ l.item.unit }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
+    <p class="mt-0.5 text-sm font-semibold">{% for l in c.lines.all %}{{ l.item.name }} {{ l.quantity|quantidade:l.item.unit }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
     <p class="font-dados text-sm text-ardosia">{% if c.value is not None %}{{ c.value|euros }}{% else %}sem custo{% endif %}</p>
     {% if c.note %}<p class="text-sm text-ardosia">{{ c.note }}</p>{% endif %}
     <form method="post" action="{% url 'staff:consumo_anular' c.pk %}" class="mt-2 flex flex-wrap items-center gap-4" x-data="{ aberto: false }">

@@ -19,7 +19,7 @@
       {% for l in linhas %}
       <tr>
         <td class="font-medium"><a href="{% url 'purchasing:precos' l.item.pk %}" class="hover:underline">{{ l.item.name }}</a></td>
-        <td class="td-dados">{{ l.quantity|numero }} {{ l.item.unit }}</td>
+        <td class="td-dados">{{ l.quantity|quantidade:l.item.unit }}</td>
         <td class="td-dados">{{ l.unit_price|preco }}</td>
         <td class="td-dados">{% if l.total is not None %}{{ l.total|euros }}{% endif %}</td>
       </tr>

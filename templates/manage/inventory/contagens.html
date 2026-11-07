@@ -39,7 +39,7 @@ anterior do mesmo artigo. A diferença é o que saiu sem ficar registado.{% endc
       <tbody>
         {% for l in linhas %}
         <tr>
-          <td class="font-medium">{{ l.count.item.name }}<span class="block text-xs font-normal text-ardosia">{{ l.count.item.unit }}{% if l.previous %} · desde {{ l.previous.counted_at|date:"d/m H:i" }}{% endif %}</span></td>
+          <td class="font-medium">{{ l.count.item.name }}<span class="block text-xs font-normal text-ardosia">{{ l.count.item.unit|unidade }}{% if l.previous %} · desde {{ l.previous.counted_at|date:"d/m H:i" }}{% endif %}</span></td>
           <td class="font-dados text-sm">{{ l.count.counted_at|date:"d/m H:i" }}<span class="block text-xs text-ardosia">{{ l.count.created_by }}</span></td>
           {% if l.previous %}
           <td class="td-dados">{{ l.sales|numero:3 }}</td>

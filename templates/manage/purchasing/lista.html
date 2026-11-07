@@ -1,5 +1,5 @@
 {% extends "base_manage.html" %}
-{% load vendas %}
+{% load interface vendas %}
 {% block title %}Lista de compras{% endblock %}
 {% block content %}
 {% comment %}Lista de compras (Fase 11): os artigos no mínimo ou abaixo dele,
@@ -53,15 +53,15 @@ encomenda, que ainda se pode mudar antes de enviar.{% endcomment %}
         {% for l in linhas %}
         <tr>
           <td class="font-medium">{{ l.item.name }}{% if l.ref %} <span class="font-dados text-xs text-ardosia">{{ l.ref }}</span>{% endif %}</td>
-          <td class="td-dados {% if l.item.current_stock < l.item.minimum_stock %}font-semibold text-alerta{% endif %}">{{ l.item.current_stock|numero }} {{ l.item.unit }}</td>
-          <td class="td-dados text-ardosia">{{ l.item.minimum_stock|numero }}</td>
+          <td class="td-dados {% if l.item.current_stock < l.item.minimum_stock %}font-semibold text-alerta{% endif %}">{{ l.item.current_stock|quantidade:l.item.unit }}</td>
+          <td class="td-dados text-ardosia">{{ l.item.minimum_stock|quantidade }}</td>
           <td class="td-dados text-ardosia">{% if l.encomendado %}{{ l.encomendado|numero }}{% endif %}</td>
           <td class="td-dados text-ardosia">{% if l.preco is not None %}{{ l.preco|preco }}{% endif %}</td>
           <td class="td-dados">
             <label class="inline-flex items-center gap-2">
               <span class="sr-only">Quantidade de {{ l.item.name }}</span>
               <input type="text" inputmode="decimal" name="qtd-{{ l.item.pk }}" value="{{ l.sugerido|campo }}" class="campo-input font-dados w-24 text-right">
-              <span class="w-8 text-left text-xs text-ardosia">{{ l.item.unit }}</span>
+              <span class="w-8 text-left text-xs text-ardosia">{{ l.item.unit|unidade }}</span>
             </label>
           </td>
         </tr>

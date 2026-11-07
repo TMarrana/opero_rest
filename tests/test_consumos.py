@@ -174,7 +174,7 @@ class TestAcessos:
         _consumo(restaurant, rui, [(cafe, Decimal(5))], manager)
         client.force_login(staff_user)
         html = client.get(reverse("staff:consumos")).content.decode()
-        assert "Café 1 UN" in html and "Café 5 UN" not in html
+        assert "Café 1 un" in html and "Café 5 un" not in html
         # O backoffice dos consumos está fechado ao colaborador.
         assert client.get(reverse("inventory:consumos")).status_code == 403
         assert client.post(reverse("inventory:consumo_novo"), {}).status_code == 403
@@ -185,7 +185,7 @@ class TestAcessos:
         consumo = _consumo(restaurant, marta, [(cafe, Decimal(1))], manager)
         client.force_login(stock_user)
         html = client.get(reverse("inventory:consumos")).content.decode()
-        assert "Café 1 UN" in html and reverse("inventory:consumo_novo") not in html and "Alterar" not in html
+        assert "Café 1 un" in html and reverse("inventory:consumo_novo") not in html and "Alterar" not in html
         assert client.get(reverse("inventory:consumo_novo")).status_code == 403
         assert client.post(reverse("inventory:consumo_novo"), {}).status_code == 403
         assert client.get(reverse("inventory:consumo_alterar", args=[consumo.pk])).status_code == 403
@@ -233,7 +233,7 @@ class TestStockNegativo:
             "item-0": cafe.pk, "qtd-0": "102",
         }, follow=True)
         html = resp.content.decode()
-        assert "Stock negativo: Café em -2 UN" in html
+        assert "Stock negativo: Café em -2 un" in html
         assert Item.objects.get(pk=cafe.pk).current_stock == -2
 
     def test_outros_movimentos_continuam_a_recusar(self, manager, cafe):
@@ -334,4 +334,4 @@ class TestColaborador:
         resp = client.post(reverse("staff:consumo_novo"), {
             "motivo": REFEICAO, "dia": timezone.localdate().isoformat(), "item-0": cafe.pk, "qtd-0": "105",
         }, follow=True)
-        assert "Stock negativo: Café em -5 UN" in resp.content.decode()
+        assert "Stock negativo: Café em -5 un" in resp.content.decode()

@@ -11,6 +11,7 @@ from django.views import View
 from django.views.generic import TemplateView
 
 from core import exports
+from core.formatos import quantidade
 from core.mixins import StockRequiredMixin
 from core.models import Restaurant
 from core.utils import restaurant_scope
@@ -220,7 +221,8 @@ class TransferView(StockRequiredMixin, View):
             else:
                 item = contexto["item"]
                 messages.success(
-                    request, f"Transferido: {form.cleaned_data['quantity']} {item.unit} de {item.name} para {contexto['destino']}"
+                    request,
+                    f"Transferido: {quantidade(form.cleaned_data['quantity'], item.unit)} de {item.name} para {contexto['destino']}",
                 )
                 return redirect("inventory:lista")
         return render(request, self.template_name, contexto)

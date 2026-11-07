@@ -1,4 +1,4 @@
-{% load static vendas %}<!doctype html>
+{% load static vendas interface %}<!doctype html>
 <html lang="pt">
 <head>
   <meta charset="utf-8">
@@ -37,7 +37,7 @@
         <tr class="border-b border-ardosia/15">
           <td class="py-2">{{ l.item.name }}</td>
           <td class="py-2 font-dados">{{ l.ref }}</td>
-          <td class="py-2 text-right font-dados">{{ l.quantity|numero }} {{ l.item.unit }}</td>
+          <td class="py-2 text-right font-dados">{{ l.quantity|quantidade:l.item.unit }}</td>
         </tr>
         {% endfor %}
       </tbody>

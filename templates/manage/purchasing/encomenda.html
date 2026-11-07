@@ -43,7 +43,7 @@ ou WhatsApp, até haver envio de emails (secção 12).{% endcomment %}
               <td class="td-dados">
                 <span class="inline-flex items-center gap-2 whitespace-nowrap">
                   <input type="text" inputmode="decimal" name="qtd-{{ l.item_id }}" value="{{ l.quantity|campo }}" aria-label="Quantidade de {{ l.item.name }}" class="campo-input font-dados w-24 text-right">
-                  <span class="w-8 text-left text-xs text-ardosia">{{ l.item.unit }}</span>
+                  <span class="w-8 text-left text-xs text-ardosia">{{ l.item.unit|unidade }}</span>
                 </span>
               </td>
               <td class="td-dados"><input type="text" inputmode="decimal" name="preco-{{ l.item_id }}" value="{{ l.unit_price|campo_preco }}" aria-label="Preço de {{ l.item.name }}" class="campo-input font-dados w-28 text-right"></td>
@@ -56,7 +56,7 @@ ou WhatsApp, até haver envio de emails (secção 12).{% endcomment %}
               <td>
                 <select name="novo_item" class="campo-input" aria-label="Acrescentar artigo">
                   <option value="">Acrescentar artigo…</option>
-                  {% for a in artigos %}<option value="{{ a.pk }}">{{ a.name }} ({{ a.unit }})</option>{% endfor %}
+                  {% for a in artigos %}<option value="{{ a.pk }}">{{ a.name }} ({{ a.unit|unidade }})</option>{% endfor %}
                 </select>
               </td>
               <td class="td-dados"><span class="inline-flex items-center gap-2"><input type="text" inputmode="decimal" name="novo_qtd" aria-label="Quantidade do artigo novo" class="campo-input font-dados w-24 text-right"><span class="w-8"></span></span></td>
@@ -91,7 +91,7 @@ ou WhatsApp, até haver envio de emails (secção 12).{% endcomment %}
             {% for l in linhas %}
             <tr>
               <td class="font-medium">{{ l.item.name }}</td>
-              <td class="td-dados">{{ l.quantity|numero }} {{ l.item.unit }}</td>
+              <td class="td-dados">{{ l.quantity|quantidade:l.item.unit }}</td>
               <td class="td-dados">{{ l.recebido|numero }}</td>
               <td class="td-dados {% if l.falta and encomenda.state == 'PARCIAL' %}font-semibold{% endif %}">{% if l.falta %}{{ l.falta|numero }}{% else %}<span class="text-ardosia">—</span>{% endif %}</td>
               <td class="td-dados text-ardosia">{{ l.unit_price|preco }}</td>
@@ -111,7 +111,7 @@ ou WhatsApp, até haver envio de emails (secção 12).{% endcomment %}
       <article class="talao">
         <time class="block text-xs text-ardosia">{{ r.received_at|date:"d/m/Y · H:i" }} · {{ r.received_by }}</time>
         <p class="mt-0.5 text-sm font-semibold"><a href="{% url 'purchasing:rececao' r.pk %}" class="link-texto">{{ r.reference }}</a> · {{ r.document_number }} de {{ r.document_date|date:"d/m/Y" }}</p>
-        <p class="text-sm">{% for l in r.lines.all %}{{ l.item.name }} {{ l.quantity|numero }} {{ l.item.unit }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
+        <p class="text-sm">{% for l in r.lines.all %}{{ l.item.name }} {{ l.quantity|quantidade:l.item.unit }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
       </article>
       {% endfor %}
     </section>

@@ -57,7 +57,7 @@ de referência; os movimentos e os ajustes são os do período.{% endcomment %}
       <tbody>
         {% for m in c.movimentados %}
         <tr>
-          <td class="font-medium">{{ m.item.name }}<span class="block text-xs font-normal text-ardosia">{{ m.item.unit }}</span></td>
+          <td class="font-medium">{{ m.item.name }}<span class="block text-xs font-normal text-ardosia">{{ m.item.unit|unidade }}</span></td>
           <td class="td-dados">{{ m.movimentos }}</td>
           <td class="td-dados">{{ m.entradas|numero:3 }}</td>
           <td class="td-dados">{{ m.vendas|numero:3 }}</td>
@@ -92,7 +92,7 @@ de referência; os movimentos e os ajustes são os do período.{% endcomment %}
         <tr>
           <td class="font-dados text-sm">{{ l.mov.occurred_at|date:"d/m H:i" }}</td>
           <td class="font-medium">{{ l.mov.item.name }}</td>
-          <td class="td-dados {% if l.mov.signed_quantity < 0 %}text-perigo{% endif %}">{{ l.mov.signed_quantity|numero:3 }} {{ l.mov.item.unit }}</td>
+          <td class="td-dados {% if l.mov.signed_quantity < 0 %}text-perigo{% endif %}">{{ l.mov.signed_quantity|quantidade:l.mov.item.unit }}</td>
           <td class="td-dados">{{ l.valor|euros }}</td>
           <td class="text-sm text-ardosia">{{ l.mov.get_origin_display }}</td>
           <td class="text-sm text-ardosia">{{ l.mov.reason|default:"—" }}<span class="block text-xs">{{ l.mov.created_by }}</span></td>

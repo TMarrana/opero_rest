@@ -22,7 +22,7 @@
         <tbody>
           {% for a in artigos %}
           <tr>
-            <td class="font-medium"><a href="{% url 'purchasing:precos' a.item.pk %}" class="hover:underline">{{ a.item.name }}</a> <span class="text-xs text-ardosia">{{ a.item.unit }}</span></td>
+            <td class="font-medium"><a href="{% url 'purchasing:precos' a.item.pk %}" class="hover:underline">{{ a.item.name }}</a> <span class="text-xs text-ardosia">{{ a.item.unit|unidade }}</span></td>
             <td colspan="4">
               <form method="post" class="flex flex-wrap items-center gap-3">
                 {% csrf_token %}
@@ -56,7 +56,7 @@
         <label for="novo-item" class="block text-sm font-medium">Artigo</label>
         <select id="novo-item" name="item" required class="campo-input w-56">
           <option value="">Escolher…</option>
-          {% for i in por_ligar %}<option value="{{ i.pk }}">{{ i.name }} ({{ i.unit }})</option>{% endfor %}
+          {% for i in por_ligar %}<option value="{{ i.pk }}">{{ i.name }} ({{ i.unit|unidade }})</option>{% endfor %}
         </select>
       </div>
       <div class="space-y-1.5">

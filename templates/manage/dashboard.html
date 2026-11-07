@@ -137,9 +137,9 @@
         <span class="mosaico h-10 w-10 bg-alerta-50 text-alerta">{% icone "pacote" "h-[18px] w-[18px]" %}</span>
         <span class="min-w-0 flex-1">
           <span class="block truncate text-sm font-semibold">{{ item.name }}</span>
-          <span class="block text-xs text-ardosia">Mínimo <span class="font-dados">{{ item.minimum_stock }} {{ item.unit }}</span>{% if item.category %} · {{ item.category.name }}{% endif %}</span>
+          <span class="block text-xs text-ardosia">Mínimo <span class="font-dados">{{ item.minimum_stock|quantidade:item.unit }}</span>{% if item.category %} · {{ item.category.name }}{% endif %}</span>
         </span>
-        <span class="font-dados text-sm font-semibold text-alerta">{{ item.current_stock }} {{ item.unit }}</span>
+        <span class="font-dados text-sm font-semibold text-alerta">{{ item.current_stock|quantidade:item.unit }}</span>
       </li>
       {% endfor %}
     </ul>
@@ -169,7 +169,7 @@
           <span class="block truncate text-sm font-semibold">{{ mov.item.name }}</span>
           <span class="block truncate text-xs text-ardosia">{{ mov.get_movement_type_display }} · <span class="font-dados">{{ mov.occurred_at|date:"d M · H:i" }}</span> · {{ mov.created_by }}</span>
         </span>
-        <span class="font-dados text-sm font-semibold {% if mov.signed_quantity > 0 %}text-servico{% endif %}">{% if mov.signed_quantity > 0 %}+{% endif %}{{ mov.signed_quantity }} {{ mov.item.unit }}</span>
+        <span class="font-dados text-sm font-semibold {% if mov.signed_quantity > 0 %}text-servico{% endif %}">{% if mov.signed_quantity > 0 %}+{% endif %}{{ mov.signed_quantity|quantidade:mov.item.unit }}</span>
       </li>
       {% endfor %}
     </ul>

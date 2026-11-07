@@ -19,6 +19,7 @@ from django.views import View
 from accounts.models import User
 from attendance.month import month_start, next_month, previous_month
 from core import exports
+from core.formatos import quantidade
 from core.mixins import AdminRequiredMixin, ManagerRequiredMixin, StockRequiredMixin
 from core.utils import parse_decimal, restaurant_scope, workers_scope
 from workers.models import Worker
@@ -84,7 +85,7 @@ def avisar_resultado(request, consumo):
             "Ficou registado e assinalado.",
         )
     if consumo.negativos:
-        artigos = "; ".join(f"{item.name} em {_numero(stock)} {item.unit}" for item, stock in consumo.negativos)
+        artigos = "; ".join(f"{item.name} em {quantidade(stock, item.unit)}" for item, stock in consumo.negativos)
         messages.warning(
             request,
             f"Stock negativo: {artigos}.",

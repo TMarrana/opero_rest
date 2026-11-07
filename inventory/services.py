@@ -7,6 +7,8 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from core.formatos import quantidade
+
 from .models import Item, StockMovement, StockTransfer
 
 _NEGATIVOS = {StockMovement.Type.SAIDA, StockMovement.Type.AJUSTE_NEG}
@@ -45,8 +47,8 @@ def register_movement(
         # contagem seguinte.
         if new_stock < 0 and origin not in (StockMovement.Origin.VENDA, StockMovement.Origin.CONSUMO):
             raise ValidationError(
-                f"Este movimento deixaria o stock em {new_stock} {locked.unit}. "
-                f"O stock registado agora é {locked.current_stock} {locked.unit}. "
+                f"Este movimento deixaria o stock em {quantidade(new_stock, locked.unit)}. "
+                f"O stock registado agora é {quantidade(locked.current_stock, locked.unit)}. "
                 "Se a contagem física for outra, registe primeiro um ajuste."
             )
         movement = StockMovement.objects.create(

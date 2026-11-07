@@ -10,6 +10,7 @@ from django import template
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
+from core.formatos import quantidade, unidade
 from core.utils import nome_do_mes
 
 register = template.Library()
@@ -98,6 +99,9 @@ def iniciais(nome):
 
 # «outubro»: o mês por extenso e em minúscula ({{ mes|nome_do_mes }}).
 register.filter("nome_do_mes", nome_do_mes)
+# «4 kg», «0,22 L»: {{ item.current_stock|quantidade:item.unit }}; só a unidade: {{ item.unit|unidade }}.
+register.filter("quantidade", quantidade)
+register.filter("unidade", unidade)
 
 
 @register.simple_tag(takes_context=True)

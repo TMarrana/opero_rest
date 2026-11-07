@@ -1,8 +1,8 @@
-<tr id="item-{{ item.pk }}" {% if oob %}hx-swap-oob="true"{% endif %} {% if not item.is_active %}class="opacity-50"{% endif %}>
+{% load interface %}<tr id="item-{{ item.pk }}" {% if oob %}hx-swap-oob="true"{% endif %} {% if not item.is_active %}class="opacity-50"{% endif %}>
   <td class="font-medium">{{ item.name }}{% if not item.is_active %} <span class="text-xs text-ardosia">(inativo)</span>{% endif %}</td>
   <td class="text-ardosia">{{ item.category.name }}</td>
-  <td class="td-dados">{{ item.current_stock }} {{ item.unit }}</td>
-  <td class="td-dados text-ardosia">{{ item.minimum_stock }} {{ item.unit }}</td>
+  <td class="td-dados">{{ item.current_stock|quantidade:item.unit }}</td>
+  <td class="td-dados text-ardosia">{{ item.minimum_stock|quantidade:item.unit }}</td>
   <td>
     {% if item.needs_count %}
     {% include "components/badge.html" with label="Stock negativo, contar" variante="alerta" %}

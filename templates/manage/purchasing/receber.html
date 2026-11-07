@@ -51,13 +51,13 @@ linha dá entrada no stock e não se apaga; um erro corrige-se com um ajuste.{% 
           <tr>
             {% if encomenda %}
             <td class="font-medium">{{ l.item.name }}</td>
-            <td class="td-dados text-ardosia">{{ l.encomendado|numero }} {{ l.item.unit }}</td>
+            <td class="td-dados text-ardosia">{{ l.encomendado|quantidade:l.item.unit }}</td>
             <td class="td-dados">{{ l.falta|numero }}</td>
             {% else %}
             <td>
               <select name="item-{{ l.chave }}" class="campo-input" aria-label="Artigo da linha {{ forloop.counter }}">
                 <option value="">—</option>
-                {% for a in artigos %}<option value="{{ a.pk }}"{% if l.item_id == a.pk|stringformat:"s" %} selected{% endif %}>{{ a.name }} ({{ a.unit }})</option>{% endfor %}
+                {% for a in artigos %}<option value="{{ a.pk }}"{% if l.item_id == a.pk|stringformat:"s" %} selected{% endif %}>{{ a.name }} ({{ a.unit|unidade }})</option>{% endfor %}
               </select>
             </td>
             {% endif %}
