@@ -132,6 +132,10 @@ class WorkerDeactivateView(ManagerRequiredMixin, View):
             if saida is None:
                 messages.error(request, "A data de saída não é válida. Indique um dia no formato AAAA-MM-DD.")
                 return redirect("workers:editar", pk=pk)
+            if saida > timezone.localdate():
+                # Desativar é já: a ficha deixava de picar nos dias que ainda faltam.
+                messages.error(request, "A data de saída não pode ser no futuro. Desative a ficha no último dia de trabalho.")
+                return redirect("workers:editar", pk=pk)
         else:
             saida = timezone.localdate()
         worker.is_active = False

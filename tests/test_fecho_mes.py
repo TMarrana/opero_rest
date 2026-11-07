@@ -294,12 +294,24 @@ class TestQuemEntraNoMes:
         assert w.is_active and w.end_date is None
         assert "data de saída" in resp.content.decode()
 
+    def test_data_de_saida_no_futuro_nao_desativa(self, client, manager, restaurant):
+        """Desativar é já: com uma data futura, a pessoa deixava logo de picar
+        nos dias que ainda lhe faltam trabalhar."""
+        w = Worker.objects.create(restaurant=restaurant, full_name="Ana Sai")
+        client.force_login(manager)
+        amanha = timezone.localdate() + datetime.timedelta(days=1)
+        resp = client.post(reverse("workers:desativar", args=[w.pk]), {"data_saida": amanha.isoformat()}, follow=True)
+        w.refresh_from_db()
+        assert w.is_active and w.end_date is None
+        assert "A data de saída não pode ser no futuro" in resp.content.decode()
+
     def test_ficha_com_historico_pede_a_data_de_saida_ao_desativar(self, client, manager, restaurant, mes_passado):
         w = Worker.objects.create(restaurant=restaurant, full_name="Ana Historico")
         add_manual_entry(worker=w, user=manager, check_in=_dia(mes_passado, 3), check_out=_dia(mes_passado, 3, 17))
         client.force_login(manager)
         html = client.get(reverse("workers:editar", args=[w.pk])).content.decode()
-        assert 'name="data_saida"' in html and f'value="{timezone.localdate():%Y-%m-%d}"' in html
+        hoje = f"{timezone.localdate():%Y-%m-%d}"
+        assert 'name="data_saida"' in html and f'value="{hoje}"' in html and f'max="{hoje}"' in html
         assert 'form="apagar-trabalhador-form"' in html and 'id="apagar-trabalhador-form"' in html
 
     def test_reativar_limpa_a_data_de_saida(self, client, manager, restaurant):
