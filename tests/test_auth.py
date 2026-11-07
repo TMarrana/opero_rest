@@ -1,6 +1,6 @@
 """Fase 0: login e redirecionamento por perfil."""
 import pytest
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 
 pytestmark = pytest.mark.django_db
 
@@ -114,3 +114,23 @@ def test_falha_csrf_fora_do_login_continua_403(staff_user):
     client.force_login(staff_user)
     resp = client.post(reverse("accounts:logout"))
     assert resp.status_code == 403
+
+
+class TestLimiteLogin:
+    URL = reverse_lazy("accounts:login")
+
+    def test_dez_falhas_bloqueiam_o_email(self, client, manager):
+        for _ in range(10):
+            client.post(self.URL, {"username": "gerente@tasca.pt", "password": "errada"})
+        r = client.post(self.URL, {"username": "GERENTE@tasca.pt", "password": "segredo-de-teste-123"})
+        assert "Demasiadas tentativas" in r.content.decode()
+        assert "_auth_user_id" not in client.session
+
+    def test_entrar_bem_limpa_as_falhas(self, client, manager):
+        for _ in range(9):
+            client.post(self.URL, {"username": "gerente@tasca.pt", "password": "errada"})
+        client.post(self.URL, {"username": "gerente@tasca.pt", "password": "segredo-de-teste-123"})
+        client.logout()
+        client.post(self.URL, {"username": "gerente@tasca.pt", "password": "errada"})
+        r = client.post(self.URL, {"username": "gerente@tasca.pt", "password": "segredo-de-teste-123"})
+        assert r.status_code == 302
