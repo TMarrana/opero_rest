@@ -18,6 +18,7 @@ from attendance.month import month_range, next_month, previous_month
 from core import exports
 from core.exports import EUROS, HORAS, NUMERO, PERCENTAGEM, Tabela
 from core.mixins import ManagerRequiredMixin, StockRequiredMixin
+from sales.reports import ultimo_dia
 
 from . import people_reports as pr
 from . import reports
@@ -33,17 +34,18 @@ def _data(valor):
         return None
 
 
-def periodo(request, meses=1):
-    """(início, fim, mês ou None). Por omissão, o mês corrente, ou os últimos
-    `meses` meses até hoje. Um intervalo de datas (`inicio` e `fim`) manda
-    sobre o mês."""
+def periodo(request, meses=1, por_omissao=None):
+    """(início, fim, mês ou None). Por omissão, o mês do dia `por_omissao`
+    (o resumo passa o último dia com vendas, como as Vendas) ou o mês
+    corrente, ou os últimos `meses` meses até hoje. Um intervalo de datas
+    (`inicio` e `fim`) manda sobre o mês."""
     inicio, fim = _data(request.GET.get("inicio")), _data(request.GET.get("fim"))
     if inicio and fim and inicio <= fim and (fim - inicio).days < MAX_DIAS:
         return inicio, fim, None
     try:
         mes = datetime.datetime.strptime(request.GET.get("mes", ""), "%Y-%m").date()
     except ValueError:
-        mes = timezone.localdate().replace(day=1)
+        mes = (por_omissao or timezone.localdate()).replace(day=1)
         if meses > 1:
             inicio = mes
             for _ in range(meses - 1):
@@ -130,7 +132,8 @@ class AnalysisView(StockRequiredMixin, TemplateView):
         # O resumo cruza vendas e pessoas: o Resp. stock vai para o stock.
         if request.role not in ("ADMIN", "MANAGER"):
             return redirect("analytics:stock")
-        inicio, fim, mes = periodo(request)
+        # Abre no último mês com vendas: o mês corrente quase nunca as tem ainda.
+        inicio, fim, mes = periodo(request, por_omissao=ultimo_dia(request.restaurant))
         disponiveis = casas_disponiveis(request)
         escolhidas = casas_escolhidas(request, disponiveis)
         indicadores = [reports.indicadores(c, inicio, fim) for c in escolhidas]
