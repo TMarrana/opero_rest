@@ -18,24 +18,42 @@ contadores dizem o que está por tratar (core/context_processors.py).{% endcomme
       {% if request.user.is_group_admin %}
       {% url 'grupo:painel' as url %}{% include "partials/nav_item.html" with chave="grupo" simbolo="predio" label="Grupo" %}
       {% endif %}
+      {% if "dashboard" in secoes %}
       {% url 'dashboard:home' as url %}{% include "partials/nav_item.html" with chave="dashboard" simbolo="painel" label="Dashboard" %}
+      {% endif %}
+      {% if "trabalhadores" in secoes %}
       {% url 'workers:lista' as url %}{% include "partials/nav_item.html" with chave="trabalhadores" simbolo="pessoas" label="Trabalhadores" %}
+      {% endif %}
+      {% if "ponto" in secoes %}
       {% url 'attendance:dia' as url %}{% include "partials/nav_item.html" with chave="ponto" simbolo="relogio" label="Ponto" nav_pendentes=contadores.ponto %}
+      {% endif %}
+      {% if "ferias" in secoes %}
       {% url 'vacations:calendario' as url %}{% include "partials/nav_item.html" with chave="ferias" simbolo="calendario" label="Férias" nav_pendentes=contadores.ferias %}
+      {% endif %}
+      {% if "turnos" in secoes %}
       {% url 'shifts:planeador' as url %}{% include "partials/nav_item.html" with chave="turnos" simbolo="turnos" label="Turnos" %}
+      {% endif %}
+      {% if "stock" in secoes %}
       {% url 'inventory:lista' as url %}{% include "partials/nav_item.html" with chave="stock" simbolo="pacote" label="Stock" nav_pendentes=contadores.stock %}
+      {% endif %}
+      {% if "compras" in secoes %}
       {% url 'purchasing:lista' as url %}{% include "partials/nav_item.html" with chave="compras" simbolo="cesto" label="Compras" %}
+      {% endif %}
+      {% if "fichas" in secoes %}
       {% url 'recipes:lista' as url %}{% include "partials/nav_item.html" with chave="fichas" simbolo="chapeu" label="Fichas" %}
-      {% if request.role == "ADMIN" or request.role == "MANAGER" %}
+      {% endif %}
+      {% if "vendas" in secoes %}
       {% url 'sales:vendas' as url %}{% include "partials/nav_item.html" with chave="vendas" simbolo="talao" label="Vendas" %}
       {% endif %}
-      {% if request.role == "ADMIN" or request.role == "MANAGER" or request.role == "STOCK" %}
+      {% if "analise" in secoes %}
       {% url 'analytics:inicio' as url %}{% include "partials/nav_item.html" with chave="analise" simbolo="grafico" label="Análise" %}
       {% endif %}
     </ul>
     <ul class="mt-2 space-y-0.5 border-t border-linha pt-2">
+      {% if "dispositivo" in secoes %}
       {% url 'accounts:dispositivo' as url %}{% include "partials/nav_item.html" with chave="dispositivo" simbolo="tablet" label="Dispositivo" %}
-      {% if request.role == "ADMIN" %}
+      {% endif %}
+      {% if "configuracao" in secoes %}
       {% url 'config:inicio' as url %}{% include "partials/nav_item.html" with chave="configuracao" simbolo="definicoes" label="Configuração" %}
       {% endif %}
       <li>
