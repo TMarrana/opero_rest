@@ -17,11 +17,35 @@ from core.models import Restaurant
 from inventory import consumption
 from inventory.models import Category, InternalConsumption, Item, StockMovement
 from inventory.services import register_movement
+from workers.formatos import normalizar_contacto
 from workers.models import Worker
 from workers.services import delete_blockers, delete_worker
 
 pytestmark = pytest.mark.django_db
 User = get_user_model()
+
+
+@pytest.mark.parametrize("entrada,saida", [
+    ("965852489", "+351 965 852 489"), ("+351911043974", "+351 911 043 974"),
+    ("00351 910 161 333", "+351 910 161 333"), ("+44 20 7946 0958", "+44 20 7946 0958"),
+    (" ana@mail.pt ", "ana@mail.pt"),
+])
+def test_normalizar_contacto(entrada, saida):
+    assert normalizar_contacto(entrada) == saida
+
+
+def test_migracao_arruma_as_fichas_que_ja_existem(restaurant):
+    from importlib import import_module
+
+    from django.apps import apps
+
+    antiga = Worker.objects.create(restaurant=restaurant, full_name="Rui Sousa", job_title="copeiro", contact="965852489")
+    sem_nada = Worker.objects.create(restaurant=restaurant, full_name="Ana Lopes")
+    import_module("workers.migrations.0005_funcao_e_contacto_arrumados").arrumar_fichas(apps, None)
+    antiga.refresh_from_db()
+    sem_nada.refresh_from_db()
+    assert (antiga.job_title, antiga.contact) == ("Copeiro", "+351 965 852 489")
+    assert (sem_nada.job_title, sem_nada.contact) == ("", "")
 
 H = datetime.timedelta(hours=1)
 FICHA = {"full_name": "Ana Lopes", "job_title": "Sala", "contact": "912345678", "start_date": "2026-01-05", "is_active": "on"}
@@ -45,7 +69,13 @@ class TestFormulario:
         resp = client.post(reverse("workers:novo"), FICHA)
         assert resp.status_code == 302
         ana = Worker.objects.get()
-        assert (ana.job_title, ana.contact, ana.start_date) == ("Sala", "912345678", datetime.date(2026, 1, 5))
+        assert (ana.job_title, ana.contact, ana.start_date) == ("Sala", "+351 912 345 678", datetime.date(2026, 1, 5))
+
+    def test_funcao_com_maiuscula_e_telefone_no_formato_351(self, client, restaurant, manager):
+        client.force_login(manager)
+        client.post(reverse("workers:novo"), {**FICHA, "job_title": " copeiro ", "contact": "00351 965852489"})
+        ana = Worker.objects.get()
+        assert (ana.job_title, ana.contact) == ("Copeiro", "+351 965 852 489")
 
     def test_post_com_user_nao_liga_conta(self, client, restaurant, manager, staff_user):
         """Mesmo enviando `user` à mão, a ficha não fica ligada a uma conta."""

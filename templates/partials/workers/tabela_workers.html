@@ -11,7 +11,7 @@
         <tr {% if not w.is_active %}class="opacity-50"{% endif %}>
           <td><span class="flex items-center gap-3"><span class="avatar h-9 w-9 text-xs">{{ w.full_name|iniciais }}</span><span><span class="block font-semibold">{{ w.full_name }}</span>{% if w.restaurant_id != request.restaurant.pk %}<span class="block text-xs text-ardosia">Casa principal: {{ w.restaurant.name }}</span>{% endif %}</span></span></td>
           <td class="text-ardosia">{{ w.job_title|default:"—" }}</td>
-          <td class="text-ardosia">{{ w.contact|default:"—" }}</td>
+          <td class="whitespace-nowrap text-ardosia">{{ w.contact|default:"—" }}</td>
           <td>{% if w.has_code %}{% include "components/badge.html" with label="Definido" variante="neutro" %}{% else %}<span class="text-sm text-ardosia">—</span>{% endif %}</td>
           <td>{% if w.user %}{% include "components/badge.html" with label="Com conta" variante="neutro" %}{% else %}<span class="text-sm text-ardosia">—</span>{% endif %}</td>
           <td>{% if w.is_active %}{% include "components/badge.html" with label="Ativo" variante="servico" %}{% else %}{% include "components/badge.html" with label="Inativo" %}{% endif %}</td>
