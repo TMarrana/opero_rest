@@ -11,18 +11,18 @@ from dataclasses import dataclass, field
 
 from django import forms
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.db.models import ProtectedError
 from django.forms import modelform_factory
-from django.core.exceptions import PermissionDenied
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views import View
 
 from attendance.models import BreakType
-from shifts.models import ShiftTemplate
 from core.mixins import ManagerRequiredMixin
 from core.models import WorkArea
+from shifts.models import ShiftTemplate
 from vacations.holidays import national_holidays
 from vacations.models import AbsenceType, BlockedPeriod, Holiday
 from workers.models import Worker
@@ -94,7 +94,7 @@ def _secao(slug, request=None):
     try:
         secao = SECOES[slug]
     except KeyError:
-        raise Http404
+        raise Http404 from None
     if request is not None and secao.so_admin and request.role != "ADMIN":
         raise PermissionDenied
     return secao
@@ -106,7 +106,7 @@ def _form_class(secao):
 
 def _preparar(form, restaurant):
     """Estilo do sistema de design e escolhas limitadas ao restaurante."""
-    for nome, campo in form.fields.items():
+    for campo in form.fields.values():
         widget = campo.widget
         if isinstance(widget, (forms.CheckboxInput, forms.CheckboxSelectMultiple)):
             continue

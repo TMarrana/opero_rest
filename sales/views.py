@@ -21,7 +21,7 @@ from core.mixins import AdminRequiredMixin, ManagerRequiredMixin
 
 from . import reports, stock
 from .forms import ImportForm, SalesSettingsForm
-from .models import SaleStockMovement, SalesImport, SalesSettings
+from .models import SalesImport, SalesSettings, SaleStockMovement
 from .services import import_saft
 
 MAX_DIAS = 366

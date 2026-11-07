@@ -17,7 +17,7 @@ from attendance.services import close_shift, decide_correction, open_shift, requ
 from core.middleware import SESSION_KEY
 from core.models import Restaurant
 from inventory.consumption import register_consumption
-from inventory.models import Category, Item, InternalConsumption, StockMovement
+from inventory.models import Category, InternalConsumption, Item, StockMovement
 from inventory.services import register_movement
 from shifts import services as turnos
 from shifts.models import Shift

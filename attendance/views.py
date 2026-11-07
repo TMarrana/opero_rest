@@ -1,10 +1,9 @@
 import datetime
 
-from django.conf import settings
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import HttpResponse
-from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -17,13 +16,13 @@ from django.views.generic import TemplateView
 
 from core import exports
 from core.mixins import ManagerRequiredMixin
-from shifts.models import Shift
 from core.utils import restaurant_scope, workers_scope
+from shifts.models import Shift
 from workers.models import Worker
 
-from .forms import CorrectionDecisionForm, EntryCorrectionForm
 from . import desvios
 from . import month as mes
+from .forms import CorrectionDecisionForm, EntryCorrectionForm
 from .models import CorrectionRequest, MonthClose, TimeEntry
 from .services import add_manual_entry, annul_entry, correct_entry, decide_correction, overlapping
 

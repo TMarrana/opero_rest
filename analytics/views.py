@@ -19,8 +19,8 @@ from core import exports
 from core.exports import EUROS, HORAS, NUMERO, PERCENTAGEM, Tabela
 from core.mixins import ManagerRequiredMixin, StockRequiredMixin
 
-from . import reports
 from . import people_reports as pr
+from . import reports
 from . import stock_reports as sr
 
 MAX_DIAS = 366

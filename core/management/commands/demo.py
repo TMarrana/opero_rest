@@ -24,8 +24,8 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
-from attendance.services import add_manual_entry, open_shift
 from accounts.services import dar_acesso
+from attendance.services import add_manual_entry, open_shift
 from core.models import Restaurant
 from inventory.models import Category, Item
 from inventory.services import register_movement

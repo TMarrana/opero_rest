@@ -32,7 +32,7 @@ from inventory.services import register_movement
 from recipes.models import Recipe, RecipeProduct
 from recipes.services import gross_quantity, items_by_name
 
-from .models import PosProduct, SaleStockMovement, SalesDocument, SalesLine, SalesSettings
+from .models import PosProduct, SalesDocument, SalesLine, SalesSettings, SaleStockMovement
 
 MIL = Decimal("0.001")
 

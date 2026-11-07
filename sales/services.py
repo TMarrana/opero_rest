@@ -94,7 +94,7 @@ def import_saft(*, restaurant, upload, user):
     try:
         ficheiro = saft.parse(saft.open_upload(upload), on_header=_check_header(restaurant))
     except saft.SaftError as exc:
-        raise ValidationError(str(exc))
+        raise ValidationError(str(exc)) from exc
     if not ficheiro.has_sales_invoices:
         raise ValidationError(
             "O ficheiro não traz documentos de venda (SalesInvoices). Exporte o SAF-T de faturação, e não o de contabilidade."

@@ -20,7 +20,6 @@ from core import exports
 from core.mixins import StockRequiredMixin
 from core.utils import restaurant_scope
 from inventory.models import Item
-
 from sales.templatetags.vendas import campo_preco
 
 from . import services

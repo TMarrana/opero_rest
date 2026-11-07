@@ -31,8 +31,8 @@ def parse_decimal(texto, campo="O valor"):
         return None
     try:
         valor = Decimal(texto)
-    except InvalidOperation:
-        raise ValidationError(f"{campo} «{texto}» não é um número.")
+    except InvalidOperation as exc:
+        raise ValidationError(f"{campo} «{texto}» não é um número.") from exc
     if valor < 0:
         raise ValidationError(f"{campo} não pode ser negativo.")
     return valor

@@ -8,10 +8,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.views.generic import TemplateView
 
+from accounts.services import dar_acesso, perfil_na_casa
 from core.mixins import ManagerRequiredMixin
 from core.utils import restaurant_scope, workers_scope
-
-from accounts.services import dar_acesso, perfil_na_casa
 
 from .forms import AccountCreateForm, AccountRoleForm, KioskCodeForm, WorkerForm, roles_que_gere
 from .models import Worker

@@ -169,8 +169,8 @@ class RecipeFormView(StockRequiredMixin, View):
             doses = parse_decimal(dados["doses"], "O número de doses")
             try:
                 desde = datetime.date.fromisoformat(dados["desde"])
-            except ValueError:
-                raise ValidationError("Indique a data a partir da qual a receita vale.")
+            except ValueError as exc:
+                raise ValidationError("Indique a data a partir da qual a receita vale.") from exc
             with transaction.atomic():
                 if ficha is None:
                     ficha = services.create_recipe(
