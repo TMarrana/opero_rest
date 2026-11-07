@@ -2,15 +2,19 @@
 colaborador sem botão de ponto. Também o que ficou da Fase 3: histórico,
 férias, PWA e dashboard."""
 import datetime
+import re
 
 import pytest
 from django.core import signing
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 
+from accounts.models import User
+from accounts.services import dar_acesso
 from accounts.views import DEVICE_COOKIE
 from attendance.models import CorrectionRequest, TimeEntry
 from attendance.services import decide_correction, open_shift
+from core.middleware import SESSION_KEY
 from core.models import Restaurant, WorkArea
 from kiosk import views as kiosk_views
 from shifts.models import Shift
@@ -325,7 +329,7 @@ class TestAppColaborador:
     def test_sem_ficha_com_backoffice_tem_caminho_para_a_gestao(self, client, manager):
         client.force_login(manager)
         html = client.get(reverse("staff:home")).content.decode()
-        assert f'href="{reverse("dashboard:home")}"' in html
+        assert f'href="{reverse("accounts:pos_login")}"' in html
         assert "Ir para a gestão" in html
         assert "Sair" in html
 
@@ -333,22 +337,39 @@ class TestAppColaborador:
         Worker.objects.create(restaurant=restaurant, full_name="Gerente Teste", user=manager)
         client.force_login(manager)
         html = client.get(reverse("staff:home")).content.decode()
-        assert f'href="{reverse("dashboard:home")}"' in html
+        assert f'href="{reverse("accounts:pos_login")}"' in html
         assert ">Gestão<" in html
 
     def test_colaborador_sem_backoffice_nao_ve_a_gestao(self, client, marta, staff_user):
         client.force_login(staff_user)
         for url in [reverse("staff:home"), reverse("staff:historico")]:
             html = client.get(url).content.decode()
-            assert f'href="{reverse("dashboard:home")}"' not in html
+            assert f'href="{reverse("accounts:pos_login")}"' not in html
             assert "Gestão" not in html
 
     def test_cabecalho_da_app_liga_a_gestao_ao_backoffice(self, client, manager, restaurant):
         Worker.objects.create(restaurant=restaurant, full_name="Gerente Teste", user=manager)
         client.force_login(manager)
         html = client.get(reverse("staff:historico")).content.decode()
-        assert f'href="{reverse("dashboard:home")}"' in html
+        assert f'href="{reverse("accounts:pos_login")}"' in html
         assert ">Gestão<" in html
+
+    @pytest.mark.parametrize("com_ficha,pagina", [(False, "staff:home"), (True, "staff:home"), (True, "staff:historico")])
+    def test_gestao_abre_quando_a_casa_ativa_e_de_colaborador(self, client, restaurant, staff_user, com_ficha, pagina):
+        """Colaborador na casa ativa e gerente noutra: a ligação para a gestão
+        leva à casa onde tem backoffice, não a um 403."""
+        outra = Restaurant.objects.create(organization=restaurant.organization, name="Tasca Dois", slug="tasca-dois")
+        dar_acesso(staff_user, outra, User.Role.MANAGER)
+        if com_ficha:
+            Worker.objects.create(restaurant=restaurant, full_name="Marta Silva", user=staff_user)
+        client.force_login(staff_user)
+        sessao = client.session
+        sessao[SESSION_KEY] = restaurant.pk
+        sessao.save()
+        html = client.get(reverse(pagina)).content.decode()
+        href = re.search(r'<a href="([^"]+)"[^>]*>(?:Gestão|Ir para a gestão)<', html).group(1)
+        resp = client.get(href, follow=True)
+        assert resp.status_code == 200 and resp.redirect_chain[-1][0] == reverse("dashboard:home")
 
     def test_gestao_tem_a_minha_app_no_menu_da_conta(self, client, manager):
         client.force_login(manager)

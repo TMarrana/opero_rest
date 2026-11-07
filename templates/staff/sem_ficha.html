@@ -10,7 +10,7 @@
   </div>
 </div>
 {% if request.user.is_backoffice %}
-<a href="{% url 'dashboard:home' %}" class="btn btn-primario mt-6 w-full">Ir para a gestão</a>
+<a href="{% url 'accounts:pos_login' %}" class="btn btn-primario mt-6 w-full">Ir para a gestão</a>
 {% endif %}
 <form method="post" action="{% url 'accounts:logout' %}" class="mt-6">
   {% csrf_token %}
