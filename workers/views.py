@@ -82,6 +82,8 @@ class WorkerFormView(ManagerRequiredMixin, View):
         if restaurant is None:
             messages.error(request, "Ainda não há restaurante configurado. Crie-o no admin primeiro.")
             return redirect("workers:lista")
+        # Lido antes da validação: o is_valid() já escreve o POST na instância.
+        estava_ativo = worker is not None and worker.is_active
         form = WorkerForm(request.POST, instance=worker, restaurant=restaurant)
         if not form.is_valid():
             return render(request, "manage/workers/form.html", self._contexto(request, form, worker))
@@ -89,6 +91,10 @@ class WorkerFormView(ManagerRequiredMixin, View):
         novo.restaurant = restaurant
         if novo.is_active:
             novo.end_date = None  # reativar apaga a data de saída
+        elif estava_ativo:
+            # Tirar o visto de «ativo» é uma saída hoje, como o Desativar sem
+            # data; sem ela, a ficha saía do fecho do mês (attendance.selectors).
+            novo.end_date = timezone.localdate()
         novo.save()
         form.save_m2m()
         messages.success(request, "Trabalhador guardado" if worker else "Trabalhador criado")

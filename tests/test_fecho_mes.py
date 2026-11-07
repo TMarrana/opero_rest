@@ -327,6 +327,35 @@ class TestQuemEntraNoMes:
         w.refresh_from_db()
         assert w.is_active and w.end_date is None
 
+    def test_desativar_pela_caixa_da_ficha_guarda_hoje_como_saida(self, client, manager, restaurant):
+        """Tirar o visto de «Trabalhador ativo» é uma saída, como o botão
+        Desativar sem data. Sem data de saída, quem não picou nesse mês
+        desaparecia do fecho e do CSV."""
+        from attendance.selectors import workers_for_month
+
+        w = Worker.objects.create(
+            restaurant=restaurant, full_name="Ana Sai", job_title="Sala", contact="912345678",
+            start_date=datetime.date(2025, 1, 2),
+        )
+        client.force_login(manager)
+        dados = {"full_name": "Ana Sai", "job_title": "Sala", "contact": "912345678", "start_date": "2025-01-02"}
+        assert client.post(reverse("workers:editar", args=[w.pk]), dados).status_code == 302
+        w.refresh_from_db()
+        assert not w.is_active and w.end_date == timezone.localdate()
+        assert w in workers_for_month(Worker.objects.all(), timezone.localdate())
+
+    def test_editar_ficha_ja_inativa_mantem_a_data_de_saida(self, client, manager, restaurant):
+        w = Worker.objects.create(
+            restaurant=restaurant, full_name="Ana Saiu", job_title="Sala", contact="912345678",
+            start_date=datetime.date(2025, 1, 2), is_active=False, end_date=datetime.date(2026, 1, 31),
+        )
+        client.force_login(manager)
+        dados = {"full_name": "Ana Saiu", "job_title": "Sala", "contact": "912345678", "start_date": "2025-01-02",
+                 "notes": "Pode voltar no verão"}
+        assert client.post(reverse("workers:editar", args=[w.pk]), dados).status_code == 302
+        w.refresh_from_db()
+        assert not w.is_active and w.end_date == datetime.date(2026, 1, 31)
+
     def test_seletor_ignora_registos_anulados_e_saidas_anteriores(self, manager, restaurant, mes_passado):
         from attendance.selectors import workers_for_month
 
