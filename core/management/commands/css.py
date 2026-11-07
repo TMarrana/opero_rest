@@ -35,10 +35,11 @@ class Command(BaseCommand):
                 f"Descarregue a versao v3.4.17 para o seu sistema em {DOWNLOAD} "
                 "e ponha-o em tools/ (ou defina TAILWIND_BIN)."
             )
+        saida = base / "static" / "css" / "app.css"
         comando = [
             str(binario),
             "-i", str(base / "static" / "src" / "input.css"),
-            "-o", str(base / "static" / "css" / "app.css"),
+            "-o", str(saida),
         ]
         if options["watch"]:
             comando.append("--watch")
@@ -50,3 +51,6 @@ class Command(BaseCommand):
             return
         if resultado.returncode:
             raise CommandError(f"O Tailwind terminou com o codigo {resultado.returncode}.")
+        # O Tailwind nao reescreve um CSS igual ao que ja la estava; sem isto a
+        # data do ficheiro ficava antiga e o check opero.W001 nunca se calava.
+        os.utime(saida)

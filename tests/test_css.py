@@ -1,4 +1,9 @@
 import os
+import subprocess
+
+import pytest
+from django.core.management import call_command
+from django.core.management.base import CommandError
 
 from core.checks import css_desatualizado
 
@@ -42,3 +47,37 @@ def test_fontes_inexistentes_sao_ignoradas(tmp_path):
     css, tpl = _ficheiros(tmp_path)
     os.utime(tpl, (1, 1))
     assert css_desatualizado(css, [tmp_path / "nao-existe", tmp_path / "templates"]) is False
+
+
+def _projeto_com_tailwind(tmp_path, settings, monkeypatch, codigo):
+    """Um BASE_DIR com um template e um app.css antigo, e um Tailwind que
+    termina com `codigo` sem escrever nada (o que o Tailwind v3 faz quando o
+    CSS gerado e igual ao que ja estava no ficheiro)."""
+    (tmp_path / "templates").mkdir()
+    (tmp_path / "templates" / "x.html").write_text("<p></p>")
+    (tmp_path / "static" / "css").mkdir(parents=True)
+    css = tmp_path / "static" / "css" / "app.css"
+    css.write_text("a{}")
+    os.utime(css, (1, 1))
+    binario = tmp_path / "tailwindcss"
+    binario.write_text("")
+    settings.BASE_DIR = tmp_path
+    monkeypatch.setenv("TAILWIND_BIN", str(binario))
+    monkeypatch.setattr(
+        "core.management.commands.css.subprocess.run",
+        lambda comando, **kwargs: subprocess.CompletedProcess(comando, codigo),
+    )
+    return css
+
+
+def test_compilar_deixa_o_css_em_dia_mesmo_sem_reescrever_o_ficheiro(tmp_path, settings, monkeypatch):
+    css = _projeto_com_tailwind(tmp_path, settings, monkeypatch, codigo=0)
+    call_command("css")
+    assert css_desatualizado(css, [tmp_path / "templates"]) is False
+
+
+def test_compilacao_falhada_deixa_o_css_desatualizado(tmp_path, settings, monkeypatch):
+    css = _projeto_com_tailwind(tmp_path, settings, monkeypatch, codigo=1)
+    with pytest.raises(CommandError):
+        call_command("css")
+    assert css_desatualizado(css, [tmp_path / "templates"]) is True
