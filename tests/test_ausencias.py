@@ -8,10 +8,12 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils import timezone
 
+from attendance import month as mes
 from vacations.holidays import easter, national_holidays
 from vacations.models import AbsenceType, Allowance, BlockedPeriod, Holiday, VacationRequest
 from vacations.services import (
     balance,
+    cancel_by_manager,
     cancel_request,
     count_days,
     create_request,
@@ -22,6 +24,7 @@ from workers.models import Worker
 pytestmark = pytest.mark.django_db
 
 D = datetime.date
+DIA = datetime.timedelta(days=1)
 
 
 @pytest.fixture
@@ -39,6 +42,22 @@ def ferias(restaurant):
 @pytest.fixture
 def baixa(restaurant):
     return AbsenceType.objects.get(restaurant=restaurant, name="Baixa médica")
+
+
+@pytest.fixture
+def mes_passado():
+    return mes.previous_month(timezone.localdate())
+
+
+def proximo_dia_util(worker, dia):
+    """O primeiro dia, a partir de `dia`, em que a ausência desconta um dia."""
+    while count_days(worker, dia, dia) != 1:
+        dia += DIA
+    return dia
+
+
+def primeiro_dia_util(worker, mes_inicio):
+    return proximo_dia_util(worker, mes_inicio)
 
 
 def _futuro(dias):
@@ -217,3 +236,137 @@ class TestPeriodosBloqueados:
         client.force_login(staff_user)
         html = client.get(reverse("staff:ferias")).content.decode()
         assert "Sem pedidos nestas datas" in html and "Época alta" in html
+
+
+class TestMesAprovadoESobreposicao:
+    def test_aprovar_em_mes_aprovado_e_recusado(self, worker, manager, ferias, mes_passado):
+        mes.approve_month(worker=worker, month=mes_passado, user=manager)
+        dia = primeiro_dia_util(worker, mes_passado)
+        pedido = VacationRequest.objects.create(
+            worker=worker, absence_type=ferias, start_date=dia, end_date=dia, days_taken=1
+        )
+        with pytest.raises(ValidationError, match="já foi aprovado"):
+            decide_request(request_obj=pedido, user=manager, approve=True)
+        pedido.refresh_from_db()
+        assert pedido.status == VacationRequest.Status.PENDENTE
+
+    def test_recusar_em_mes_aprovado_continua_possivel(self, worker, manager, ferias, mes_passado):
+        mes.approve_month(worker=worker, month=mes_passado, user=manager)
+        dia = primeiro_dia_util(worker, mes_passado)
+        pedido = VacationRequest.objects.create(
+            worker=worker, absence_type=ferias, start_date=dia, end_date=dia, days_taken=1
+        )
+        decide_request(request_obj=pedido, user=manager, approve=False)
+        pedido.refresh_from_db()
+        assert pedido.status == VacationRequest.Status.RECUSADO
+
+    def test_gerente_nao_regista_ausencia_em_mes_aprovado(self, worker, manager, ferias, mes_passado):
+        mes.approve_month(worker=worker, month=mes_passado, user=manager)
+        dia = primeiro_dia_util(worker, mes_passado)
+        with pytest.raises(ValidationError, match="já foi aprovado"):
+            create_request(worker=worker, absence_type=ferias, start_date=dia, end_date=dia, created_by=manager)
+        assert not VacationRequest.objects.filter(worker=worker).exists()
+
+    def test_tipo_sem_aprovacao_nao_nasce_em_mes_aprovado(self, worker, manager, baixa, mes_passado):
+        mes.approve_month(worker=worker, month=mes_passado, user=manager)
+        dia = primeiro_dia_util(worker, mes_passado)
+        with pytest.raises(ValidationError, match="já foi aprovado"):
+            create_request(worker=worker, absence_type=baixa, start_date=dia, end_date=dia)
+
+    def test_pedido_pendente_em_mes_aprovado_ainda_se_submete(self, worker, manager, ferias, mes_passado):
+        mes.approve_month(worker=worker, month=mes_passado, user=manager)
+        dia = primeiro_dia_util(worker, mes_passado)
+        pedido = create_request(worker=worker, absence_type=ferias, start_date=dia, end_date=dia)
+        assert pedido.status == VacationRequest.Status.PENDENTE
+
+    def test_ausencia_que_atravessa_um_mes_aprovado_e_recusada(self, worker, manager, baixa, mes_passado):
+        """Basta um dos meses tocados estar aprovado, mesmo não sendo o do início."""
+        mes.approve_month(worker=worker, month=mes_passado, user=manager)
+        ultimo = mes.next_month(mes_passado) - DIA
+        with pytest.raises(ValidationError, match="já foi aprovado"):
+            create_request(
+                worker=worker,
+                absence_type=baixa,
+                start_date=ultimo - DIA,
+                end_date=ultimo + 5 * DIA,
+                created_by=manager,
+            )
+
+    def test_cancelar_ausencia_aprovada_respeita_mes_aprovado(self, worker, manager, ferias, mes_passado):
+        dia = primeiro_dia_util(worker, mes_passado)
+        pedido = VacationRequest.objects.create(
+            worker=worker,
+            absence_type=ferias,
+            start_date=dia,
+            end_date=timezone.localdate() + 3 * DIA,
+            days_taken=1,
+            status=VacationRequest.Status.APROVADO,
+        )
+        mes.approve_month(worker=worker, month=mes_passado, user=manager)
+        with pytest.raises(ValidationError, match="já foi aprovado"):
+            cancel_by_manager(request_obj=pedido, user=manager)
+        pedido.refresh_from_db()
+        assert pedido.status == VacationRequest.Status.APROVADO
+
+    def test_aprovar_sobreposta_a_aprovada_e_recusado_e_o_saldo_desce_uma_vez(self, worker, manager, ferias):
+        inicio = proximo_dia_util(worker, timezone.localdate() + datetime.timedelta(days=20))
+        create_request(
+            worker=worker, absence_type=ferias, start_date=inicio, end_date=inicio + 2 * DIA, created_by=manager
+        )
+        saldo = balance(worker, inicio.year)
+        # Começa no mesmo dia útil, para o pedido ter sempre dias a descontar.
+        pedido = create_request(worker=worker, absence_type=ferias, start_date=inicio, end_date=inicio + 3 * DIA)
+        assert pedido.status == VacationRequest.Status.PENDENTE
+        with pytest.raises(ValidationError, match="Sobrepõe-se") as erro:
+            decide_request(request_obj=pedido, user=manager, approve=True)
+        assert erro.value.messages[0] == (
+            f"Sobrepõe-se a Férias de {inicio:%d/%m} a {inicio + 2 * DIA:%d/%m}, já aprovada. "
+            "Recuse este pedido ou cancele a outra ausência."
+        )
+        assert balance(worker, inicio.year) == saldo
+
+    def test_tipo_sem_aprovacao_sobreposto_e_recusado(self, worker, manager, ferias, baixa):
+        inicio = proximo_dia_util(worker, timezone.localdate() + datetime.timedelta(days=20))
+        create_request(
+            worker=worker, absence_type=ferias, start_date=inicio, end_date=inicio + 2 * DIA, created_by=manager
+        )
+        fim = inicio + 2 * DIA
+        with pytest.raises(ValidationError, match="Sobrepõe-se"):
+            create_request(worker=worker, absence_type=baixa, start_date=fim, end_date=fim + 2 * DIA)
+        assert VacationRequest.objects.filter(worker=worker).count() == 1
+
+    def test_dias_seguidos_sem_cruzar_nao_se_sobrepoem(self, worker, manager, ferias):
+        inicio = proximo_dia_util(worker, timezone.localdate() + datetime.timedelta(days=20))
+        create_request(worker=worker, absence_type=ferias, start_date=inicio, end_date=inicio, created_by=manager)
+        seguinte = proximo_dia_util(worker, inicio + DIA)
+        create_request(worker=worker, absence_type=ferias, start_date=seguinte, end_date=seguinte, created_by=manager)
+        assert VacationRequest.objects.filter(worker=worker).count() == 2
+
+    def test_pedido_pendente_sobreposto_ainda_se_submete(self, worker, manager, ferias):
+        inicio = proximo_dia_util(worker, timezone.localdate() + datetime.timedelta(days=20))
+        create_request(
+            worker=worker, absence_type=ferias, start_date=inicio, end_date=inicio + 2 * DIA, created_by=manager
+        )
+        pedido = create_request(worker=worker, absence_type=ferias, start_date=inicio, end_date=inicio + DIA)
+        assert pedido.status == VacationRequest.Status.PENDENTE
+
+    def test_recusar_pedido_sobreposto_continua_possivel(self, worker, manager, ferias):
+        inicio = proximo_dia_util(worker, timezone.localdate() + datetime.timedelta(days=20))
+        create_request(
+            worker=worker, absence_type=ferias, start_date=inicio, end_date=inicio + 2 * DIA, created_by=manager
+        )
+        pedido = create_request(worker=worker, absence_type=ferias, start_date=inicio, end_date=inicio + DIA)
+        decide_request(request_obj=pedido, user=manager, approve=False)
+        pedido.refresh_from_db()
+        assert pedido.status == VacationRequest.Status.RECUSADO
+
+    def test_ausencia_cancelada_nao_conta_como_sobreposicao(self, worker, manager, ferias):
+        inicio = proximo_dia_util(worker, timezone.localdate() + datetime.timedelta(days=20))
+        primeira = create_request(
+            worker=worker, absence_type=ferias, start_date=inicio, end_date=inicio + 2 * DIA, created_by=manager
+        )
+        pedido = create_request(worker=worker, absence_type=ferias, start_date=inicio, end_date=inicio + DIA)
+        cancel_by_manager(request_obj=primeira, user=manager)
+        decide_request(request_obj=pedido, user=manager, approve=True)
+        pedido.refresh_from_db()
+        assert pedido.status == VacationRequest.Status.APROVADO
