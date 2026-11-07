@@ -1,0 +1,13 @@
+{# Separadores do stock, em pílula, como os do ponto (manage/attendance/_nav.html). #}
+<nav class="separadores mt-5" aria-label="Stock">
+  {% url 'inventory:lista' as url_artigos %}
+  {% url 'inventory:historico' as url_historico %}
+  {% url 'inventory:contagens' as url_contagens %}
+  {% url 'inventory:consumos' as url_consumos %}
+  {% url 'inventory:categorias' as url_categorias %}
+  <a href="{{ url_artigos }}" class="separador {% if request.path == url_artigos %}separador-ativo{% endif %}"{% if request.path == url_artigos %} aria-current="page"{% endif %}>Artigos</a>
+  <a href="{{ url_historico }}" class="separador {% if request.path == url_historico %}separador-ativo{% endif %}"{% if request.path == url_historico %} aria-current="page"{% endif %}>Histórico</a>
+  <a href="{{ url_contagens }}" class="separador {% if request.path == url_contagens %}separador-ativo{% endif %}"{% if request.path == url_contagens %} aria-current="page"{% endif %}>Contagens</a>
+  <a href="{{ url_consumos }}" class="separador {% if request.path == url_consumos %}separador-ativo{% endif %}"{% if request.path == url_consumos %} aria-current="page"{% endif %}>Consumos</a>
+  <a href="{{ url_categorias }}" class="separador {% if request.path == url_categorias %}separador-ativo{% endif %}"{% if request.path == url_categorias %} aria-current="page"{% endif %}>Categorias</a>
+</nav>

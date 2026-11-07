@@ -5,13 +5,13 @@
 {% block content %}
 {% comment %}Teórico contra real (Fase 14): cada contagem do mês comparada com a
 anterior do mesmo artigo. A diferença é o que saiu sem ficar registado.{% endcomment %}
-<a href="{% url 'inventory:lista' %}" class="link-voltar">{% icone "seta-esquerda" "h-4 w-4" %}Stock</a>
-<div class="mt-2 flex flex-wrap items-end justify-between gap-4">
+<div class="flex flex-wrap items-end justify-between gap-4">
   <h1 class="titulo-pagina">Contagens</h1>
   {% url 'inventory:contagem' as url_contar %}
   {% include "components/botao.html" with variante="acento" label="Contar" href=url_contar %}
 </div>
 <p class="subtitulo-pagina">Entre duas contagens de um artigo, o consumo esperado são as vendas pelas fichas técnicas, os consumos internos e as quebras registadas. A diferença na contagem é o que saiu sem registo: desperdício, porções mal servidas ou fichas erradas.</p>
+{% include "manage/inventory/_nav.html" %}
 
 <div class="mt-6 flex items-center gap-2">
   <a href="?mes={{ mes_anterior|date:'Y-m' }}" class="btn btn-fantasma btn-sm" aria-label="Mês anterior">&larr;</a>

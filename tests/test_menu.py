@@ -41,6 +41,42 @@ def test_menu_segue_o_perfil_da_casa_ativa(client, restaurant, stock_user):
     assert f'href="{reverse("attendance:dia")}"' in html
 
 
+def _menu(client):
+    html = client.get(reverse("dashboard:home")).content.decode()
+    menu = html[html.index('aria-label="Navegação principal"'):]
+    return menu[: menu.index("</nav>")]
+
+
+def test_gerente_ve_os_tres_grupos_do_menu(client, manager):
+    client.force_login(manager)
+    menu = _menu(client)
+    for titulo in ("Pessoas", "Stock", "Negócio"):
+        assert f'aria-label="{titulo}"' in menu and f">{titulo}</p>" in menu
+
+
+def test_resp_stock_nao_ve_o_grupo_pessoas(client, stock_user):
+    client.force_login(stock_user)
+    menu = _menu(client)
+    assert "Pessoas" not in menu
+    # Do Negócio, o Resp. stock só abre a Análise: o grupo aparece por causa dela.
+    assert 'aria-label="Stock"' in menu and 'aria-label="Negócio"' in menu
+
+
+PAGINAS_DO_STOCK = ["inventory:lista", "inventory:historico", "inventory:contagens", "inventory:consumos", "inventory:categorias"]
+
+
+@pytest.mark.parametrize("pagina", PAGINAS_DO_STOCK)
+def test_paginas_do_stock_tem_os_mesmos_separadores(client, stock_user, pagina):
+    client.force_login(stock_user)
+    html = client.get(reverse(pagina)).content.decode()
+    nav = html[html.index('<nav class="separadores'):]
+    nav = nav[: nav.index("</nav>")]
+    for outra in PAGINAS_DO_STOCK:
+        assert f'href="{reverse(outra)}"' in nav
+    ativo = re.findall(r'<a href="([^"]+)"[^>]*aria-current="page"', nav)
+    assert ativo == [reverse(pagina)]
+
+
 def test_secoes_visiveis_por_perfil():
     from core import permissions
 

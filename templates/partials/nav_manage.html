@@ -21,6 +21,13 @@ contadores dizem o que está por tratar (core/context_processors.py).{% endcomme
       {% if "dashboard" in secoes %}
       {% url 'dashboard:home' as url %}{% include "partials/nav_item.html" with chave="dashboard" simbolo="painel" label="Dashboard" %}
       {% endif %}
+    </ul>
+    {% comment %}Três áreas com título. O menu aparece duas vezes na página (rail e
+    gaveta do telemóvel), por isso cada lista tem o nome em aria-label em vez de
+    aria-labelledby com um id. Uma área sem entradas para este perfil não aparece.{% endcomment %}
+    {% if "trabalhadores" in secoes or "ponto" in secoes or "ferias" in secoes or "turnos" in secoes %}
+    <p class="rotulo mt-4 px-3 pb-1" aria-hidden="true">Pessoas</p>
+    <ul class="space-y-0.5" aria-label="Pessoas">
       {% if "trabalhadores" in secoes %}
       {% url 'workers:lista' as url %}{% include "partials/nav_item.html" with chave="trabalhadores" simbolo="pessoas" label="Trabalhadores" %}
       {% endif %}
@@ -33,6 +40,11 @@ contadores dizem o que está por tratar (core/context_processors.py).{% endcomme
       {% if "turnos" in secoes %}
       {% url 'shifts:planeador' as url %}{% include "partials/nav_item.html" with chave="turnos" simbolo="turnos" label="Turnos" %}
       {% endif %}
+    </ul>
+    {% endif %}
+    {% if "stock" in secoes or "compras" in secoes or "fichas" in secoes %}
+    <p class="rotulo mt-4 px-3 pb-1" aria-hidden="true">Stock</p>
+    <ul class="space-y-0.5" aria-label="Stock">
       {% if "stock" in secoes %}
       {% url 'inventory:lista' as url %}{% include "partials/nav_item.html" with chave="stock" simbolo="pacote" label="Stock" nav_pendentes=contadores.stock %}
       {% endif %}
@@ -42,6 +54,11 @@ contadores dizem o que está por tratar (core/context_processors.py).{% endcomme
       {% if "fichas" in secoes %}
       {% url 'recipes:lista' as url %}{% include "partials/nav_item.html" with chave="fichas" simbolo="chapeu" label="Fichas" %}
       {% endif %}
+    </ul>
+    {% endif %}
+    {% if "vendas" in secoes or "analise" in secoes %}
+    <p class="rotulo mt-4 px-3 pb-1" aria-hidden="true">Negócio</p>
+    <ul class="space-y-0.5" aria-label="Negócio">
       {% if "vendas" in secoes %}
       {% url 'sales:vendas' as url %}{% include "partials/nav_item.html" with chave="vendas" simbolo="talao" label="Vendas" %}
       {% endif %}
@@ -49,7 +66,8 @@ contadores dizem o que está por tratar (core/context_processors.py).{% endcomme
       {% url 'analytics:inicio' as url %}{% include "partials/nav_item.html" with chave="analise" simbolo="grafico" label="Análise" %}
       {% endif %}
     </ul>
-    <ul class="mt-2 space-y-0.5 border-t border-linha pt-2">
+    {% endif %}
+    <ul class="mt-3 space-y-0.5 border-t border-linha pt-2">
       {% if "dispositivo" in secoes %}
       {% url 'accounts:dispositivo' as url %}{% include "partials/nav_item.html" with chave="dispositivo" simbolo="tablet" label="Dispositivo" %}
       {% endif %}
