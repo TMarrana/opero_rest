@@ -6,7 +6,10 @@ que falhe sem rede. Uso: ``{% icone "pacote" %}`` ou
 ``{% icone "relogio" "h-4 w-4 text-ardosia" %}``.
 """
 
+import uuid
+
 from django import template
+from django.template.loader import render_to_string
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
@@ -113,6 +116,16 @@ def url_exportar(context, formato, chave="exportar"):
         query.pop(k, None)
     query[chave] = formato
     return "?" + query.urlencode()
+
+
+@register.simple_block_tag
+def menu_acoes(content, rotulo="Mais ações"):
+    """As ações de uma linha que não são a principal, num menu «Mais ações»
+    ({% menu_acoes %}…{% endmenu_acoes %}; ver components/menu_acoes.html)."""
+    return render_to_string(
+        "components/menu_acoes.html",
+        {"conteudo": content, "rotulo": rotulo, "id": f"menu-acoes-{uuid.uuid4().hex[:8]}"},
+    )
 
 
 @register.inclusion_tag("components/exportar.html", takes_context=True)

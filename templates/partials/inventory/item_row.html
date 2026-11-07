@@ -13,11 +13,15 @@
     {% endif %}
   </td>
   <td class="whitespace-nowrap text-right text-sm">
-    <button type="button"
-            hx-get="{% url 'inventory:movimento' item.pk %}" hx-target="#modal-slot" hx-swap="innerHTML"
-            class="link-acao bg-floresta text-creme hover:bg-floresta-800">Movimento</button>
-    {% if pode_transferir and item.is_active %}<a href="{% url 'inventory:transferir' item.pk %}" class="ml-1.5 link-acao">Transferir</a>{% endif %}
-    <a href="{% url 'purchasing:precos' item.pk %}" class="ml-1.5 link-acao">Preços</a>
-    <a href="{% url 'inventory:editar' item.pk %}" class="ml-1.5 link-acao">Editar</a>
+    <div class="flex items-center justify-end gap-1.5">
+      <button type="button"
+              hx-get="{% url 'inventory:movimento' item.pk %}" hx-target="#modal-slot" hx-swap="innerHTML"
+              class="btn btn-sm btn-primario">Movimento</button>
+      {% menu_acoes %}
+      {% if pode_transferir and item.is_active %}<a href="{% url 'inventory:transferir' item.pk %}" class="nav-item w-full">Transferir</a>{% endif %}
+      <a href="{% url 'purchasing:precos' item.pk %}" class="nav-item w-full">Preços</a>
+      <a href="{% url 'inventory:editar' item.pk %}" class="nav-item w-full">Editar</a>
+      {% endmenu_acoes %}
+    </div>
   </td>
 </tr>

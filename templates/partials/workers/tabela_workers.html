@@ -19,9 +19,14 @@
             {% if w.restaurant_id != request.restaurant.pk %}
             <span class="text-sm text-ardosia">A ficha é de {{ w.restaurant.name }}</span>
             {% else %}
-            <a href="{% url 'workers:codigo' w.pk %}" class="link-acao">{% if w.has_code %}Repor código{% else %}Definir código{% endif %}</a>
-            <a href="{% url 'workers:conta' w.pk %}" class="ml-1.5 link-acao">{% if w.user %}Conta da app{% else %}Dar acesso à app{% endif %}</a>
-            <a href="{% url 'workers:editar' w.pk %}" class="ml-1.5 link-acao">Editar</a>
+            <div class="flex items-center justify-end gap-1.5">
+              {% url 'workers:editar' w.pk as url_editar %}
+              {% include "components/botao.html" with label="Editar" tamanho="sm" href=url_editar %}
+              {% menu_acoes %}
+              <a href="{% url 'workers:codigo' w.pk %}" class="nav-item w-full">{% if w.has_code %}Repor código{% else %}Definir código{% endif %}</a>
+              <a href="{% url 'workers:conta' w.pk %}" class="nav-item w-full">{% if w.user %}Conta da app{% else %}Dar acesso à app{% endif %}</a>
+              {% endmenu_acoes %}
+            </div>
             {% endif %}
           </td>
         </tr>
