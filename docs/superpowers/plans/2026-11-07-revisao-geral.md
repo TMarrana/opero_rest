@@ -157,7 +157,7 @@ Uma SPA (React) ou o Tailwind v4 não trazem nada de que o produto precise agora
 **Interfaces:**
 - Produces: `core.checks.css_desatualizado(css: pathlib.Path, fontes: list[pathlib.Path]) -> bool` e o comando `python manage.py css [--watch] [--minify]`.
 
-- [ ] **Step 1: Escrever os testes que falham**
+- [x] **Step 1: Escrever os testes que falham**
 
 ```python
 def test_css_mais_antigo_que_um_template_esta_desatualizado(tmp_path):
@@ -175,13 +175,13 @@ def test_css_em_falta_esta_desatualizado(tmp_path):
 ```
 (`_ficheiros` cria `app.css` e `templates/x.html` em `tmp_path`.)
 
-- [ ] **Step 2: Correr e ver falhar.** `pytest tests/test_css.py -v`. Esperado: `ImportError`.
-- [ ] **Step 3: Implementar.**
+- [x] **Step 2: Correr e ver falhar.** `pytest tests/test_css.py -v`. Esperado: `ImportError`.
+- [x] **Step 3: Implementar.**
   - `css_desatualizado` compara o `st_mtime` do CSS com o mais recente de `*.html` nas pastas e dos ficheiros indicados.
   - O aviso do sistema (`@register(Tags.staticfiles)`, id `opero.W001`) só corre com `DEBUG=True`. Usa como fontes `templates/`, `static/src/input.css`, `tailwind.config.js` e `*/templates/`, e diz: «O CSS está desatualizado. Corra: python manage.py css».
   - O comando corre `tools/tailwindcss.exe` no Windows, `tools/tailwindcss` noutros sistemas, ou o binário de `TAILWIND_BIN` se estiver definido, com `-i static/src/input.css -o static/css/app.css`, e passa-lhe `--watch` e `--minify`. Sem binário, dá `CommandError` e diz onde o descarregar (release v3.4.17).
-- [ ] **Step 4: Correr e ver passar.** `pytest tests/test_css.py -v` → PASS. Depois mexer num template e correr `python manage.py check` → mostra `opero.W001`.
-- [ ] **Step 5: Commit.** `git commit -m "CSS: comando css e aviso no check quando o CSS fica para tras"`
+- [x] **Step 4: Correr e ver passar.** `pytest tests/test_css.py -v` → PASS. Depois mexer num template e correr `python manage.py check` → mostra `opero.W001`.
+- [x] **Step 5: Commit.** `git commit -m "CSS: comando css e aviso no check quando o CSS fica para tras"`
 
 ### Tarefa A2: Settings de produção, dependências e `demo` seguro
 
@@ -192,7 +192,7 @@ def test_css_em_falta_esta_desatualizado(tmp_path):
 - Modify: `core/management/commands/demo.py`
 - Test: `tests/test_producao.py`
 
-- [ ] **Step 1: Escrever os testes que falham**
+- [x] **Step 1: Escrever os testes que falham**
 
 ```python
 def _prod(monkeypatch):
@@ -217,8 +217,8 @@ def test_demo_recusa_fora_de_desenvolvimento(settings):
         call_command("demo")
 ```
 
-- [ ] **Step 2: Correr e ver falhar.** `pytest tests/test_producao.py -v`. Esperado: 3 FAIL.
-- [ ] **Step 3: Implementar.**
+- [x] **Step 2: Correr e ver falhar.** `pytest tests/test_producao.py -v`. Esperado: 3 FAIL.
+- [x] **Step 3: Implementar.**
   - **`prod.py`:**
     - `SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")`.
     - `CSRF_TRUSTED_ORIGINS = env.list("DJANGO_CSRF_TRUSTED_ORIGINS", default=[])`.
@@ -227,8 +227,8 @@ def test_demo_recusa_fora_de_desenvolvimento(settings):
     - `sentry_sdk.init(dsn=..., send_default_pii=False, traces_sample_rate=0)`, só se `SENTRY_DSN` estiver definido.
   - **`base.py`:** `LOGGING` para a consola, `INFO` para `django`, `ERROR` com traceback para `django.request` e formato `%(asctime)s %(levelname)s %(name)s %(message)s`.
   - **`demo`:** opção `--forcar`. Sem ela e com `DEBUG=False`, dá `CommandError("O demo so corre em desenvolvimento (DEBUG=True). Use --forcar num ambiente de demonstracao.")`.
-- [ ] **Step 4: Correr e ver passar.** `pytest tests/test_producao.py -v` → PASS. Correr `python manage.py check --deploy --settings=config.settings.prod` com as variáveis do teste: só fica o W021 (preload).
-- [ ] **Step 5: Commit.** `git commit -m "Producao: proxy HTTPS, CSRF por subdominio, cache partilhada, logs, Sentry e demo so em dev"`
+- [x] **Step 4: Correr e ver passar.** `pytest tests/test_producao.py -v` → PASS. Correr `python manage.py check --deploy --settings=config.settings.prod` com as variáveis do teste: só fica o W021 (preload).
+- [x] **Step 5: Commit.** `git commit -m "Producao: proxy HTTPS, CSRF por subdominio, cache partilhada, logs, Sentry e demo so em dev"`
 
 ### Tarefa A3: Limite de tentativas no login
 
@@ -241,7 +241,7 @@ def test_demo_recusa_fora_de_desenvolvimento(settings):
 **Interfaces:**
 - Produces: `core.throttle.Limite(prefixo: str, max_falhas: int, segundos: int)` com `bloqueado(chave) -> bool`, `falhou(chave) -> int` e `limpar(chave) -> None`.
 
-- [ ] **Step 1: Escrever os testes que falham**
+- [x] **Step 1: Escrever os testes que falham**
 
 ```python
 class TestLimiteLogin:
@@ -264,14 +264,14 @@ class TestLimiteLogin:
         assert r.status_code == 302
 ```
 
-- [ ] **Step 2: Correr e ver falhar.** `pytest tests/test_auth.py -k Limite -v`. Esperado: o primeiro FAIL.
-- [ ] **Step 3: Implementar.**
+- [x] **Step 2: Correr e ver falhar.** `pytest tests/test_auth.py -k Limite -v`. Esperado: o primeiro FAIL.
+- [x] **Step 3: Implementar.**
   - Limite do login: 10 falhas em 900 segundos. A chave é o email em minúsculas, sem espaços.
   - Mensagem: «Demasiadas tentativas. Espere 15 minutos ou peça ao gerente uma palavra-passe provisória.»
   - No `clean()`: verificar o bloqueio, depois chamar `super().clean()`. Se falhar, registar a falha e voltar a levantar o erro; se passar, limpar as falhas.
   - O quiosque passa a usar `Limite("codigo-falhas", 5, 60)`, com o mesmo comportamento de hoje.
-- [ ] **Step 4: Correr e ver passar.** `pytest tests/test_auth.py tests/test_staff.py -v` → PASS (os testes do quiosque continuam verdes).
-- [ ] **Step 5: Commit.** `git commit -m "Login: bloqueio de 15 minutos ao fim de 10 tentativas falhadas"`
+- [x] **Step 4: Correr e ver passar.** `pytest tests/test_auth.py tests/test_staff.py -v` → PASS (os testes do quiosque continuam verdes).
+- [x] **Step 5: Commit.** `git commit -m "Login: bloqueio de 15 minutos ao fim de 10 tentativas falhadas"`
 
 ### Tarefa A4: CI no GitHub Actions, com PostgreSQL e ruff
 
@@ -280,11 +280,11 @@ class TestLimiteLogin:
 - Create: `ruff.toml`
 - Modify: `requirements-dev.txt` (acrescentar `ruff>=0.8`)
 
-- [ ] **Step 1: Configurar o ruff.**
+- [x] **Step 1: Configurar o ruff.**
   - Valores: `line-length = 120`, `target-version = "py312"`, `extend-exclude = ["*/migrations/*", "re-factorial", "floorplan"]`, `lint.select = ["E4", "E7", "E9", "F", "I", "B", "DJ"]`.
   - Correr `ruff check . --fix` e corrigir à mão o que sobrar.
   - Commit: `git commit -m "ruff: configuracao e correcoes"`.
-- [ ] **Step 2: Escrever o workflow.**
+- [x] **Step 2: Escrever o workflow.**
   - Gatilhos: `push` e `pull_request`.
   - Job `sqlite`, em Python 3.12: `pip install -r requirements-dev.txt`, `python manage.py check`, `python manage.py makemigrations --check --dry-run`, `ruff check .` e `pytest -q`.
   - Job `postgres`:
@@ -293,8 +293,8 @@ class TestLimiteLogin:
     - `python manage.py migrate`, que aplica as migrações reais a uma base vazia (o que o `--no-migrations` esconde);
     - `pytest -q --migrations`.
   - Job `css`: `pip install -r requirements.txt`, descarregar `https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.17/tailwindcss-linux-x64` para `tools/tailwindcss`, dar-lhe `chmod +x` e correr `python manage.py css --minify`.
-- [ ] **Step 3: Verificar.** Fazer push de um ramo e ver os três jobs verdes no separador Actions. Se o job `postgres` falhar, cada falha passa a ser uma tarefa nova neste bloco, porque é exatamente o que o CI veio mostrar.
-- [ ] **Step 4: Commit.** `git commit -m "CI: testes em SQLite e PostgreSQL, migracoes, ruff e build do CSS"`
+- [~] **Step 3: Verificar.** Fazer push de um ramo e ver os três jobs verdes no separador Actions. Se o job `postgres` falhar, cada falha passa a ser uma tarefa nova neste bloco, porque é exatamente o que o CI veio mostrar.
+- [x] **Step 4: Commit.** `git commit -m "CI: testes em SQLite e PostgreSQL, migracoes, ruff e build do CSS"`
 
 ### Tarefa A5: Registos legais protegidos na base de dados
 
@@ -307,7 +307,7 @@ class TestLimiteLogin:
 - Create: as migrações geradas (`makemigrations`), só com `AlterField`
 - Test: `tests/test_ficha_trabalhador.py`
 
-- [ ] **Step 1: Escrever os testes que falham**
+- [x] **Step 1: Escrever os testes que falham**
 
 ```python
 def test_ficha_com_registos_nao_se_apaga_nem_por_codigo(restaurant, manager):
@@ -325,10 +325,10 @@ def test_casa_com_registos_nao_se_apaga(restaurant, manager):
         restaurant.delete()
 ```
 
-- [ ] **Step 2: Correr e ver falhar.** `pytest tests/test_ficha_trabalhador.py -k "nao_se_apaga" -v`. Esperado: FAIL (DID NOT RAISE).
-- [ ] **Step 3: Implementar.** `on_delete=models.PROTECT` nos campos listados, e depois `python manage.py makemigrations`. O `workers.services.delete_worker` continua a apagar fichas sem histórico, porque os apagáveis (turnos, folgas, saldos) mantêm `CASCADE`.
-- [ ] **Step 4: Correr tudo.** `pytest -q` → PASS (o apagar a ficha sem histórico continua a funcionar).
-- [ ] **Step 5: Commit.** `git commit -m "Registos de ponto, ausencias, vendas e rececoes protegidos contra apagar em cascata"`
+- [x] **Step 2: Correr e ver falhar.** `pytest tests/test_ficha_trabalhador.py -k "nao_se_apaga" -v`. Esperado: FAIL (DID NOT RAISE).
+- [x] **Step 3: Implementar.** `on_delete=models.PROTECT` nos campos listados, e depois `python manage.py makemigrations`. O `workers.services.delete_worker` continua a apagar fichas sem histórico, porque os apagáveis (turnos, folgas, saldos) mantêm `CASCADE`.
+- [x] **Step 4: Correr tudo.** `pytest -q` → PASS (o apagar a ficha sem histórico continua a funcionar).
+- [x] **Step 5: Commit.** `git commit -m "Registos de ponto, ausencias, vendas e rececoes protegidos contra apagar em cascata"`
 
 ### Tarefa A6: Arrumação do repositório
 
@@ -337,12 +337,12 @@ def test_casa_com_registos_nao_se_apaga(restaurant, manager):
 - Modify: `.gitignore` (acrescentar `/saft-teste/`)
 - Modify: `plan.md` §2 (tirar o `time-machine`, porque os testes passam `agora=`)
 
-- [ ] **Step 1: Commitar o trabalho pendente da 26ª sessão.** O dashboard com as férias pendentes em «Por tratar» e o cartão «Em férias» foi visto no browser nesta revisão e está bem. `pytest tests/test_dashboard_ferias.py tests/test_staff.py -q` → PASS. Depois: `git commit -m "Dashboard: ferias pendentes em Por tratar e cartao Em ferias"`.
-- [ ] **Step 2: Escrever o `.gitattributes`.**
+- [x] **Step 1: Commitar o trabalho pendente da 26ª sessão.** O dashboard com as férias pendentes em «Por tratar» e o cartão «Em férias» foi visto no browser nesta revisão e está bem. `pytest tests/test_dashboard_ferias.py tests/test_staff.py -q` → PASS. Depois: `git commit -m "Dashboard: ferias pendentes em Por tratar e cartao Em ferias"`.
+- [x] **Step 2: Escrever o `.gitattributes`.**
   - `* text=auto`.
   - `binary` para `*.png`, `*.woff2`, `*.xlsx`, `*.docx` e `*.exe`.
   - Depois: `git add --renormalize .` e `git commit -m "gitattributes: fins de linha normalizados"`.
-- [ ] **Step 3: Pôr `/saft-teste/` no `.gitignore`.** Os ficheiros são sintéticos e podem gerar-se outra vez com `sales/sintetico.py`. Commit.
+- [x] **Step 3: Pôr `/saft-teste/` no `.gitignore`.** Os ficheiros são sintéticos e podem gerar-se outra vez com `sales/sintetico.py`. Commit.
 - [ ] **Step 4 (opcional): Arquivar o registo antigo.** Mover as linhas do Registo de progresso anteriores a 2026-11-01 para `docs/registo-de-progresso.md`, com uma ligação no `plan.md`. O ficheiro passa de 200 KB para uma fração disso, e cada sessão lê menos. Commit.
 
 ### Tarefa A7: Sair da conta limpa o telemóvel
@@ -352,7 +352,7 @@ def test_casa_com_registos_nao_se_apaga(restaurant, manager):
 - Modify: `static/manifest.webmanifest` («férias» com acento)
 - Test: `tests/test_auth.py`
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 ```python
 def test_sair_limpa_a_cache_do_telemovel(client, staff_user):
@@ -361,10 +361,10 @@ def test_sair_limpa_a_cache_do_telemovel(client, staff_user):
     assert r["Clear-Site-Data"] == '"cache", "storage"'
 ```
 
-- [ ] **Step 2: Correr e ver falhar.** Esperado: `KeyError`.
-- [ ] **Step 3: Implementar.** No `LogoutView.post`, a resposta leva `Clear-Site-Data: "cache", "storage"`, o que apaga a Cache Storage do service worker e anula o registo dele, que se refaz na visita seguinte. Corrigir também o texto do manifest.
-- [ ] **Step 4: Correr e ver passar.** Depois, no Android (`todo.md` §4): entrar, ver o histórico, sair, desligar a rede e abrir `/equipa/historico/`. Não deve aparecer o histórico.
-- [ ] **Step 5: Commit.** `git commit -m "Sair da conta apaga as paginas guardadas pelo service worker"`
+- [x] **Step 2: Correr e ver falhar.** Esperado: `KeyError`.
+- [x] **Step 3: Implementar.** No `LogoutView.post`, a resposta leva `Clear-Site-Data: "cache", "storage"`, o que apaga a Cache Storage do service worker e anula o registo dele, que se refaz na visita seguinte. Corrigir também o texto do manifest.
+- [~] **Step 4: Correr e ver passar.** Depois, no Android (`todo.md` §4): entrar, ver o histórico, sair, desligar a rede e abrir `/equipa/historico/`. Não deve aparecer o histórico.
+- [x] **Step 5: Commit.** `git commit -m "Sair da conta apaga as paginas guardadas pelo service worker"`
 
 ---
 
@@ -393,7 +393,7 @@ def test_sair_limpa_a_cache_do_telemovel(client, staff_user):
 
 O Grupo continua a depender de `is_group_admin`.
 
-- [ ] **Step 1: Escrever os testes que falham**
+- [x] **Step 1: Escrever os testes que falham**
 
 ```python
 @pytest.mark.parametrize("perfil", ["admin_user", "manager", "stock_user"])
@@ -420,13 +420,13 @@ def test_menu_segue_o_perfil_da_casa_ativa(client, restaurant, stock_user):
     assert f'href="{reverse("attendance:dia")}"' in html
 ```
 
-- [ ] **Step 2: Correr e ver falhar.** `pytest tests/test_menu.py -v`. Esperado: `test_cada_ligacao_do_menu_abre[stock_user]` e `test_resp_stock_nao_ve_as_areas_de_pessoas` falham.
-- [ ] **Step 3: Implementar.**
+- [x] **Step 2: Correr e ver falhar.** `pytest tests/test_menu.py -v`. Esperado: `test_cada_ligacao_do_menu_abre[stock_user]` e `test_resp_stock_nao_ve_as_areas_de_pessoas` falham.
+- [x] **Step 3: Implementar.**
   - `ManagerRequiredMixin.allowed_roles = PESSOAS`, `StockRequiredMixin.allowed_roles = STOCK` e `AdminRequiredMixin.allowed_roles = ADMIN`, como atributos de classe. Isto tira o `dispatch` que só servia para os definir.
   - O processador de contexto acrescenta `secoes = secoes_visiveis(request.role)`.
   - O menu deixa de comparar `request.role` com texto.
-- [ ] **Step 4: Correr tudo.** `pytest -q` → PASS.
-- [ ] **Step 5: Commit.** `git commit -m "Menu e permissoes a partir do mesmo mapa: cada perfil so ve o que pode abrir"`
+- [x] **Step 4: Correr tudo.** `pytest -q` → PASS.
+- [x] **Step 5: Commit.** `git commit -m "Menu e permissoes a partir do mesmo mapa: cada perfil so ve o que pode abrir"`
 
 ### Tarefa B2: Páginas de erro com o aspeto da app
 
@@ -444,7 +444,7 @@ def test_menu_segue_o_perfil_da_casa_ativa(client, restaurant, stock_user):
 
 O 500 não usa `{% url %}` nem dados do pedido, porque o Django o mostra sem contexto.
 
-- [ ] **Step 1: Escrever os testes que falham**
+- [x] **Step 1: Escrever os testes que falham**
 
 ```python
 def test_403_tem_o_aspeto_da_app(client, stock_user):
@@ -462,10 +462,10 @@ def test_500_mostra_se_sem_contexto():
     assert "Algo correu mal" in loader.get_template("500.html").render()
 ```
 
-- [ ] **Step 2: Correr e ver falhar.** `pytest tests/test_erros.py -v`.
-- [ ] **Step 3: Implementar** os templates com os textos da tabela.
-- [ ] **Step 4: Correr e ver passar**, recompilar o CSS e ver o 403 no browser como Resp. stock.
-- [ ] **Step 5: Commit.** `git commit -m "Paginas de erro 403, 404, 500 e CSRF com o aspeto da app"`
+- [x] **Step 2: Correr e ver falhar.** `pytest tests/test_erros.py -v`.
+- [x] **Step 3: Implementar** os templates com os textos da tabela.
+- [x] **Step 4: Correr e ver passar**, recompilar o CSS e ver o 403 no browser como Resp. stock.
+- [x] **Step 5: Commit.** `git commit -m "Paginas de erro 403, 404, 500 e CSRF com o aspeto da app"`
 
 ### Tarefa B3: Passar entre a app e a gestão
 
@@ -474,7 +474,7 @@ def test_500_mostra_se_sem_contexto():
 - Modify: `templates/base_manage.html` (menu da conta: «A minha app» → `staff:home`)
 - Test: `tests/test_staff.py`
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 ```python
 def test_sem_ficha_com_backoffice_tem_caminho_para_a_gestao(client, manager):
@@ -483,10 +483,10 @@ def test_sem_ficha_com_backoffice_tem_caminho_para_a_gestao(client, manager):
     assert f'href="{reverse("dashboard:home")}"' in html
 ```
 
-- [ ] **Step 2: Correr e ver falhar.**
-- [ ] **Step 3: Implementar** as duas ligações. O colaborador sem backoffice não vê nenhuma.
-- [ ] **Step 4: Correr e ver passar.** `pytest tests/test_staff.py -q`.
-- [ ] **Step 5: Commit.** `git commit -m "Ligacoes entre a app do colaborador e a gestao"`
+- [x] **Step 2: Correr e ver falhar.**
+- [x] **Step 3: Implementar** as duas ligações. O colaborador sem backoffice não vê nenhuma.
+- [x] **Step 4: Correr e ver passar.** `pytest tests/test_staff.py -q`.
+- [x] **Step 5: Commit.** `git commit -m "Ligacoes entre a app do colaborador e a gestao"`
 
 ---
 
@@ -509,7 +509,7 @@ def test_sem_ficha_com_backoffice_tem_caminho_para_a_gestao(client, manager):
   
   A ordem é por `full_name`, e o resultado leva `.distinct()`.
 
-- [ ] **Step 1: Escrever os testes que falham**
+- [x] **Step 1: Escrever os testes que falham**
 
 ```python
 class TestQuemEntraNoMes:
@@ -539,10 +539,10 @@ class TestQuemEntraNoMes:
         assert not w.is_active and w.end_date == datetime.date(2026, 10, 31)
 ```
 
-- [ ] **Step 2: Correr e ver falhar.** `pytest tests/test_fecho_mes.py -k QuemEntra -v`.
-- [ ] **Step 3: Implementar** o seletor e usá-lo nos três sítios. No dashboard e no painel do grupo, «por aprovar» passa a ser `workers_for_month(...).count()` menos os aprovados.
-- [ ] **Step 4: Correr tudo.** `pytest -q` → PASS.
-- [ ] **Step 5: Commit.** `git commit -m "Fecho do mes: entra quem trabalhou no mes, incluindo quem ja saiu; data de saida na ficha"`
+- [x] **Step 2: Correr e ver falhar.** `pytest tests/test_fecho_mes.py -k QuemEntra -v`.
+- [x] **Step 3: Implementar** o seletor e usá-lo nos três sítios. No dashboard e no painel do grupo, «por aprovar» passa a ser `workers_for_month(...).count()` menos os aprovados.
+- [x] **Step 4: Correr tudo.** `pytest -q` → PASS.
+- [x] **Step 5: Commit.** `git commit -m "Fecho do mes: entra quem trabalhou no mes, incluindo quem ja saiu; data de saida na ficha"`
 
 ### Tarefa C2: Ausências respeitam o mês aprovado e não se sobrepõem
 
@@ -562,7 +562,7 @@ class TestQuemEntraNoMes:
 - Aprovar ou registar uma ausência sobreposta a outra aprovada é recusado com: «Sobrepõe-se a {tipo} de {dd/mm} a {dd/mm}, já aprovada. Recuse este pedido ou cancele a outra ausência.»
 - Um pedido pendente sobreposto continua a poder submeter-se, com o aviso visual da invariante 6.
 
-- [ ] **Step 1: Escrever os testes que falham**
+- [x] **Step 1: Escrever os testes que falham**
 
 ```python
 class TestMesAprovadoESobreposicao:
@@ -596,10 +596,10 @@ O ficheiro já tem as fixtures `worker` e `ferias`. Acrescentar ao ficheiro:
 - a constante `DIA = datetime.timedelta(days=1)`;
 - os ajudantes `primeiro_dia_util(worker, mes)` e `proximo_dia_util(worker, dia)`, que avançam até `count_days(worker, d, d) == 1`. É a mesma ideia do teste de férias corrigido na 25ª sessão.
 
-- [ ] **Step 2: Correr e ver falhar.** `pytest tests/test_ausencias.py -k MesAprovado -v`.
-- [ ] **Step 3: Implementar** as regras dentro das transações que já existem.
-- [ ] **Step 4: Correr tudo.** `pytest -q` → PASS.
-- [ ] **Step 5: Commit.** `git commit -m "Ausencias: mes aprovado bloqueia, sobreposicao a uma aprovada recusada"`
+- [x] **Step 2: Correr e ver falhar.** `pytest tests/test_ausencias.py -k MesAprovado -v`.
+- [x] **Step 3: Implementar** as regras dentro das transações que já existem.
+- [x] **Step 4: Correr tudo.** `pytest -q` → PASS.
+- [x] **Step 5: Commit.** `git commit -m "Ausencias: mes aprovado bloqueia, sobreposicao a uma aprovada recusada"`
 
 ### Tarefa C3: Pedidos com datas passadas assinalados
 
@@ -611,7 +611,7 @@ O ficheiro já tem as fixtures `worker` e `ferias`. Acrescentar ao ficheiro:
 
 Decisão: não expiram sozinhos. Aprovar uma ausência passada é legítimo, por exemplo uma baixa entregue tarde.
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 ```python
 def test_pendente_com_datas_passadas_assinalado(client, manager, restaurant):
@@ -623,8 +623,8 @@ def test_pendente_com_datas_passadas_assinalado(client, manager, restaurant):
     assert "Datas já passaram" in client.get(reverse("vacations:lista")).content.decode()
 ```
 
-- [ ] **Step 2: Correr e ver falhar.** **Step 3: Implementar.** **Step 4: Correr e ver passar.**
-- [ ] **Step 5: Commit.** `git commit -m "Ferias: pedidos pendentes com datas passadas assinalados"`
+- [x] **Step 2: Correr e ver falhar.** **Step 3: Implementar.** **Step 4: Correr e ver passar.**
+- [x] **Step 5: Commit.** `git commit -m "Ferias: pedidos pendentes com datas passadas assinalados"`
 
 ### Tarefa C4: As horas previstas só contam até hoje
 
@@ -632,7 +632,7 @@ def test_pendente_com_datas_passadas_assinalado(client, manager, restaurant):
 - Modify: `sales/reports.py:115-123` (`horas_por_servico`)
 - Test: `tests/test_vendas.py` (`TestServicos`)
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 ```python
 def test_horas_previstas_so_ate_hoje(self, casa, manager):
@@ -644,10 +644,10 @@ def test_horas_previstas_so_ate_hoje(self, casa, manager):
     assert amanha not in horas
 ```
 
-- [ ] **Step 2: Correr e ver falhar.**
-- [ ] **Step 3: Implementar.** As horas previstas só substituem as reais em dias `<= timezone.localdate(agora)`.
-- [ ] **Step 4: Correr tudo.** `pytest tests/test_vendas.py tests/test_analise.py -q` → PASS.
-- [ ] **Step 5: Commit.** `git commit -m "Horas trabalhadas: turnos previstos so contam ate hoje"`
+- [x] **Step 2: Correr e ver falhar.**
+- [x] **Step 3: Implementar.** As horas previstas só substituem as reais em dias `<= timezone.localdate(agora)`.
+- [x] **Step 4: Correr tudo.** `pytest tests/test_vendas.py tests/test_analise.py -q` → PASS.
+- [x] **Step 5: Commit.** `git commit -m "Horas trabalhadas: turnos previstos so contam ate hoje"`
 
 ### Tarefa C5: De madrugada, «hoje» é o dia de serviço
 
@@ -666,7 +666,7 @@ def test_horas_previstas_so_ate_hoje(self, casa, manager):
   - `dashboard.views.saudacao(hora: int) -> str`;
   - cada hora de `_escala(...)["horas"]` ganha a chave `oculta: bool`.
 
-- [ ] **Step 1: Escrever os testes que falham**
+- [x] **Step 1: Escrever os testes que falham**
 
 ```python
 SEXTA = datetime.date(2026, 11, 6)
@@ -693,13 +693,13 @@ def test_saudacao(hora, texto):
     assert saudacao(hora) == texto
 ```
 
-- [ ] **Step 2: Correr e ver falhar.** `pytest tests/test_dashboard_turnos.py -v`.
-- [ ] **Step 3: Implementar.**
+- [x] **Step 2: Correr e ver falhar.** `pytest tests/test_dashboard_turnos.py -v`.
+- [x] **Step 3: Implementar.**
   - `dia_de_servico` usa `service_date(timezone.localtime(agora), SalesSettings.for_restaurant(restaurant).day_cutoff_hour)`.
   - `saudacao`: «Boa noite» antes das 5h e a partir das 20h, «Bom dia» antes das 12h, «Boa tarde» no resto.
   - Uma hora fica `oculta` quando está a menos de 4 pontos percentuais da posição de `agora`.
-- [ ] **Step 4: Correr tudo, recompilar o CSS e ver o dashboard no browser.**
-- [ ] **Step 5: Commit.** `git commit -m "Dashboard e ponto do dia pelo dia de servico; boa noite de madrugada"`
+- [x] **Step 4: Correr tudo, recompilar o CSS e ver o dashboard no browser.**
+- [x] **Step 5: Commit.** `git commit -m "Dashboard e ponto do dia pelo dia de servico; boa noite de madrugada"`
 
 ### Tarefa C6: Cartões e avisos com datas legíveis
 
@@ -714,7 +714,7 @@ def test_saudacao(hora, texto):
   - `core.utils.nome_do_mes(dia: date) -> str` (minúsculas: «novembro»);
   - `dashboard.views.cartao_vendas(total: Decimal, ultimo_dia: date | None, hoje: date) -> dict`, com as chaves `valor: Decimal | None` e `legenda: str`.
 
-- [ ] **Step 1: Escrever os testes que falham**
+- [x] **Step 1: Escrever os testes que falham**
 
 ```python
 HOJE = datetime.date(2026, 11, 7)
@@ -731,8 +731,8 @@ def test_cartao_vendas_com_dados():
     assert c == {"valor": Decimal("812.40"), "legenda": "Vendas de novembro · até 05/11"}
 ```
 
-- [ ] **Step 2: Correr e ver falhar.** **Step 3: Implementar.** Com `valor` None, o cartão mostra «—» e a legenda leva a Vendas → Importar. **Step 4: Correr e ver passar.**
-- [ ] **Step 5: Commit.** `git commit -m "Cartao de vendas e avisos do mes com nomes de meses e sem zeros enganadores"`
+- [x] **Step 2: Correr e ver falhar.** **Step 3: Implementar.** Com `valor` None, o cartão mostra «—» e a legenda leva a Vendas → Importar. **Step 4: Correr e ver passar.**
+- [x] **Step 5: Commit.** `git commit -m "Cartao de vendas e avisos do mes com nomes de meses e sem zeros enganadores"`
 
 ---
 
@@ -754,7 +754,7 @@ def test_cartao_vendas_com_dados():
   - `core.formatos.quantidade(valor: Decimal | None, unidade: str = "") -> str`, com até 3 casas decimais e sem zeros à direita;
   - o filtro `{{ item.current_stock|quantidade:item.unit }}`.
 
-- [ ] **Step 1: Escrever os testes que falham**
+- [x] **Step 1: Escrever os testes que falham**
 
 ```python
 @pytest.mark.parametrize("valor,unidade,texto", [
@@ -775,10 +775,10 @@ def test_mensagem_de_stock_negativo_formatada(restaurant, stock_user):
         register_movement(item=item, movement_type=StockMovement.Type.SAIDA, quantity=2, user=stock_user)
 ```
 
-- [ ] **Step 2: Correr e ver falhar.**
-- [ ] **Step 3: Implementar e trocar nos templates.**
-- [ ] **Step 4: Correr tudo, recompilar o CSS e ver o Stock, o Dashboard e as Compras no browser.**
-- [ ] **Step 5: Commit.** `git commit -m "Quantidades com o mesmo formato em todo o lado: 4 kg, 0,22 L"`
+- [x] **Step 2: Correr e ver falhar.**
+- [x] **Step 3: Implementar e trocar nos templates.**
+- [x] **Step 4: Correr tudo, recompilar o CSS e ver o Stock, o Dashboard e as Compras no browser.**
+- [x] **Step 5: Commit.** `git commit -m "Quantidades com o mesmo formato em todo o lado: 4 kg, 0,22 L"`
 
 ### Tarefa D2: Painel do grupo sem scroll horizontal
 
@@ -786,10 +786,10 @@ def test_mensagem_de_stock_negativo_formatada(restaurant, stock_user):
 - Modify: `templates/manage/grupo/painel.html` (a tabela de 9 colunas passa a uma grelha de cartões, um por casa, `grid gap-6 sm:grid-cols-2 xl:grid-cols-3`: nome, os sinais em pares rótulo e valor, e o botão «Abrir»)
 - Test: `tests/test_varias_casas.py` (os testes do painel continuam a passar)
 
-- [ ] **Step 1:** Trocar a tabela pelos cartões. Os números com alerta usam `text-alerta`, e o cartão de vendas usa a legenda da Tarefa C6.
-- [ ] **Step 2:** `pytest tests/test_varias_casas.py -q` → PASS.
-- [ ] **Step 3:** Recompilar o CSS e ver no browser a 1280px e no menu estreito: `document.documentElement.scrollWidth <= innerWidth`.
-- [ ] **Step 4: Commit.** `git commit -m "Painel do grupo em cartoes, sem scroll horizontal"`
+- [x] **Step 1:** Trocar a tabela pelos cartões. Os números com alerta usam `text-alerta`, e o cartão de vendas usa a legenda da Tarefa C6.
+- [x] **Step 2:** `pytest tests/test_varias_casas.py -q` → PASS.
+- [x] **Step 3:** Recompilar o CSS e ver no browser a 1280px e no menu estreito: `document.documentElement.scrollWidth <= innerWidth`.
+- [x] **Step 4: Commit.** `git commit -m "Painel do grupo em cartoes, sem scroll horizontal"`
 
 ### Tarefa D3: Uma ação por linha
 
@@ -798,10 +798,10 @@ def test_mensagem_de_stock_negativo_formatada(restaurant, stock_user):
 - Modify: `templates/partials/inventory/item_row.html` («Movimento» fica visível; Transferir, Preços e Editar passam para o menu)
 - Modify: `templates/manage/workers/lista.html` («Editar» fica visível; código e conta passam para o menu, e as pílulas «Definido» e «Com conta» continuam nas colunas)
 
-- [ ] **Step 1:** Criar o componente e usá-lo nas duas listas. A ação que fica visível mantém o verde (`btn-primario`), como manda a secção 4 do `plan.md` para a ação de cada linha.
-- [ ] **Step 2:** `pytest tests/test_inventory.py tests/test_people.py -q` → PASS (as ligações continuam no HTML).
-- [ ] **Step 3:** Recompilar o CSS e ver no browser. Fazer o percurso só com o teclado: Tab até «Mais ações», Enter abre, Esc fecha.
-- [ ] **Step 4: Commit.** `git commit -m "Listas com uma acao por linha e as outras em Mais acoes"`
+- [x] **Step 1:** Criar o componente e usá-lo nas duas listas. A ação que fica visível mantém o verde (`btn-primario`), como manda a secção 4 do `plan.md` para a ação de cada linha.
+- [x] **Step 2:** `pytest tests/test_inventory.py tests/test_people.py -q` → PASS (as ligações continuam no HTML).
+- [x] **Step 3:** Recompilar o CSS e ver no browser. Fazer o percurso só com o teclado: Tab até «Mais ações», Enter abre, Esc fecha.
+- [x] **Step 4: Commit.** `git commit -m "Listas com uma acao por linha e as outras em Mais acoes"`
 
 ### Tarefa D4: Login pensado para o telemóvel
 
@@ -809,7 +809,7 @@ def test_mensagem_de_stock_negativo_formatada(restaurant, stock_user):
 - Modify: `accounts/forms.py:15` (o widget do email passa a `forms.EmailInput` com `autocomplete="username"`, `inputmode="email"`, `autocapitalize="none"` e `spellcheck="false"`)
 - Test: `tests/test_auth.py`
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 ```python
 def test_login_com_campo_de_email(client):
@@ -817,8 +817,8 @@ def test_login_com_campo_de_email(client):
     assert 'type="email"' in html and 'autocomplete="username"' in html
 ```
 
-- [ ] **Step 2: Correr e ver falhar.** **Step 3: Implementar.** **Step 4: Correr e ver passar.**
-- [ ] **Step 5: Commit.** `git commit -m "Login: campo de email com teclado e autocomplete certos"`
+- [x] **Step 2: Correr e ver falhar.** **Step 3: Implementar.** **Step 4: Correr e ver passar.**
+- [x] **Step 5: Commit.** `git commit -m "Login: campo de email com teclado e autocomplete certos"`
 
 ### Tarefa D5: Funções e contactos com regra
 
@@ -832,7 +832,7 @@ def test_login_com_campo_de_email(client):
 **Interfaces:**
 - Produces: `workers.formatos.normalizar_contacto(texto: str) -> str`. Um número português (9 algarismos começados por 2 ou 9, com ou sem `+351` ou `00351`) fica `+351 XXX XXX XXX`. O resto fica como foi escrito, sem espaços nas pontas.
 
-- [ ] **Step 1: Escrever os testes que falham**
+- [x] **Step 1: Escrever os testes que falham**
 
 ```python
 @pytest.mark.parametrize("entrada,saida", [
@@ -845,8 +845,8 @@ def test_normalizar_contacto(entrada, saida):
 ```
 Mais um teste do formulário: gravar com a função «copeiro» guarda «Copeiro».
 
-- [ ] **Step 2: Correr e ver falhar.** **Step 3: Implementar, com a migração.** **Step 4: `pytest -q`.**
-- [ ] **Step 5: Commit.** `git commit -m "Fichas: funcao com maiuscula e telefones no formato +351"`
+- [x] **Step 2: Correr e ver falhar.** **Step 3: Implementar, com a migração.** **Step 4: `pytest -q`.**
+- [x] **Step 5: Commit.** `git commit -m "Fichas: funcao com maiuscula e telefones no formato +351"`
 
 ### Tarefa D6: Totais vazios como `0h00`
 
@@ -854,9 +854,9 @@ Mais um teste do formulário: gravar com a função «copeiro» guarda «Copeiro
 - Modify: `templates/manage/attendance/dia.html:68` (o total vazio mostra `0h00` em `text-ardosia`)
 - Test: `tests/test_people.py`
 
-- [ ] **Step 1:** Escrever um teste: o Ponto do dia de uma pessoa sem registos contém `0h00` na coluna «Trabalhado».
-- [ ] **Step 2: Correr e ver falhar.** **Step 3: Implementar.** **Step 4: Correr e ver passar.**
-- [ ] **Step 5: Commit.** `git commit -m "Ponto do dia: total vazio como 0h00"`
+- [x] **Step 1:** Escrever um teste: o Ponto do dia de uma pessoa sem registos contém `0h00` na coluna «Trabalhado».
+- [x] **Step 2: Correr e ver falhar.** **Step 3: Implementar.** **Step 4: Correr e ver passar.**
+- [x] **Step 5: Commit.** `git commit -m "Ponto do dia: total vazio como 0h00"`
 
 ### Tarefa D7: Seletores do ponto fora das views
 
@@ -864,9 +864,9 @@ Mais um teste do formulário: gravar com a função «copeiro» guarda «Copeiro
 - Modify: `attendance/selectors.py` (o ficheiro criado na Tarefa C1): passam para lá `overlapping_entries`, `tabela_registos` e `_desvios` (este como `desvios_do_dia`), que hoje estão em `attendance/views.py`
 - Modify: `attendance/views.py`, `dashboard/views.py`, `analytics/people_reports.py` (os imports apontam para `attendance.selectors`; os imports dentro de funções sobem para o topo quando não criam ciclos)
 
-- [ ] **Step 1:** Mover as funções sem mudar o que fazem.
-- [ ] **Step 2:** `pytest -q` → PASS, com o mesmo número de testes. `ruff check .` limpo.
-- [ ] **Step 3: Commit.** `git commit -m "Ponto: consultas partilhadas em attendance/selectors.py"`
+- [x] **Step 1:** Mover as funções sem mudar o que fazem.
+- [x] **Step 2:** `pytest -q` → PASS, com o mesmo número de testes. `ruff check .` limpo.
+- [x] **Step 3: Commit.** `git commit -m "Ponto: consultas partilhadas em attendance/selectors.py"`
 
 ### Tarefa D8: Menu por áreas e sub-navegação igual em todo o lado
 
@@ -876,9 +876,9 @@ Mais um teste do formulário: gravar com a função «copeiro» guarda «Copeiro
 - Modify: os templates das cinco páginas do stock (os botões do cabeçalho dão lugar ao `_nav.html`; «Novo artigo» fica como a ação principal)
 - Test: `tests/test_menu.py`
 
-- [ ] **Step 1:** Escrever o teste: o Resp. stock não vê o título «Pessoas», e o gerente vê os três grupos.
-- [ ] **Step 2: Correr e ver falhar.** **Step 3: Implementar.** **Step 4: Correr, recompilar o CSS e ver no browser.**
-- [ ] **Step 5: Commit.** `git commit -m "Menu por areas e sub-navegacao do stock em pilulas"`
+- [x] **Step 1:** Escrever o teste: o Resp. stock não vê o título «Pessoas», e o gerente vê os três grupos.
+- [x] **Step 2: Correr e ver falhar.** **Step 3: Implementar.** **Step 4: Correr, recompilar o CSS e ver no browser.**
+- [x] **Step 5: Commit.** `git commit -m "Menu por areas e sub-navegacao do stock em pilulas"`
 
 ### Tarefa D9: A Análise abre no último mês com vendas
 
@@ -886,7 +886,7 @@ Mais um teste do formulário: gravar com a função «copeiro» guarda «Copeiro
 - Modify: `analytics/views.py:36` (`periodo(request, meses=1, por_omissao=None)`: sem `mes` nem datas no pedido, usa o mês de `por_omissao`; as views passam o mês de `sales.reports.ultimo_dia(request.restaurant)`)
 - Test: `tests/test_analise.py`
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 ```python
 def test_periodo_por_omissao_e_o_ultimo_mes_com_vendas(rf):
@@ -894,8 +894,8 @@ def test_periodo_por_omissao_e_o_ultimo_mes_com_vendas(rf):
     assert (inicio, fim) == (datetime.date(2026, 9, 1), datetime.date(2026, 9, 30))
 ```
 
-- [ ] **Step 2: Correr e ver falhar.** **Step 3: Implementar.** **Step 4: `pytest tests/test_analise*.py -q`.**
-- [ ] **Step 5: Commit.** `git commit -m "Analise abre no ultimo mes com vendas, como as Vendas"`
+- [x] **Step 2: Correr e ver falhar.** **Step 3: Implementar.** **Step 4: `pytest tests/test_analise*.py -q`.**
+- [x] **Step 5: Commit.** `git commit -m "Analise abre no ultimo mes com vendas, como as Vendas"`
 
 ---
 
