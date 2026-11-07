@@ -10,6 +10,8 @@ from django import template
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
+from core.utils import nome_do_mes
+
 register = template.Library()
 
 _ICONES = {
@@ -92,6 +94,10 @@ def iniciais(nome):
     if len(partes) == 1:
         return partes[0][:2].upper()
     return (partes[0][0] + partes[-1][0]).upper()
+
+
+# «outubro»: o mês por extenso e em minúscula ({{ mes|nome_do_mes }}).
+register.filter("nome_do_mes", nome_do_mes)
 
 
 @register.simple_tag(takes_context=True)

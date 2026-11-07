@@ -2,6 +2,18 @@ from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
 
+# Os meses em português escrevem-se com minúscula; o filtro `date:"F"` do
+# Django dá-os com maiúscula («Vendas de Novembro»).
+MESES = (
+    "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+    "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+)
+
+
+def nome_do_mes(dia):
+    """«novembro» para qualquer dia de novembro."""
+    return MESES[dia.month - 1]
+
 
 def restaurant_scope(request, qs, field="restaurant"):
     """

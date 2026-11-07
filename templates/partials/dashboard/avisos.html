@@ -10,7 +10,7 @@ leva até elas (secção 9).{% endcomment %}
     {% if por_aprovar %}
     <li><a href="{% url 'attendance:mes' %}?mes={{ mes_por_fechar|date:'Y-m' }}" class="flex items-center gap-4 px-6 py-3.5 text-sm transition-colors hover:bg-neutro-50">
       <span class="mosaico h-10 w-10 bg-ambar-50 text-ambar-700">{% icone "cadeado" "h-[18px] w-[18px]" %}</span>
-      <span class="flex-1">O mês de <span class="font-dados">{{ mes_por_fechar|date:"m/Y" }}</span> está por fechar: <span class="font-dados font-semibold">{{ por_aprovar }}</span> trabalhador{{ por_aprovar|pluralize:"es" }} por aprovar</span>
+      <span class="flex-1">O mês de <span class="font-dados">{{ mes_por_fechar|nome_do_mes }} de {{ mes_por_fechar|date:"Y" }}</span> está por fechar: <span class="font-dados font-semibold">{{ por_aprovar }}</span> trabalhador{{ por_aprovar|pluralize:"es" }} por aprovar</span>
       <span class="link-acao">Fechar</span></a></li>
     {% endif %}
     {% if vendas_atraso %}

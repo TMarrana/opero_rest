@@ -24,11 +24,12 @@
     <span><span class="block font-dados text-2xl font-bold leading-tight {% if contador_baixo %}text-alerta{% endif %}">{{ contador_baixo }}</span><span class="block text-xs text-ardosia">Abaixo do mínimo</span></span>
   </a>
   {% if ve_pessoas %}
-  <a href="{% url 'sales:vendas' %}" class="cartao cartao-link flex items-center gap-4 p-6">
+  {# Sem valor (nada importado, ou nada deste mês), o cartão leva a importar o SAF-T. #}
+  <a href="{% if vendas.valor is None %}{% url 'sales:importar' %}{% else %}{% url 'sales:vendas' %}{% endif %}" class="cartao cartao-link flex items-center gap-4 p-6">
     <span class="mosaico mosaico-floresta">{% icone "talao" %}</span>
     <span class="min-w-0">
-      <span class="block whitespace-nowrap font-dados text-xl font-bold leading-tight">{% if ultimo_dia_vendas %}{{ vendas_mes|euros }}{% else %}—{% endif %}</span>
-      <span class="block text-xs text-ardosia">Vendas de {% now "F" %}{% if ultimo_dia_vendas %} · até {{ ultimo_dia_vendas|date:"d/m" }}{% endif %}</span>
+      <span class="block whitespace-nowrap font-dados text-xl font-bold leading-tight">{% if vendas.valor is None %}—{% else %}{{ vendas.valor|euros }}{% endif %}</span>
+      <span class="block text-xs text-ardosia">{{ vendas.legenda }}</span>
     </span>
   </a>
   {% else %}

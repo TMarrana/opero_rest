@@ -20,6 +20,7 @@ from attendance.services import (
     request_correction,
     start_break,
 )
+from core.utils import nome_do_mes
 from workers.models import Worker
 
 pytestmark = pytest.mark.django_db
@@ -144,7 +145,7 @@ class TestExportacao:
     def test_dashboard_avisa_mes_por_fechar(self, client, worker, manager, mes_passado):
         client.force_login(manager)
         html = client.get(reverse("dashboard:home")).content.decode()
-        assert "está por fechar" in html
+        assert f"O mês de <span class=\"font-dados\">{nome_do_mes(mes_passado)} de {mes_passado.year}</span> está por fechar" in html
         mes.approve_month(worker=worker, month=mes_passado, user=manager)
         assert "está por fechar" not in client.get(reverse("dashboard:home")).content.decode()
 

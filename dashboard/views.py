@@ -10,7 +10,7 @@ from accounts.models import BACKOFFICE_ROLES
 from attendance.models import CorrectionRequest, TimeEntry
 from core.middleware import SESSION_KEY
 from core.mixins import GroupAdminRequiredMixin, RoleRequiredMixin
-from core.utils import restaurant_scope, workers_scope
+from core.utils import nome_do_mes, restaurant_scope, workers_scope
 from inventory.models import Item, StockMovement
 from sales.services import dia_de_servico
 from vacations.models import VacationRequest
@@ -102,7 +102,10 @@ class DashboardView(RoleRequiredMixin, TemplateView):
             from sales.reports import resumo, ultimo_dia
 
             ctx["ultimo_dia_vendas"] = ultimo_dia(request.restaurant)
-            ctx["vendas_mes"] = resumo(request.restaurant, *month_range(timezone.localdate())).total
+            mes_vendas = timezone.localdate()
+            ctx["vendas"] = cartao_vendas(
+                resumo(request.restaurant, *month_range(mes_vendas)).total, ctx["ultimo_dia_vendas"], mes_vendas
+            )
             if ctx["ultimo_dia_vendas"] is not None:
                 atraso = (timezone.localdate() - ctx["ultimo_dia_vendas"]).days
                 ctx["vendas_atraso"] = atraso if atraso > VENDAS_ATRASO_DIAS else 0
@@ -114,6 +117,18 @@ class DashboardView(RoleRequiredMixin, TemplateView):
 
             ctx["sobrepostos"] = len(overlapping_entries(request))
         return ctx
+
+
+def cartao_vendas(total, ultimo_dia, hoje):
+    """O cartão das vendas do mês de `hoje`. Sem nada importado, ou sem
+    nenhum dia deste mês, não há valor (o cartão mostra «—», não um 0,00 €
+    que se lê como zero vendas) e a legenda diz porquê."""
+    if ultimo_dia is None:
+        return {"valor": None, "legenda": "Ainda não há vendas importadas"}
+    mes = nome_do_mes(hoje)
+    if ultimo_dia < hoje.replace(day=1):
+        return {"valor": None, "legenda": f"Sem vendas de {mes} · último dia {ultimo_dia:%d/%m}"}
+    return {"valor": total, "legenda": f"Vendas de {mes} · até {ultimo_dia:%d/%m}"}
 
 
 def saudacao(hora):
@@ -307,7 +322,8 @@ def _sinais(restaurant):
     from attendance.month import month_range
     from sales.reports import resumo, ultimo_dia
 
-    vendas_mes = resumo(restaurant, *month_range(timezone.localdate())).total
+    hoje = timezone.localdate()
+    vendas = cartao_vendas(resumo(restaurant, *month_range(hoje)).total, ultimo_dia(restaurant), hoje)
     return {
         "casa": restaurant,
         "stock_baixo": Item.objects.filter(restaurant=restaurant, is_active=True, current_stock__lte=F("minimum_stock")).count(),
@@ -320,8 +336,7 @@ def _sinais(restaurant):
             restaurant=restaurant, status=CorrectionRequest.Status.PENDENTE
         ).count(),
         "por_aprovar": do_mes.count() - aprovados,
-        "vendas_mes": vendas_mes,
-        "ultimo_dia_vendas": ultimo_dia(restaurant),
+        "vendas": vendas,
     }
 
 
@@ -337,5 +352,4 @@ class GroupDashboardView(GroupAdminRequiredMixin, TemplateView):
 
         ctx["linhas"] = [_sinais(casa) for casa in self.request.casas]
         ctx["mes_por_fechar"] = previous_month(timezone.localdate())
-        ctx["mes_atual"] = timezone.localdate()
         return ctx
