@@ -10,6 +10,20 @@ def test_login_page_renders(client):
     assert resp.status_code == 200
 
 
+def test_login_com_campo_de_email(client):
+    html = client.get(reverse("accounts:login")).content.decode()
+    assert 'type="email"' in html and 'autocomplete="username"' in html
+
+
+def test_campo_de_email_sem_correcoes_e_com_o_foco_e_o_limite_do_django():
+    from accounts.forms import LoginForm
+
+    attrs = LoginForm().fields["username"].widget.attrs
+    assert (attrs["inputmode"], attrs["autocapitalize"], attrs["spellcheck"]) == ("email", "none", "false")
+    # Trocar o widget não pode perder o que o AuthenticationForm lá pôs.
+    assert attrs["autofocus"] and attrs["maxlength"]
+
+
 def test_login_com_email_redireciona_gerente_para_backoffice(client, manager):
     resp = client.post(
         reverse("accounts:login"),

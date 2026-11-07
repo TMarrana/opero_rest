@@ -1,5 +1,6 @@
 import hashlib
 
+from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
 
@@ -28,9 +29,21 @@ class LoginForm(AuthenticationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["username"].label = "Email"
-        self.fields["username"].widget.attrs.update(
-            {"class": "campo-input", "autocomplete": "email", "placeholder": "nome@restaurante.pt"}
+        email = self.fields["username"]
+        email.label = "Email"
+        # No telemóvel: teclado de email, sem maiúscula nem corretor; «username»
+        # é o que os gestores de palavras-passe procuram. Os atributos que o
+        # Django já pôs (autofocus, maxlength) passam para o widget novo.
+        email.widget = forms.EmailInput(
+            attrs={
+                **email.widget.attrs,
+                "class": "campo-input",
+                "autocomplete": "username",
+                "inputmode": "email",
+                "autocapitalize": "none",
+                "spellcheck": "false",
+                "placeholder": "nome@restaurante.pt",
+            }
         )
         self.fields["password"].label = "Palavra-passe"
         self.fields["password"].widget.attrs.update(
