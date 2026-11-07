@@ -41,7 +41,7 @@
         <tr>
           <td class="font-dados text-sm"><a href="{% url 'purchasing:rececao' l.receipt.pk %}" class="link-texto">{{ l.receipt.document_date|date:"d/m/Y" }}</a></td>
           <td class="text-sm">{{ l.receipt.supplier.name }}</td>
-          <td class="td-dados">{{ l.quantity|numero }}</td>
+          <td class="td-dados">{{ l.quantity|quantidade:item.unit }}</td>
           <td class="td-dados">{{ l.unit_price|preco }}</td>
         </tr>
         {% endfor %}

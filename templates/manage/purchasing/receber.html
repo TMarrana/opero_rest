@@ -52,7 +52,7 @@ linha dá entrada no stock e não se apaga; um erro corrige-se com um ajuste.{% 
             {% if encomenda %}
             <td class="font-medium">{{ l.item.name }}</td>
             <td class="td-dados text-ardosia">{{ l.encomendado|quantidade:l.item.unit }}</td>
-            <td class="td-dados">{{ l.falta|numero }}</td>
+            <td class="td-dados">{{ l.falta|quantidade:l.item.unit }}</td>
             {% else %}
             <td>
               <select name="item-{{ l.chave }}" class="campo-input" aria-label="Artigo da linha {{ forloop.counter }}">

@@ -182,6 +182,11 @@ class ArtigoComprado:
     precos: list = field(default_factory=list)  # (data, preço, fornecedor, casa), por data
 
     @property
+    def chave(self):
+        """O valor do artigo no seletor da Análise (?artigo=), com o código da unidade."""
+        return chave_artigo(self)
+
+    @property
     def preco_medio(self):
         return (self.total / self.quantidade).quantize(Decimal("0.0001"), ROUND_HALF_UP) if self.quantidade else None
 

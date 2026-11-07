@@ -92,8 +92,8 @@ ou WhatsApp, até haver envio de emails (secção 12).{% endcomment %}
             <tr>
               <td class="font-medium">{{ l.item.name }}</td>
               <td class="td-dados">{{ l.quantity|quantidade:l.item.unit }}</td>
-              <td class="td-dados">{{ l.recebido|numero }}</td>
-              <td class="td-dados {% if l.falta and encomenda.state == 'PARCIAL' %}font-semibold{% endif %}">{% if l.falta %}{{ l.falta|numero }}{% else %}<span class="text-ardosia">—</span>{% endif %}</td>
+              <td class="td-dados">{{ l.recebido|quantidade:l.item.unit }}</td>
+              <td class="td-dados {% if l.falta and encomenda.state == 'PARCIAL' %}font-semibold{% endif %}">{% if l.falta %}{{ l.falta|quantidade:l.item.unit }}{% else %}<span class="text-ardosia">—</span>{% endif %}</td>
               <td class="td-dados text-ardosia">{{ l.unit_price|preco }}</td>
             </tr>
             {% endfor %}

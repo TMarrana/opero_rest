@@ -59,12 +59,12 @@ de referência; os movimentos e os ajustes são os do período.{% endcomment %}
         <tr>
           <td class="font-medium">{{ m.item.name }}<span class="block text-xs font-normal text-ardosia">{{ m.item.unit|unidade }}</span></td>
           <td class="td-dados">{{ m.movimentos }}</td>
-          <td class="td-dados">{{ m.entradas|numero:3 }}</td>
-          <td class="td-dados">{{ m.vendas|numero:3 }}</td>
-          <td class="td-dados">{{ m.consumos|numero:3 }}</td>
-          <td class="td-dados">{{ m.quebras|numero:3 }}</td>
-          <td class="td-dados">{{ m.transferencias|numero:3 }}</td>
-          <td class="td-dados {% if m.ajustes < 0 %}text-perigo{% endif %}">{{ m.ajustes|numero:3 }}</td>
+          <td class="td-dados">{{ m.entradas|quantidade }}</td>
+          <td class="td-dados">{{ m.vendas|quantidade }}</td>
+          <td class="td-dados">{{ m.consumos|quantidade }}</td>
+          <td class="td-dados">{{ m.quebras|quantidade }}</td>
+          <td class="td-dados">{{ m.transferencias|quantidade }}</td>
+          <td class="td-dados {% if m.ajustes < 0 %}text-perigo{% endif %}">{{ m.ajustes|quantidade }}</td>
           <td class="td-dados">{{ m.valor_saidas|euros }}</td>
         </tr>
         {% endfor %}
