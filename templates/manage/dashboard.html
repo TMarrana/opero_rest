@@ -181,24 +181,24 @@
   {% if ve_pessoas %}
   <section class="cartao">
     <div class="cartao-cabecalho">
-      <h2 class="cartao-titulo">Férias pendentes</h2>
-      <a href="{% url 'vacations:lista' %}" class="link-ver">Decidir {% icone "seguinte" "h-4 w-4" %}</a>
+      <h2 class="cartao-titulo">Em férias</h2>
+      <a href="{% url 'vacations:lista' %}" class="link-ver">Férias {% icone "seguinte" "h-4 w-4" %}</a>
     </div>
-    {% if ferias_pendentes %}
+    {% if em_ferias %}
     <ul class="divide-y divide-linha">
-      {% for p in ferias_pendentes %}
+      {% for p in em_ferias %}
       <li class="flex items-center gap-4 px-6 py-3.5">
         <span class="avatar h-10 w-10 text-xs">{{ p.worker.full_name|iniciais }}</span>
         <span class="min-w-0 flex-1">
           <span class="block truncate text-sm font-semibold">{{ p.worker.full_name }}</span>
           <span class="block font-dados text-xs text-ardosia">{{ p.start_date|date:"d M" }} &rarr; {{ p.end_date|date:"d M" }}</span>
         </span>
-        {% include "components/badge.html" with label="Por decidir" variante="ambar" %}
+        {% include "components/badge.html" with label=p.absence_type.name variante="servico" %}
       </li>
       {% endfor %}
     </ul>
     {% else %}
-    <p class="vazio">Não há pedidos pendentes.</p>
+    <p class="vazio">Ninguém está de férias hoje.</p>
     {% endif %}
   </section>
   {% endif %}

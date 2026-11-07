@@ -60,8 +60,18 @@ class DashboardView(RoleRequiredMixin, TemplateView):
                 .order_by("start_date"),
                 field="worker__restaurant",
             )
-            ctx["ferias_pendentes"] = pendentes[:6]
             ctx["ferias_pendentes_total"] = pendentes.count()
+            # Quem está fora hoje: ausências aprovadas que apanham o dia de hoje.
+            hoje = timezone.localdate()
+            ctx["em_ferias"] = restaurant_scope(
+                request,
+                VacationRequest.objects.filter(
+                    status=VacationRequest.Status.APROVADO, start_date__lte=hoje, end_date__gte=hoje
+                )
+                .select_related("worker", "absence_type")
+                .order_by("end_date", "worker__full_name"),
+                field="worker__restaurant",
+            )
             entradas = restaurant_scope(request, TimeEntry.objects.all())
             ctx["em_turno"] = (
                 entradas.filter(check_out__isnull=True).resolved().select_related("worker").order_by("check_in")

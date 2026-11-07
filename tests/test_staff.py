@@ -434,7 +434,9 @@ class TestDashboard:
         client.force_login(manager)
         corpo = client.get(reverse("dashboard:home")).content.decode()
         assert "Artigo vazio" in corpo
-        assert "Bea Nunes" in corpo
+        # O pedido pendente vai para «Por tratar», não para o cartão «Em férias».
+        assert "pedido de férias por decidir" in corpo
+        assert "Ninguém está de férias hoje." in corpo
         assert "Em turno agora" in corpo
 
     def test_dashboard_do_resp_stock_sem_areas_de_pessoas(self, client, restaurant, stock_user):
