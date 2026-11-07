@@ -119,7 +119,6 @@ Tudo o resto neste documento deriva do docx, exceto as Fases 5 e 6 e as Fases 9 
 | Config | `django-environ` | settings por ambiente, segredos fora do código |
 | Estáticos (prod) | `whitenoise` | serve estáticos sem depender do proxy |
 | Testes | `pytest-django`, `pytest-cov` | |
-| Testes com tempo | `time-machine` *(Fase 5)* | fecho do mês, registos por resolver e turnos na noite da mudança de hora dependem do relógio |
 | Feriados | cálculo próprio em `vacations/holidays.py` *(Fase 5)* | feriados nacionais portugueses, incluindo os móveis (Sexta-feira Santa, Páscoa, Corpo de Deus); os municipais ficam em `vacations.Holiday` (ver Notas de desvio) |
 | XML de fora | `defusedxml` *(Fase 10, instalado)* | o SAF-T vem de outro programa: lê-se em streaming e sem expandir entidades |
 | Excel | `openpyxl` *(Fase 15)* | extração de dados em Excel, além do CSV |
