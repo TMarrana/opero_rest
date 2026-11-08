@@ -456,3 +456,13 @@ def test_ponto_do_dia_passado_mostra_quem_ja_saiu(client, manager, restaurant, m
     # Depois de sair, já não aparece.
     depois = mes.next_month(mes_passado)
     assert "Rita Saiu" not in client.get(reverse("attendance:dia") + f"?dia={depois:%Y-%m-%d}").content.decode()
+
+
+def test_ficha_inativa_mostra_a_data_de_saida(client, manager, restaurant):
+    w = Worker.objects.create(restaurant=restaurant, full_name="Ana Saiu", is_active=False,
+                              end_date=datetime.date(2026, 10, 31))
+    client.force_login(manager)
+    ficha = client.get(reverse("workers:editar", args=[w.pk])).content.decode()
+    assert "Saiu a 31/10/2026" in ficha
+    lista = client.get(reverse("workers:lista") + "?inativos=1").content.decode()
+    assert "Saiu a 31/10/2026" in lista

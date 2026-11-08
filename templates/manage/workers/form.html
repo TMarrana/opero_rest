@@ -4,7 +4,10 @@
 {% load interface %}
 {% if worker and worker.restaurant_id == request.restaurant.pk %}
 <div class="flex max-w-xl items-center justify-between gap-4">
-  <h1 class="titulo-pagina">{{ worker.full_name }}</h1>
+  <div>
+    <h1 class="titulo-pagina">{{ worker.full_name }}</h1>
+    {% if not worker.is_active %}<p class="subtitulo-pagina">Inativo{% if worker.end_date %} · Saiu a {{ worker.end_date|date:"d/m/Y" }}{% endif %}</p>{% endif %}
+  </div>
   <button type="button" x-data x-on:click="$dispatch('abrir-modal', {id: 'apagar-trabalhador'})"
           class="btn-icone border-perigo bg-perigo text-white hover:bg-perigo-700"
           aria-label="Eliminar {{ worker.full_name }}" title="Eliminar trabalhador">{% icone "lixo" %}</button>

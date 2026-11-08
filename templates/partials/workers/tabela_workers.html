@@ -16,7 +16,7 @@
           <td class="whitespace-nowrap text-ardosia {{ esbatido }}">{{ w.contact|default:"—" }}</td>
           <td class="{{ esbatido }}">{% if w.has_code %}{% include "components/badge.html" with label="Definido" variante="neutro" %}{% else %}<span class="text-sm text-ardosia">—</span>{% endif %}</td>
           <td class="{{ esbatido }}">{% if w.user %}{% include "components/badge.html" with label="Com conta" variante="neutro" %}{% else %}<span class="text-sm text-ardosia">—</span>{% endif %}</td>
-          <td class="{{ esbatido }}">{% if w.is_active %}{% include "components/badge.html" with label="Ativo" variante="servico" %}{% else %}{% include "components/badge.html" with label="Inativo" %}{% endif %}</td>
+          <td class="{{ esbatido }}">{% if w.is_active %}{% include "components/badge.html" with label="Ativo" variante="servico" %}{% else %}{% include "components/badge.html" with label="Inativo" %}{% if w.end_date %}<span class="mt-1 block font-dados text-xs text-ardosia">Saiu a {{ w.end_date|date:"d/m/Y" }}</span>{% endif %}{% endif %}</td>
           <td class="whitespace-nowrap text-right">
             {% if w.restaurant_id != request.restaurant.pk %}
             <span class="text-sm text-ardosia">A ficha é de {{ w.restaurant.name }}</span>
@@ -24,7 +24,7 @@
             <div class="flex items-center justify-end gap-1.5">
               {% url 'workers:editar' w.pk as url_editar %}
               {% include "components/botao.html" with label="Editar" tamanho="sm" href=url_editar %}
-              {% menu_acoes %}
+              {% menu_acoes nome=w.full_name %}
               <a href="{% url 'workers:codigo' w.pk %}" class="nav-item w-full">{% if w.has_code %}Repor código{% else %}Definir código{% endif %}</a>
               <a href="{% url 'workers:conta' w.pk %}" class="nav-item w-full">{% if w.user %}Conta da app{% else %}Dar acesso à app{% endif %}</a>
               {% endmenu_acoes %}

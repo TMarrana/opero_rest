@@ -185,6 +185,16 @@ class TestAplicacao:
         assert [(p.kind, p.item_name, p.quantity) for p in problemas] == [("sem_artigo", "Sal grosso", Decimal("0.010"))]
         assert _stock(artigos["bife"]) == Decimal("9.64")
 
+    def test_unidade_diferente_e_assinalada_em_minusculas(self, casa, manager, artigos, bitoque):
+        fichas.save_version(
+            recipe=bitoque, portions=1, notes="", user=manager, valid_from=HOJE() - datetime.timedelta(days=20),
+            lines=[(("Ovo", "KG"), Decimal("0.060"), None)],
+        )
+        _ligar(casa)
+        importacao = _importar(casa, manager, [_bitoques(2)])
+        [problema] = stock.summary(importacao.stock_results)["problemas"]
+        assert problema.kind == "unidade" and "Ovo em kg, e nesta casa está em un." in problema.text
+
     def test_preparation_expands_into_items(self, casa, manager, artigos, bitoque):
         """Um molho de 10 doses com 1 l de natas: cada bitoque com uma dose
         de molho tira 0,1 l."""

@@ -93,3 +93,43 @@ def test_trabalhador_inativo_fica_esbatido_mas_o_menu_nao(client, restaurant, ma
     html = client.get(reverse("workers:lista") + "?inativos=1").content.decode()
     assert _translucidas_acima_do_painel(html) == []
     assert "opacity-50" in _linha(html, "Marta Silva")
+
+
+def test_cada_menu_tem_o_nome_da_linha_no_nome_acessivel(client, restaurant, stock_user, manager):
+    categoria = Category.objects.get_or_create(restaurant=restaurant, name="Mercearia")[0]
+    Item.objects.create(restaurant=restaurant, name="Arroz", unit="KG", category=categoria)
+    client.force_login(stock_user)
+    assert 'aria-label="Mais ações: Arroz"' in client.get(reverse("inventory:lista")).content.decode()
+    Worker.objects.create(restaurant=restaurant, full_name="Marta Silva")
+    client.force_login(manager)
+    assert 'aria-label="Mais ações: Marta Silva"' in client.get(reverse("workers:lista")).content.decode()
+
+
+def test_linha_devolvida_depois_do_movimento_mantem_o_menu(client, restaurant, stock_user):
+    categoria = Category.objects.get_or_create(restaurant=restaurant, name="Mercearia")[0]
+    item = Item.objects.create(restaurant=restaurant, name="Arroz", unit="KG", category=categoria)
+    client.force_login(stock_user)
+    resp = client.post(
+        reverse("inventory:movimento", args=[item.pk]),
+        {"movement_type": "ENTRADA", "quantity": "2", "occurred_at": "2026-09-04T10:00"},
+        HTTP_HX_REQUEST="true",
+    )
+    linha = _linha(resp.content.decode(), f'id="item-{item.pk}"')
+    visivel, menu = _visivel_e_menu(linha)
+    assert ">Movimento<" in visivel and reverse("inventory:editar", args=[item.pk]) in menu
+
+
+def test_menu_acoes_esta_na_pagina_de_componentes(client, stock_user):
+    client.force_login(stock_user)
+    html = client.get(reverse("core:components")).content.decode()
+    assert 'aria-haspopup="true"' in html and "Mais ações" in html
+
+
+def test_painel_fecha_quando_a_tabela_rola_na_horizontal(client, restaurant, stock_user):
+    """O painel é fixed: se a tabela rolar por baixo, fecha em vez de ficar
+    pendurado longe do botão."""
+    categoria = Category.objects.get_or_create(restaurant=restaurant, name="Mercearia")[0]
+    Item.objects.create(restaurant=restaurant, name="Arroz", unit="KG", category=categoria)
+    client.force_login(stock_user)
+    html = client.get(reverse("inventory:lista")).content.decode()
+    assert "closest('.overflow-x-auto')" in html

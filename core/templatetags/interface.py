@@ -122,12 +122,14 @@ def url_exportar(context, formato, chave="exportar"):
 
 
 @register.simple_block_tag
-def menu_acoes(content, rotulo="Mais ações"):
+def menu_acoes(content, rotulo="Mais ações", nome=""):
     """As ações de uma linha que não são a principal, num menu «Mais ações»
-    ({% menu_acoes %}…{% endmenu_acoes %}; ver components/menu_acoes.html)."""
+    ({% menu_acoes nome=item.name %}…{% endmenu_acoes %}; ver
+    components/menu_acoes.html). O `nome` da linha entra no nome acessível
+    («Mais ações: Arroz»), para cada botão se distinguir num leitor de ecrã."""
     return render_to_string(
         "components/menu_acoes.html",
-        {"conteudo": content, "rotulo": rotulo, "id": f"menu-acoes-{uuid.uuid4().hex[:8]}"},
+        {"conteudo": content, "rotulo": rotulo, "nome": nome, "id": f"menu-acoes-{uuid.uuid4().hex[:8]}"},
     )
 
 
