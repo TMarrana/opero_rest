@@ -135,7 +135,7 @@ Tudo o resto neste documento deriva do docx, exceto as Fases 5 e 6 e as Fases 9 
 
 - **Hora local.** `TIME_ZONE = "Europe/Lisbon"` e `USE_TZ = True`. O `work_date` calcula-se na hora local da entrada, não em UTC, e na noite da mudança de hora um turno tem uma hora a mais ou a menos. Tem de haver um teste para isto.
 - **SQLite não serve de prova de concorrência.** O SQLite ignora o `select_for_update()`, e as constraints de sobreposição de turnos (`ExclusionConstraint` com `btree_gist`) só existem em PostgreSQL. As regras ficam nos serviços, e os testes correm também contra PostgreSQL antes do piloto.
-- **CSS compilado.** Depois de mexer em templates, corra `python manage.py css` (e `python manage.py css --watch` noutro terminal enquanto desenvolve); com `DEBUG` ligado, o `manage.py check` avisa (`opero.W001`) se o CSS ficou para trás.
+- **CSS compilado.** Depois de mexer em templates, corra `python manage.py css`, ou deixe `python manage.py css --watch` a correr noutro terminal. Com `DEBUG` ligado, o `manage.py check` avisa (`opero.W001`) quando o CSS fica para trás.
 
 **HTMX e Alpine são vendored** em `static/js/`, não carregados de CDN: a PWA precisa de shell offline e a rede de um restaurante não é de confiança.
 

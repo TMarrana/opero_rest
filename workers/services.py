@@ -40,7 +40,13 @@ def delete_worker(*, worker, user):
     if conta is not None and conta.pk == user.pk:
         raise ValidationError("Não pode eliminar a sua própria ficha.")
     with transaction.atomic():
-        worker.delete()
+        try:
+            worker.delete()
+        except ProtectedError as exc:
+            # Histórico que o delete_blockers ainda não conhece (um PROTECT novo).
+            raise ValidationError(
+                f"{worker.full_name} tem histórico que tem de ficar guardado. Desative a ficha em vez de a eliminar."
+            ) from exc
         if conta is not None:
             try:
                 with transaction.atomic():

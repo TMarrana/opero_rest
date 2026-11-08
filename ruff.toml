@@ -9,8 +9,4 @@ ignore = [
     "E741",
     # zip() sem strict=: strict=True mudaria o comportamento se os tamanhos diferissem (6 ocorrencias).
     "B905",
-    # workers.Worker.kiosk_code usa null=True num CharField (unicidade/ausencia); mudar pede migracao.
-    "DJ001",
-    # shifts.WeekPublication sem __str__: acrescentar mudaria o que o admin mostra.
-    "DJ008",
 ]
