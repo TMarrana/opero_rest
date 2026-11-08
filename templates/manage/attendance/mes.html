@@ -1,4 +1,5 @@
 {% extends "base_manage.html" %}
+{% load interface %}
 {% load ponto %}
 {% block title %}Fecho do mês{% endblock %}
 {% block content %}
@@ -98,7 +99,7 @@
         <div>
           <h2 id="detalhe-{{ l.worker.pk }}-titulo" class="font-display text-xl font-bold text-carvao">{{ l.worker.full_name }}</h2>
           <p class="mt-1 text-sm text-ardosia">
-            {{ mes|date:"F Y"|capfirst }} ·
+            {{ mes|data:"F Y"|capfirst }} ·
             <span class="font-dados font-semibold text-carvao">{{ l.total|horas }}</span>
             em {{ l.dias_trabalhados }} dia{{ l.dias_trabalhados|pluralize }}
           </p>
@@ -164,7 +165,7 @@
   <div class="mt-4 rail-taloes">
     {% for f in reaberturas %}
     <article class="talao">
-      <time class="block text-xs text-ardosia">{{ f.reopened_at|date:"d M Y · H:i" }}</time>
+      <time class="block text-xs text-ardosia">{{ f.reopened_at|data:"d M Y · H:i" }}</time>
       <p class="mt-1 font-semibold">{{ f.worker.full_name }}</p>
       <p class="mt-0.5">aprovado por {{ f.approved_by }} em {{ f.approved_at|date:"d/m" }}</p>
       <p class="mt-1 text-xs text-ardosia">{{ f.reopened_by }} · {{ f.reopen_reason }}</p>

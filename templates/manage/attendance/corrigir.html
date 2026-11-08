@@ -8,7 +8,7 @@
           class="btn-icone border-perigo bg-perigo text-white hover:bg-perigo-700"
           aria-label="Apagar este registo" title="Apagar registo">{% icone "lixo" %}</button>
 </div>
-<p class="subtitulo-pagina">{{ entry.worker.full_name }} · registo de {{ entry.work_date|date:"d M Y" }}. A correção fica auditada: o seu nome, a hora e o valor anterior ficam no histórico, com o motivo se o indicar.</p>
+<p class="subtitulo-pagina">{{ entry.worker.full_name }} · registo de {{ entry.work_date|data:"d M Y" }}. A correção fica auditada: o seu nome, a hora e o valor anterior ficam no histórico, com o motivo se o indicar.</p>
 
 {% if sobreposto %}
 <p class="aviso aviso-perigo mt-4 max-w-md">Este registo sobrepõe-se a outro de {{ entry.worker.full_name }}. Se for um duplicado ou um engano, apague-o; senão, corrija as horas.</p>
@@ -71,7 +71,7 @@
   <div class="mt-4 rail-taloes">
     {% for c in correcoes %}
     <article class="talao">
-      <time class="block text-xs text-ardosia">{{ c.corrected_at|date:"d M Y · H:i" }}</time>
+      <time class="block text-xs text-ardosia">{{ c.corrected_at|data:"d M Y · H:i" }}</time>
       <p class="mt-1 font-semibold">{{ c.get_kind_display }}</p>
       {% if c.kind == "ALTERAR" %}
       {% if c.previous_known %}

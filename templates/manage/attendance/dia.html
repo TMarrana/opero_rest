@@ -6,7 +6,7 @@
   <h1 class="titulo-pagina">Ponto da equipa</h1>
   <div class="flex items-center gap-2">
     <a href="?dia={{ dia_anterior|date:'Y-m-d' }}" class="btn btn-fantasma btn-sm" aria-label="Dia anterior">&larr;</a>
-    <span class="font-dados text-sm font-semibold">{{ dia|date:"D, d M Y" }}</span>
+    <span class="font-dados text-sm font-semibold">{{ dia|data:"D, d M Y" }}</span>
     {% if dia < hoje %}
     <a href="?dia={{ dia_seguinte|date:'Y-m-d' }}" class="btn btn-fantasma btn-sm" aria-label="Dia seguinte">&rarr;</a>
     {% endif %}

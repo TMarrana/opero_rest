@@ -67,12 +67,12 @@
     {% for p in pedidos %}
     <article class="talao">
       <div class="flex items-start justify-between gap-3">
-        <time class="block text-xs text-ardosia">{{ p.absence_type.name }} · pedido em {{ p.created_at|date:"d M Y" }}</time>
+        <time class="block text-xs text-ardosia">{{ p.absence_type.name }} · pedido em {{ p.created_at|data:"d M Y" }}</time>
         {% if p.status == 'APROVADO' %}{% include "components/badge.html" with label=p.get_status_display variante="servico" %}
         {% elif p.status == 'RECUSADO' %}{% include "components/badge.html" with label=p.get_status_display variante="perigo" %}
         {% else %}{% include "components/badge.html" with label=p.get_status_display variante="ambar" %}{% endif %}
       </div>
-      <p class="mt-1 text-base font-semibold">{{ p.start_date|date:"d M" }}{% if p.end_date != p.start_date %} &rarr; {{ p.end_date|date:"d M Y" }}{% else %} {{ p.start_date|date:"Y" }}{% endif %}{% if p.half_day %} · {% if p.half_day_period %}{{ p.get_half_day_period_display }}{% else %}meio dia{% endif %}{% endif %}</p>
+      <p class="mt-1 text-base font-semibold">{{ p.start_date|data:"d M" }}{% if p.end_date != p.start_date %} &rarr; {{ p.end_date|data:"d M Y" }}{% else %} {{ p.start_date|date:"Y" }}{% endif %}{% if p.half_day %} · {% if p.half_day_period %}{{ p.get_half_day_period_display }}{% else %}meio dia{% endif %}{% endif %}</p>
       <p class="mt-0.5 text-ardosia">{{ p.days_taken }} dia{{ p.days_taken|pluralize }}{% if p.decision_note %} · {{ p.decision_note }}{% endif %}</p>
       {% if p.cancelavel %}
       <form method="post" action="{% url 'staff:cancelar_ferias' p.pk %}" x-data="{ confirmar: false }" class="mt-2">

@@ -76,7 +76,7 @@ class DashboardView(RoleRequiredMixin, TemplateView):
             hoje = ctx["dia_servico"]
             ctx["ferias_pendentes_total"] = pendentes.count()
             ctx["ferias_pendentes_passadas"] = pendentes.filter(end_date__lt=hoje).count()
-            ctx["em_ferias"] = restaurant_scope(
+            ausentes = restaurant_scope(
                 request,
                 VacationRequest.objects.filter(
                     status=VacationRequest.Status.APROVADO, start_date__lte=hoje, end_date__gte=hoje
@@ -85,6 +85,9 @@ class DashboardView(RoleRequiredMixin, TemplateView):
                 .order_by("end_date", "worker__full_name"),
                 field="worker__restaurant",
             )
+            # O cartão mostra até 6 pessoas; as outras ficam em «e mais N».
+            ctx["em_ferias"] = list(ausentes[:6])
+            ctx["em_ferias_mais"] = max(ausentes.count() - 6, 0)
             entradas = restaurant_scope(request, TimeEntry.objects.all())
             ctx["em_turno"] = (
                 entradas.filter(check_out__isnull=True).resolved().select_related("worker").order_by("check_in")

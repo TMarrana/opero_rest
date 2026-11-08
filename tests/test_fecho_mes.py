@@ -435,3 +435,10 @@ class TestQuemEntraNoMes:
         )
         nomes = [w.full_name for w in workers_for_month(Worker.objects.all(), mes_passado)]
         assert nomes == ["Ativo", "Com registo"]
+
+
+def test_mensagem_de_mes_aprovado_diz_o_nome_do_mes(worker, manager, mes_passado):
+    mes.approve_month(worker=worker, month=mes_passado, user=manager)
+    with pytest.raises(ValidationError) as erro:
+        mes.ensure_open(worker, mes_passado)
+    assert erro.value.messages[0].startswith(f"O mês de {nome_do_mes(mes_passado)} de {mes_passado.year} de Marta Silva")

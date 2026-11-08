@@ -1,4 +1,5 @@
 {% extends "base_manage.html" %}
+{% load interface %}
 {% block title %}Férias{% endblock %}
 {# O mês inteiro precisa da largura toda do ecrã. #}
 {% block largura %}max-w-none{% endblock %}
@@ -10,7 +11,7 @@ como no planeador de turnos.{% endcomment %}
   <h1 class="titulo-pagina">Férias e ausências</h1>
   <div class="flex items-center gap-2">
     <a href="?mes={{ mes_anterior|date:'Y-m' }}" class="btn btn-fantasma btn-sm" aria-label="Mês anterior">&larr;</a>
-    <span class="min-w-[9rem] text-center font-dados text-sm font-semibold">{{ mes|date:"F Y" }}</span>
+    <span class="min-w-[9rem] text-center font-dados text-sm font-semibold">{{ mes|data:"F Y"|capfirst }}</span>
     <a href="?mes={{ mes_seguinte|date:'Y-m' }}" class="btn btn-fantasma btn-sm" aria-label="Mês seguinte">&rarr;</a>
   </div>
 </div>

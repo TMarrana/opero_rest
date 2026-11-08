@@ -15,6 +15,22 @@ def nome_do_mes(dia):
     return MESES[dia.month - 1]
 
 
+def data(valor, formato):
+    """O filtro `date` do Django, com os meses em minúscula (F, M, N, E, b):
+    «18 set 2026», «sábado, 7 de novembro» (o dia da semana fica como o
+    Django o escreve; use capfirst no início de uma frase)."""
+    from django.utils.dateformat import format as formatar
+
+    if not valor:
+        return ""
+    texto = formatar(valor, formato)
+    for codigo in ("F", "E", "N", "M", "b"):
+        nome = formatar(valor, codigo)
+        if nome:
+            texto = texto.replace(nome, nome.lower())
+    return texto
+
+
 def restaurant_scope(request, qs, field="restaurant"):
     """
     Restringe um queryset à casa ativa do pedido (Fase 9). Sem casa ativa
