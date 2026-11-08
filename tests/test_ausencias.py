@@ -415,9 +415,11 @@ class TestMesAprovadoESobreposicao:
 
 
 def test_pendente_com_datas_passadas_assinalado(client, manager, restaurant):
+    from sales.services import dia_de_servico
+
     w = Worker.objects.create(restaurant=restaurant, full_name="Rui Atrasado")
     tipo = AbsenceType.objects.get(restaurant=restaurant, name="Férias")
-    ontem = timezone.localdate() - datetime.timedelta(days=1)
+    ontem = dia_de_servico(restaurant) - datetime.timedelta(days=1)  # o «hoje» do ecrã
     VacationRequest.objects.create(worker=w, absence_type=tipo, start_date=ontem, end_date=ontem)
     client.force_login(manager)
     assert "Datas já passaram" in client.get(reverse("vacations:lista")).content.decode()
@@ -457,3 +459,15 @@ def test_pedido_de_manha_pela_app_guarda_a_metade(client, worker, staff_user, fe
                                           "end_date": dia.isoformat(), "half_day": "MANHA"})
     pedido = VacationRequest.objects.get(worker=worker, start_date=dia)
     assert pedido.half_day and pedido.half_day_period == "MANHA" and pedido.days_taken == Decimal("0.5")
+
+
+def test_de_madrugada_pedido_de_ontem_ainda_nao_esta_atrasado(client, manager, restaurant, monkeypatch):
+    """À 1h ainda é o dia de serviço de ontem, como no dashboard."""
+    um_da_manha = timezone.make_aware(datetime.datetime.combine(timezone.localdate(), datetime.time(1)))
+    monkeypatch.setattr(timezone, "now", lambda: um_da_manha)
+    w = Worker.objects.create(restaurant=restaurant, full_name="Rui Ontem")
+    tipo = AbsenceType.objects.get(restaurant=restaurant, name="Férias")
+    ontem = timezone.localdate() - datetime.timedelta(days=1)
+    VacationRequest.objects.create(worker=w, absence_type=tipo, start_date=ontem, end_date=ontem)
+    client.force_login(manager)
+    assert "Datas já passaram" not in client.get(reverse("vacations:lista")).content.decode()

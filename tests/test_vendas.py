@@ -320,9 +320,22 @@ class TestServicos:
         horas = reports.horas_trabalhadas(casa, timezone.localdate(), amanha)
         assert amanha not in horas
 
-    def test_turno_previsto_de_hoje_ainda_conta(self, casa, manager):
-        w = Worker.objects.create(restaurant=casa, full_name="Ana Hoje")
+    def test_de_madrugada_o_turno_previsto_do_dia_civil_ainda_nao_conta(self, casa, manager, monkeypatch):
+        """À 1h ainda é o dia de serviço de ontem: o turno de hoje à noite ainda
+        não começou."""
         hoje = timezone.localdate()
+        um_da_manha = timezone.make_aware(datetime.datetime.combine(hoje, datetime.time(1)))
+        w = Worker.objects.create(restaurant=casa, full_name="Ana Noite")
+        turno = create_shift(restaurant=casa, worker=w, day=hoje, start=datetime.time(19), end=datetime.time(23))
+        Shift.objects.filter(pk=turno.pk).update(state=Shift.State.PUBLICADO)
+        monkeypatch.setattr(timezone, "now", lambda: um_da_manha)
+        assert hoje not in reports.horas_trabalhadas(casa, hoje, hoje)
+
+    def test_turno_previsto_de_hoje_ainda_conta(self, casa, manager):
+        from sales.services import dia_de_servico
+
+        w = Worker.objects.create(restaurant=casa, full_name="Ana Hoje")
+        hoje = dia_de_servico(casa)
         turno = create_shift(restaurant=casa, worker=w, day=hoje, start=datetime.time(12), end=datetime.time(16))
         Shift.objects.filter(pk=turno.pk).update(state=Shift.State.PUBLICADO)
         horas = reports.horas_trabalhadas(casa, hoje, hoje)

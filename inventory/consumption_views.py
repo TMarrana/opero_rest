@@ -16,9 +16,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views import View
 
-from accounts.models import User
 from attendance.month import month_start, next_month, previous_month
-from core import exports
+from core import exports, permissions
 from core.formatos import quantidade
 from core.mixins import AdminRequiredMixin, ManagerRequiredMixin, StockRequiredMixin
 from core.utils import parse_decimal, restaurant_scope, workers_scope
@@ -30,7 +29,7 @@ from .models import ConsumptionSettings, InternalConsumption, Item
 LINHAS_INICIAIS = 3
 LINHAS_MAX = 20
 CASA = "casa"
-PODEM_REGISTAR = (User.Role.ADMIN, User.Role.MANAGER)
+PODEM_REGISTAR = permissions.PESSOAS  # o Resp. stock vê os consumos mas não os regista
 
 
 def linhas_formulario(dados):

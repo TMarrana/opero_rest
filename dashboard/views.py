@@ -10,10 +10,11 @@ from django.utils import timezone
 from django.views import View
 from django.views.generic import TemplateView
 
-from accounts.models import BACKOFFICE_ROLES, User
+from accounts.models import BACKOFFICE_ROLES
 from attendance.models import CorrectionRequest, MonthClose, TimeEntry
 from attendance.month import month_range, previous_month
 from attendance.selectors import desvios_do_dia, overlapping_entries, workers_for_month
+from core import permissions
 from core.middleware import SESSION_KEY
 from core.mixins import GroupAdminRequiredMixin, RoleRequiredMixin
 from core.utils import nome_do_mes, restaurant_scope, workers_scope
@@ -33,10 +34,7 @@ class DashboardView(RoleRequiredMixin, TemplateView):
     quatro sinais do docx, cada um a um clique do seu módulo."""
 
     template_name = "manage/dashboard.html"
-
-    def dispatch(self, request, *args, **kwargs):
-        self.allowed_roles = (User.Role.ADMIN, User.Role.MANAGER, User.Role.STOCK)
-        return super().dispatch(request, *args, **kwargs)
+    allowed_roles = permissions.SECOES["dashboard"]
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -63,7 +61,7 @@ class DashboardView(RoleRequiredMixin, TemplateView):
         ctx["movimentos_hoje"] = movimentos.filter(occurred_at__date=timezone.localdate()).count()
 
         # As áreas de pessoas só aparecem a quem as pode abrir (matriz da secção 7).
-        ctx["ve_pessoas"] = request.role in ("ADMIN", "MANAGER")
+        ctx["ve_pessoas"] = request.role in permissions.PESSOAS
         if ctx["ve_pessoas"]:
             pendentes = restaurant_scope(
                 request,

@@ -442,3 +442,17 @@ def test_mensagem_de_mes_aprovado_diz_o_nome_do_mes(worker, manager, mes_passado
     with pytest.raises(ValidationError) as erro:
         mes.ensure_open(worker, mes_passado)
     assert erro.value.messages[0].startswith(f"O mês de {nome_do_mes(mes_passado)} de {mes_passado.year} de Marta Silva")
+
+
+def test_ponto_do_dia_passado_mostra_quem_ja_saiu(client, manager, restaurant, mes_passado):
+    """Num dia em que trabalhou, quem saiu depois continua no Ponto desse dia."""
+    w = Worker.objects.create(restaurant=restaurant, full_name="Rita Saiu")
+    add_manual_entry(worker=w, user=manager, check_in=_dia(mes_passado, 3), check_out=_dia(mes_passado, 3, 17))
+    w.is_active, w.end_date = False, _dia(mes_passado, 15).date()
+    w.save()
+    client.force_login(manager)
+    dia = _dia(mes_passado, 3).date()
+    assert "Rita Saiu" in client.get(reverse("attendance:dia") + f"?dia={dia:%Y-%m-%d}").content.decode()
+    # Depois de sair, já não aparece.
+    depois = mes.next_month(mes_passado)
+    assert "Rita Saiu" not in client.get(reverse("attendance:dia") + f"?dia={depois:%Y-%m-%d}").content.decode()

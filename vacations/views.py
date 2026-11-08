@@ -13,6 +13,7 @@ from django.views.generic import TemplateView
 from core import exports
 from core.mixins import ManagerRequiredMixin
 from core.utils import restaurant_scope
+from sales.services import dia_de_servico
 from workers.models import Worker
 
 from .forms import AllowanceForm, DecisionForm, VacationRequestForm
@@ -60,7 +61,8 @@ class VacationListView(ManagerRequiredMixin, TemplateView):
                 p.saldo = balance(p.worker, p.start_date.year)["disponiveis"]
                 p.excede_saldo = p.days_taken > p.saldo
         ctx["pendentes"] = pendentes
-        ctx["hoje"] = timezone.localdate()
+        # O «hoje» dos ecrãs: de madrugada ainda é o dia de serviço anterior.
+        ctx["hoje"] = dia_de_servico(self.request.restaurant) if self.request.restaurant else timezone.localdate()
         ctx["historico"] = historico[:100]
         ctx["workers"] = restaurant_scope(self.request, Worker.objects.filter(is_active=True))
         ctx["estados"] = [

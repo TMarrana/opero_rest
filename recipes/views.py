@@ -14,7 +14,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views import View
 
-from accounts.models import User
+from core import permissions
 from core.mixins import StockRequiredMixin
 from core.utils import parse_decimal, restaurant_scope
 from inventory.models import Item
@@ -39,7 +39,7 @@ def _erro(request, exc):
 
 
 def _ve_vendas(request):
-    return request.role in (User.Role.ADMIN, User.Role.MANAGER)
+    return request.role in permissions.PESSOAS
 
 
 # ---- Lista -----------------------------------------------------------------
