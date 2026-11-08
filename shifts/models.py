@@ -131,7 +131,7 @@ class RestDay(TimeStampedModel):
         return f"Folga · {self.worker} · {self.date:%d/%m}"
 
 
-class WeekPublication(models.Model):
+class WeekPublication(models.Model):  # noqa: DJ008 — sem __str__: acrescentar mudava o que o admin mostra
     """Registo de cada publicação de uma semana: quem, quando e o resumo."""
 
     restaurant = models.ForeignKey(

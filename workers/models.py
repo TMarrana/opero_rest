@@ -46,7 +46,7 @@ class Worker(TimeStampedModel):
     # Código de ponto do tablet partilhado (Fase 7), guardado com o hasher
     # de passwords. É da ficha e não da conta: quem não tem conta pica na
     # mesma. Nunca abre uma sessão.
-    kiosk_code = models.CharField(max_length=128, null=True, blank=True, editable=False)
+    kiosk_code = models.CharField(max_length=128, null=True, blank=True, editable=False)  # noqa: DJ001 — o NULL distingue «sem código» de um código vazio
     code_set_at = models.DateTimeField(null=True, blank=True, editable=False)
 
     objects = WorkerQuerySet.as_manager()

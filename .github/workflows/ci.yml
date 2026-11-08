@@ -1,7 +1,9 @@
 name: CI
 
+# Um PR corre o CI uma vez (pull_request); o push so corre na main, depois do merge.
 on:
   push:
+    branches: [main]
   pull_request:
 
 env:

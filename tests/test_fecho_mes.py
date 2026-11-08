@@ -322,6 +322,35 @@ class TestQuemEntraNoMes:
         assert w.is_active and w.end_date is None
         assert "A data de saída não pode ser no futuro" in resp.content.decode()
 
+    def test_data_de_saida_antes_do_inicio_nao_desativa(self, client, manager, restaurant):
+        w = Worker.objects.create(restaurant=restaurant, full_name="Ana Sai", start_date=datetime.date(2026, 3, 1))
+        client.force_login(manager)
+        resp = client.post(reverse("workers:desativar", args=[w.pk]), {"data_saida": "2026-02-27"}, follow=True)
+        w.refresh_from_db()
+        assert w.is_active and w.end_date is None
+        assert "não pode ser antes do início" in resp.content.decode()
+
+    def test_seletor_deixa_de_fora_quem_comeca_depois_do_mes(self, restaurant, mes_passado):
+        from attendance.selectors import workers_for_month
+
+        depois = mes.next_month(mes_passado)
+        Worker.objects.create(restaurant=restaurant, full_name="Novo", start_date=depois)
+        assert not workers_for_month(Worker.objects.all(), mes_passado).filter(full_name="Novo").exists()
+
+    def test_seletor_conta_registos_noutra_casa(self, restaurant, manager, mes_passado):
+        """Quem saiu antes do mes mas picou noutra casa do grupo nesse mes entra
+        no fecho da casa principal."""
+        from attendance.selectors import workers_for_month
+        from core.models import Restaurant
+
+        outra = Restaurant.objects.create(organization=restaurant.organization, name="Tasca Dois", slug="tasca-dois")
+        w = Worker.objects.create(restaurant=restaurant, full_name="Rita Duas", is_active=False,
+                                  end_date=mes.previous_month(mes_passado))
+        w.other_restaurants.add(outra)
+        add_manual_entry(worker=w, user=manager, check_in=_dia(mes_passado, 3), check_out=_dia(mes_passado, 3, 17),
+                         restaurant=outra)
+        assert w in workers_for_month(Worker.objects.all(), mes_passado)
+
     def test_ficha_com_historico_pede_a_data_de_saida_ao_desativar(self, client, manager, restaurant, mes_passado):
         w = Worker.objects.create(restaurant=restaurant, full_name="Ana Historico")
         add_manual_entry(worker=w, user=manager, check_in=_dia(mes_passado, 3), check_out=_dia(mes_passado, 3, 17))
@@ -406,3 +435,34 @@ class TestQuemEntraNoMes:
         )
         nomes = [w.full_name for w in workers_for_month(Worker.objects.all(), mes_passado)]
         assert nomes == ["Ativo", "Com registo"]
+
+
+def test_mensagem_de_mes_aprovado_diz_o_nome_do_mes(worker, manager, mes_passado):
+    mes.approve_month(worker=worker, month=mes_passado, user=manager)
+    with pytest.raises(ValidationError) as erro:
+        mes.ensure_open(worker, mes_passado)
+    assert erro.value.messages[0].startswith(f"O mês de {nome_do_mes(mes_passado)} de {mes_passado.year} de Marta Silva")
+
+
+def test_ponto_do_dia_passado_mostra_quem_ja_saiu(client, manager, restaurant, mes_passado):
+    """Num dia em que trabalhou, quem saiu depois continua no Ponto desse dia."""
+    w = Worker.objects.create(restaurant=restaurant, full_name="Rita Saiu")
+    add_manual_entry(worker=w, user=manager, check_in=_dia(mes_passado, 3), check_out=_dia(mes_passado, 3, 17))
+    w.is_active, w.end_date = False, _dia(mes_passado, 15).date()
+    w.save()
+    client.force_login(manager)
+    dia = _dia(mes_passado, 3).date()
+    assert "Rita Saiu" in client.get(reverse("attendance:dia") + f"?dia={dia:%Y-%m-%d}").content.decode()
+    # Depois de sair, já não aparece.
+    depois = mes.next_month(mes_passado)
+    assert "Rita Saiu" not in client.get(reverse("attendance:dia") + f"?dia={depois:%Y-%m-%d}").content.decode()
+
+
+def test_ficha_inativa_mostra_a_data_de_saida(client, manager, restaurant):
+    w = Worker.objects.create(restaurant=restaurant, full_name="Ana Saiu", is_active=False,
+                              end_date=datetime.date(2026, 10, 31))
+    client.force_login(manager)
+    ficha = client.get(reverse("workers:editar", args=[w.pk])).content.decode()
+    assert "Saiu a 31/10/2026" in ficha
+    lista = client.get(reverse("workers:lista") + "?inativos=1").content.decode()
+    assert "Saiu a 31/10/2026" in lista

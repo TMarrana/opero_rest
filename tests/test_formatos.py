@@ -98,3 +98,9 @@ def test_encomenda_parcial_escreve_as_quantidades_da_mesma_maneira(client, resta
     client.force_login(stock_user)
     html = client.get(reverse("purchasing:encomenda", args=[encomenda.pk])).content.decode()
     assert ">3,75 kg<" in html and ">2,5 kg<" in html and ">1,25 kg<" in html
+
+
+def test_core_nao_depende_de_sales_para_formatar():
+    """Os gráficos do core usam os formatos do core, não os filtros das vendas."""
+    texto = Path("core/templatetags/graficos.py").read_text(encoding="utf-8")
+    assert "sales.templatetags" not in texto

@@ -97,6 +97,9 @@ def horas_por_servico(restaurant, inicio, fim, hora_mudanca=None):
         return _cortar(a, b, _mudanca(dia, hora_mudanca))
 
     agora = timezone.now()
+    from .services import dia_de_servico
+
+    hoje = dia_de_servico(restaurant, agora)  # de madrugada, ainda o dia de serviço anterior
     reais = {}
     entradas = (
         TimeEntry.objects.filter(restaurant=restaurant, work_date__range=(inicio, fim))
@@ -118,7 +121,7 @@ def horas_por_servico(restaurant, inicio, fim, hora_mudanca=None):
     for dia in _dias(inicio, fim):
         if dia in reais and sum(reais[dia], datetime.timedelta()):
             horas[dia] = (reais[dia], False)
-        elif dia in previstas and dia <= timezone.localdate(agora) and sum(previstas[dia], datetime.timedelta()):
+        elif dia in previstas and dia <= hoje and sum(previstas[dia], datetime.timedelta()):
             horas[dia] = (previstas[dia], True)
     return horas
 

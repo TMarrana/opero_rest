@@ -12,7 +12,7 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 CSRF_TRUSTED_ORIGINS = env.list("DJANGO_CSRF_TRUSTED_ORIGINS", default=[])  # noqa: F405
 
 # Cache partilhada entre os processos do gunicorn (limite de tentativas e
-# tokens do quiosque). Criar a tabela uma vez: manage.py createcachetable
+# tokens do quiosque). A tabela cria-se no migrate (core/migrations/0005).
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.db.DatabaseCache",
@@ -29,12 +29,13 @@ DATABASES = {  # noqa: F405
     }
 }
 
-# Erros para o Sentry, só se houver DSN. Sem dados pessoais.
+# Erros para o Sentry, só se houver DSN. Sem dados pessoais nem as variáveis
+# locais do erro (podiam ter nomes e códigos de ponto).
 SENTRY_DSN = env("SENTRY_DSN", default="")  # noqa: F405
 if SENTRY_DSN:
     import sentry_sdk
 
-    sentry_sdk.init(dsn=SENTRY_DSN, send_default_pii=False, traces_sample_rate=0)
+    sentry_sdk.init(dsn=SENTRY_DSN, send_default_pii=False, include_local_variables=False, traces_sample_rate=0)
 
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = True

@@ -30,6 +30,15 @@ def numero(valor, casas=0):
     return _milhares(valor, int(casas) or 2)
 
 
+def preco(valor):
+    """Preço unitário: duas casas, ou até quatro quando as tem (0,8550 fica 0,855)."""
+    if valor is None:
+        return "—"
+    valor = Decimal(valor)
+    casas = max(2, min(4, -valor.normalize().as_tuple().exponent))
+    return _milhares(valor, casas) + " €"
+
+
 def unidade(codigo):
     """A unidade de um artigo como se escreve: «KG» → «kg»."""
     return UNIDADES.get(codigo, codigo)

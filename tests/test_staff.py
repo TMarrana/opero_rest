@@ -331,7 +331,8 @@ class TestAppColaborador:
         html = client.get(reverse("staff:home")).content.decode()
         assert f'href="{reverse("accounts:pos_login")}"' in html
         assert "Ir para a gestão" in html
-        assert "Sair" in html
+        # O botão Sair é um formulário que faz POST ao logout.
+        assert f'action="{reverse("accounts:logout")}"' in html and "Sair</button>" in html
 
     def test_inicio_com_ficha_e_backoffice_tem_a_gestao(self, client, manager, restaurant):
         Worker.objects.create(restaurant=restaurant, full_name="Gerente Teste", user=manager)
@@ -345,7 +346,7 @@ class TestAppColaborador:
         for url in [reverse("staff:home"), reverse("staff:historico")]:
             html = client.get(url).content.decode()
             assert f'href="{reverse("accounts:pos_login")}"' not in html
-            assert "Gestão" not in html
+            assert ">Gestão<" not in html and ">Ir para a gestão<" not in html
 
     def test_cabecalho_da_app_liga_a_gestao_ao_backoffice(self, client, manager, restaurant):
         Worker.objects.create(restaurant=restaurant, full_name="Gerente Teste", user=manager)
@@ -489,9 +490,9 @@ class TestDashboard:
         client.force_login(manager)
         corpo = client.get(reverse("dashboard:home")).content.decode()
         assert "Artigo vazio" in corpo
-        # O pedido pendente vai para «Por tratar», não para o cartão «Em férias».
+        # O pedido pendente vai para «Por tratar», não para o cartão «Ausentes hoje».
         assert "pedido de férias por decidir" in corpo
-        assert "Ninguém está de férias hoje." in corpo
+        assert "Ninguém está ausente hoje." in corpo
         assert "Em turno agora" in corpo
 
     def test_dashboard_do_resp_stock_sem_areas_de_pessoas(self, client, restaurant, stock_user):
@@ -512,3 +513,13 @@ class TestDashboard:
         gustavo = Worker.objects.get(full_name="Gustavo Reis")
         assert gustavo.user.role == gustavo.user.Role.MANAGER
         assert gustavo.check_kiosk_code("1357")
+
+
+def test_app_le_as_casas_da_conta_uma_vez_por_pagina(client, manager, monkeypatch):
+    """O middleware ja leu as casas; a ligacao «Gestao» nao as volta a pedir."""
+    chamadas = []
+    original = User.casas
+    monkeypatch.setattr(User, "casas", lambda self: chamadas.append(1) or original(self))
+    client.force_login(manager)
+    assert client.get(reverse("staff:home")).status_code == 200
+    assert len(chamadas) == 1

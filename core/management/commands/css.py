@@ -49,6 +49,11 @@ class Command(BaseCommand):
             resultado = subprocess.run(comando, cwd=base)
         except KeyboardInterrupt:
             return
+        except OSError as exc:
+            raise CommandError(
+                f"Nao foi possivel correr o Tailwind ({binario}): {exc.strerror or exc}. "
+                "Em Linux e macOS, de-lhe permissao de execucao: chmod +x."
+            ) from exc
         if resultado.returncode:
             raise CommandError(f"O Tailwind terminou com o codigo {resultado.returncode}.")
         # O Tailwind nao reescreve um CSS igual ao que ja la estava; sem isto a

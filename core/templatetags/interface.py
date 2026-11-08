@@ -13,8 +13,9 @@ from django.template.loader import render_to_string
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
+from accounts.models import tem_backoffice
 from core.formatos import quantidade, unidade
-from core.utils import nome_do_mes
+from core.utils import data, nome_do_mes
 
 register = template.Library()
 
@@ -102,6 +103,8 @@ def iniciais(nome):
 
 # «outubro»: o mês por extenso e em minúscula ({{ mes|nome_do_mes }}).
 register.filter("nome_do_mes", nome_do_mes)
+register.filter("data", data, expects_localtime=True)  # como o date: hora local
+register.filter("tem_backoffice", tem_backoffice)
 # «4 kg», «0,22 L»: {{ item.current_stock|quantidade:item.unit }}; só a unidade: {{ item.unit|unidade }}.
 register.filter("quantidade", quantidade)
 register.filter("unidade", unidade)
@@ -119,12 +122,14 @@ def url_exportar(context, formato, chave="exportar"):
 
 
 @register.simple_block_tag
-def menu_acoes(content, rotulo="Mais ações"):
+def menu_acoes(content, rotulo="Mais ações", nome=""):
     """As ações de uma linha que não são a principal, num menu «Mais ações»
-    ({% menu_acoes %}…{% endmenu_acoes %}; ver components/menu_acoes.html)."""
+    ({% menu_acoes nome=item.name %}…{% endmenu_acoes %}; ver
+    components/menu_acoes.html). O `nome` da linha entra no nome acessível
+    («Mais ações: Arroz»), para cada botão se distinguir num leitor de ecrã."""
     return render_to_string(
         "components/menu_acoes.html",
-        {"conteudo": content, "rotulo": rotulo, "id": f"menu-acoes-{uuid.uuid4().hex[:8]}"},
+        {"conteudo": content, "rotulo": rotulo, "nome": nome, "id": f"menu-acoes-{uuid.uuid4().hex[:8]}"},
     )
 
 

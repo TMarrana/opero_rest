@@ -6,6 +6,7 @@ from decimal import Decimal
 import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from django.utils import timezone
 
 from core.utils import nome_do_mes
 from dashboard.views import cartao_vendas
@@ -54,3 +55,40 @@ def test_painel_do_grupo_usa_o_cartao_de_vendas(client, restaurant):
     resp = client.get(reverse("grupo:painel"))
     assert resp.context["linhas"][0]["vendas"] == {"valor": None, "legenda": "Ainda não há vendas importadas"}
     assert "Ainda não há vendas importadas" in resp.content.decode()
+
+
+def test_filtro_data_escreve_os_meses_com_minuscula():
+    from core.utils import data
+
+    sabado = datetime.date(2026, 11, 7)
+    assert data(sabado, r"l, j \d\e F") == "Sábado, 7 de novembro"
+    assert data(datetime.date(2026, 9, 18), "d M Y") == "18 set 2026"
+    assert data(datetime.date(2026, 5, 1), "F Y") == "maio 2026"
+    assert data(None, "d M Y") == ""
+
+
+def test_dashboard_e_ferias_sem_meses_com_maiuscula(client, manager, restaurant):
+    from vacations.models import AbsenceType, VacationRequest
+    from workers.models import Worker
+
+    hoje = timezone.localdate()
+    w = Worker.objects.create(restaurant=restaurant, full_name="Ana Fora")
+    tipo = AbsenceType.objects.get(restaurant=restaurant, name="Férias")
+    VacationRequest.objects.create(worker=w, absence_type=tipo, start_date=hoje, end_date=hoje, status="APROVADO")
+    client.force_login(manager)
+    from sales.services import dia_de_servico
+
+    mes = nome_do_mes(dia_de_servico(restaurant))
+    html = client.get(reverse("dashboard:home")).content.decode()
+    assert f" de {mes} · " in html and f" de {mes.capitalize()} · " not in html
+    lista = client.get(reverse("vacations:lista")).content.decode()
+    assert nome_do_mes(hoje)[:3].capitalize() + " " not in lista
+
+
+def test_filtro_data_usa_a_hora_local():
+    from django.template import Context, Template
+
+    # 31/07 às 23:30 UTC é 1 de agosto às 00:30 em Lisboa (UTC+1).
+    momento = datetime.datetime(2026, 7, 31, 23, 30, tzinfo=datetime.timezone.utc)
+    html = Template('{% load interface %}{{ m|data:"d M H:i" }}').render(Context({"m": momento}))
+    assert html == "01 ago 00:30"

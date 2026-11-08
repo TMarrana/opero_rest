@@ -81,3 +81,40 @@ def test_compilacao_falhada_deixa_o_css_desatualizado(tmp_path, settings, monkey
     with pytest.raises(CommandError):
         call_command("css")
     assert css_desatualizado(css, [tmp_path / "templates"]) is True
+
+
+def test_binario_que_nao_arranca_da_erro_do_comando(tmp_path, settings, monkeypatch):
+    """Um binario sem permissao de execucao (chmod +x esquecido) da uma
+    mensagem, nao um traceback."""
+    _projeto_com_tailwind(tmp_path, settings, monkeypatch, codigo=0)
+
+    def recusa(comando, **kwargs):
+        raise PermissionError(13, "Permission denied")
+
+    monkeypatch.setattr("core.management.commands.css.subprocess.run", recusa)
+    with pytest.raises(CommandError, match="chmod"):
+        call_command("css")
+
+
+def test_caminho_do_binario(tmp_path, monkeypatch):
+    from core.management.commands import css
+
+    monkeypatch.setenv("TAILWIND_BIN", "/opt/tw")
+    assert str(css.caminho_binario(tmp_path)).replace("\\", "/") == "/opt/tw"
+    monkeypatch.delenv("TAILWIND_BIN")
+    monkeypatch.setattr(css.sys, "platform", "win32")
+    assert css.caminho_binario(tmp_path) == tmp_path / "tools" / "tailwindcss.exe"
+    monkeypatch.setattr(css.sys, "platform", "linux")
+    assert css.caminho_binario(tmp_path) == tmp_path / "tools" / "tailwindcss"
+
+
+def test_aviso_de_css_so_com_debug(tmp_path, settings):
+    from core.checks import avisar_css_desatualizado
+
+    (tmp_path / "templates").mkdir()
+    (tmp_path / "templates" / "x.html").write_text("<p></p>")
+    settings.BASE_DIR = tmp_path  # sem app.css: desatualizado
+    settings.DEBUG = True
+    assert [a.id for a in avisar_css_desatualizado(None)] == ["opero.W001"]
+    settings.DEBUG = False
+    assert avisar_css_desatualizado(None) == []

@@ -56,7 +56,15 @@ class TeamDayView(ManagerRequiredMixin, TemplateView):
         restaurant = self.request.restaurant
         hoje = dia_de_servico(restaurant)
         dia = parse_date(self.request.GET.get("dia", "") or "") or hoje
-        workers = workers_scope(self.request, Worker.objects.filter(is_active=True))
+        # Quem estava na casa nesse dia: os ativos, quem saiu nesse dia ou
+        # depois, e quem picou nesse dia (num dia passado, quem já saiu
+        # continua no dia em que trabalhou).
+        workers = workers_scope(
+            self.request,
+            Worker.objects.filter(
+                Q(is_active=True) | Q(end_date__gte=dia) | Q(time_entries__work_date=dia)
+            ).distinct(),
+        )
         entries = (
             TimeEntry.objects.filter(restaurant=restaurant, worker__in=workers)
             .filter(Q(work_date=dia) | Q(work_date__lt=dia, check_out__isnull=True))

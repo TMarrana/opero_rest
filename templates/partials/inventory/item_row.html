@@ -17,7 +17,7 @@
       <button type="button"
               hx-get="{% url 'inventory:movimento' item.pk %}" hx-target="#modal-slot" hx-swap="innerHTML"
               class="btn btn-sm btn-primario">Movimento</button>
-      {% menu_acoes %}
+      {% menu_acoes nome=item.name %}
       {% if pode_transferir and item.is_active %}<a href="{% url 'inventory:transferir' item.pk %}" class="nav-item w-full">Transferir</a>{% endif %}
       <a href="{% url 'purchasing:precos' item.pk %}" class="nav-item w-full">Preços</a>
       <a href="{% url 'inventory:editar' item.pk %}" class="nav-item w-full">Editar</a>

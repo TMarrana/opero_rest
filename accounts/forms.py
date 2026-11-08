@@ -6,13 +6,27 @@ from django.core.exceptions import ValidationError
 
 from core.throttle import Limite
 
-# 10 falhas por email bloqueiam o login durante 15 minutos.
+# 10 falhas do mesmo email e do mesmo IP bloqueiam o login durante 15
+# minutos. Com o IP na chave, quem erra a password de outro sítio não
+# bloqueia o dono da conta (decidido pelo TM a 2026-11-08).
 LIMITE_LOGIN = Limite("login-falhas", 10, 900)
 
 
-def _chave_email(email):
-    """Hash do email normalizado: a cache não guarda emails nem chaves com espaços."""
-    return hashlib.sha256(email.strip().lower().encode()).hexdigest()
+def _ip(request):
+    """O IP do cliente. Atrás do proxy do alojamento é o último do
+    X-Forwarded-For (o que o proxy acrescentou); os anteriores vêm do
+    cliente e podiam mudar a cada tentativa."""
+    if request is None:
+        return ""
+    encaminhado = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    if encaminhado:
+        return encaminhado.split(",")[-1].strip()
+    return request.META.get("REMOTE_ADDR", "")
+
+
+def _chave(email, request):
+    """Hash do email normalizado e do IP: a cache não guarda emails nem IPs."""
+    return hashlib.sha256(f"{email.strip().lower()}|{_ip(request)}".encode()).hexdigest()
 
 
 class LoginForm(AuthenticationForm):
@@ -54,7 +68,7 @@ class LoginForm(AuthenticationForm):
         email = self.cleaned_data.get("username")
         if not email:
             return super().clean()
-        chave = _chave_email(email)
+        chave = _chave(email, self.request)
         if LIMITE_LOGIN.bloqueado(chave):
             raise ValidationError(self.error_messages["bloqueado"], code="bloqueado")
         try:

@@ -27,6 +27,7 @@ from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
 
+from core.formatos import unidade
 from inventory.models import StockMovement
 from inventory.services import register_movement
 from recipes.models import Recipe, RecipeProduct
@@ -114,7 +115,7 @@ def theoretical(restaurant, day, *, items=None):
             elif item.unit != l.unit:
                 problema(
                     ("unidade", item.pk), kind="unidade", recipe=receita, item_name=l.item_name, quantity=bruta,
-                    text=f"A ficha {receita} tem {l.item_name} em {l.unit}, e nesta casa está em {item.unit}.",
+                    text=f"A ficha {receita} tem {l.item_name} em {unidade(l.unit)}, e nesta casa está em {unidade(item.unit)}.",
                 )
             else:
                 consumo[item] += bruta

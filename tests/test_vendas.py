@@ -320,6 +320,39 @@ class TestServicos:
         horas = reports.horas_trabalhadas(casa, timezone.localdate(), amanha)
         assert amanha not in horas
 
+    def test_de_madrugada_o_turno_previsto_do_dia_civil_ainda_nao_conta(self, casa, manager, monkeypatch):
+        """À 1h ainda é o dia de serviço de ontem: o turno de hoje à noite ainda
+        não começou."""
+        hoje = timezone.localdate()
+        um_da_manha = timezone.make_aware(datetime.datetime.combine(hoje, datetime.time(1)))
+        w = Worker.objects.create(restaurant=casa, full_name="Ana Noite")
+        turno = create_shift(restaurant=casa, worker=w, day=hoje, start=datetime.time(19), end=datetime.time(23))
+        Shift.objects.filter(pk=turno.pk).update(state=Shift.State.PUBLICADO)
+        monkeypatch.setattr(timezone, "now", lambda: um_da_manha)
+        assert hoje not in reports.horas_trabalhadas(casa, hoje, hoje)
+
+    def test_turno_previsto_de_hoje_ainda_conta(self, casa, manager):
+        from sales.services import dia_de_servico
+
+        w = Worker.objects.create(restaurant=casa, full_name="Ana Hoje")
+        hoje = dia_de_servico(casa)
+        turno = create_shift(restaurant=casa, worker=w, day=hoje, start=datetime.time(12), end=datetime.time(16))
+        Shift.objects.filter(pk=turno.pk).update(state=Shift.State.PUBLICADO)
+        horas = reports.horas_trabalhadas(casa, hoje, hoje)
+        assert horas[hoje] == (datetime.timedelta(hours=4), True)
+
+    def test_horas_reais_contam_mesmo_num_dia_futuro(self, casa, manager):
+        """O limite de hoje e so para as horas previstas; as do ponto contam sempre."""
+        from attendance.services import add_manual_entry
+
+        w = Worker.objects.create(restaurant=casa, full_name="Ana Real")
+        amanha = timezone.localdate() + datetime.timedelta(days=1)
+        tz = timezone.get_current_timezone()
+        add_manual_entry(worker=w, user=manager, check_in=datetime.datetime.combine(amanha, datetime.time(10), tz),
+                         check_out=datetime.datetime.combine(amanha, datetime.time(12), tz))
+        horas = reports.horas_trabalhadas(casa, amanha, amanha)
+        assert horas[amanha] == (datetime.timedelta(hours=2), False)
+
     def test_regras_recusam_uma_hora_de_madrugada(self, client, casa, admin_user):
         client.force_login(admin_user)
         r = client.post(reverse("sales:regras"), {"day_cutoff_hour": 5, "service_change_hour": 4})

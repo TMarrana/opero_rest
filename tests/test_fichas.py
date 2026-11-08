@@ -135,7 +135,7 @@ class TestCusto:
         problemas = {c.line.item_name: c.problem for c in custo.lines}
         assert problemas == {
             "Bife da vazia": "",
-            "Ovo": "nesta casa está em CX",
+            "Ovo": "nesta casa está em cx",
             "Batata": "não há este artigo nesta casa",
             "Arroz carolino": "não há este artigo nesta casa",
         }
@@ -358,3 +358,11 @@ class TestAcesso:
         batata = next(l for l in r.context["linhas"] if l["line"].item_name == "Batata")
         assert (batata["net"], batata["gross"]) == (Decimal("2.000"), Decimal("2.500"))
         assert "€" not in r.content.decode()
+
+
+def test_linha_da_ficha_escreve_a_unidade_como_o_stock():
+    from recipes.models import RecipeLine
+
+    assert RecipeLine(item_name="Arroz", unit="KG").unit_label == "kg"
+    assert RecipeLine(item_name="Molho", unit="chávena").unit_label == "chávena"  # texto livre fica como está
+

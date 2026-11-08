@@ -24,8 +24,8 @@
           <tr>
             <td class="font-medium">{{ p.worker.full_name }}</td>
             <td class="text-sm">{{ p.absence_type.name }}</td>
-            <td class="td-dados">{{ p.start_date|date:"d M Y" }}</td>
-            <td class="td-dados">{{ p.end_date|date:"d M Y" }}{% if p.half_day %} <span class="text-xs text-ardosia">meio dia</span>{% endif %}</td>
+            <td class="td-dados">{{ p.start_date|data:"d M Y" }}</td>
+            <td class="td-dados">{{ p.end_date|data:"d M Y" }}{% if p.half_day %} <span class="text-xs text-ardosia">{% if p.half_day_period %}{{ p.get_half_day_period_display }}{% else %}meio dia{% endif %}</span>{% endif %}</td>
             <td class="td-dados">{{ p.days_taken }}{% if p.saldo is not None %}<span class="block text-xs text-ardosia">saldo {{ p.saldo }}</span>{% endif %}</td>
             <td class="text-ardosia">{{ p.request_note|default:"—" }}</td>
             <td class="space-y-1">
@@ -86,8 +86,8 @@
           <tr>
             <td class="font-medium">{{ p.worker.full_name }}</td>
             <td class="text-sm">{{ p.absence_type.name }}</td>
-            <td class="td-dados">{{ p.start_date|date:"d M Y" }}</td>
-            <td class="td-dados">{{ p.end_date|date:"d M Y" }}</td>
+            <td class="td-dados">{{ p.start_date|data:"d M Y" }}</td>
+            <td class="td-dados">{{ p.end_date|data:"d M Y" }}</td>
             <td class="td-dados">{{ p.days_taken }}</td>
             <td>
               {% if p.status == "APROVADO" %}
@@ -99,7 +99,7 @@
               {% endif %}
             </td>
             <td class="text-xs text-ardosia">
-              {% if p.decided_by %}{{ p.decided_by }} · {{ p.decided_at|date:"d M Y" }}{% if p.decision_note %} · «{{ p.decision_note }}»{% endif %}{% else %}—{% endif %}
+              {% if p.decided_by %}{{ p.decided_by }} · {{ p.decided_at|data:"d M Y" }}{% if p.decision_note %} · «{{ p.decision_note }}»{% endif %}{% else %}—{% endif %}
             </td>
           </tr>
           {% endfor %}

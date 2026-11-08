@@ -1,4 +1,5 @@
 {% extends "base_manage.html" %}
+{% load interface %}
 {% load vendas %}
 {% block title %}Grupo{% endblock %}
 {% block content %}
@@ -26,7 +27,7 @@ dashboard de cada uma. Para agir, abre-se a casa, que passa a ser a ativa.{% end
       <dd class="text-right font-dados {% if l.ferias_pendentes %}font-semibold{% endif %}">{{ l.ferias_pendentes }}</dd>
       <dt class="text-ardosia">Correções pendentes</dt>
       <dd class="text-right font-dados {% if l.correcoes_pendentes %}font-semibold{% endif %}">{{ l.correcoes_pendentes }}</dd>
-      <dt class="text-ardosia">{{ mes_por_fechar|date:"F" }} por aprovar</dt>
+      <dt class="text-ardosia">{{ mes_por_fechar|data:"F"|capfirst }} por aprovar</dt>
       <dd class="text-right font-dados {% if l.por_aprovar %}font-semibold{% endif %}">{{ l.por_aprovar }}</dd>
       <dt class="text-ardosia">{{ l.vendas.legenda }}</dt>
       <dd class="whitespace-nowrap text-right font-dados font-semibold">{% if l.vendas.valor is None %}<span class="font-normal text-ardosia">—</span>{% else %}{{ l.vendas.valor|euros }}{% endif %}</dd>

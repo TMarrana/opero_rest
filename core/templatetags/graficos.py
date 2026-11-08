@@ -10,7 +10,7 @@ from django import template
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
 
-from sales.templatetags.vendas import euros
+from core.formatos import euros, numero, preco
 
 register = template.Library()
 
@@ -85,7 +85,6 @@ def _barra(x, y, largura, altura, raio):
 def medida(valor, formato):
     """Um valor da Análise no formato da sua linha (`core.exports`)."""
     from attendance.templatetags.ponto import horas
-    from sales.templatetags.vendas import numero
 
     if valor is None:
         return "—"
@@ -155,7 +154,6 @@ def linha_precos(pontos, unidade="", rotulo="Evolução do preço"):
 
 
 def _preco(valor):
-    from sales.templatetags.vendas import preco
 
     return preco(valor)
 

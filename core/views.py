@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.http import HttpResponse
 from django.views.generic import TemplateView
 
+from core import permissions
 from core.mixins import RoleRequiredMixin
 
 
@@ -28,12 +29,7 @@ class ComponentsView(RoleRequiredMixin, TemplateView):
     """
 
     template_name = "components.html"
-
-    def dispatch(self, request, *args, **kwargs):
-        from accounts.models import User
-
-        self.allowed_roles = (User.Role.ADMIN, User.Role.MANAGER, User.Role.STOCK)
-        return super().dispatch(request, *args, **kwargs)
+    allowed_roles = permissions.STOCK
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

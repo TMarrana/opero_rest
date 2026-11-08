@@ -134,6 +134,8 @@ def test_sair_limpa_a_cache_do_telemovel(client, staff_user):
     client.force_login(staff_user)
     r = client.post(reverse("accounts:logout"))
     assert r["Clear-Site-Data"] == '"cache", "storage"'
+    assert r.status_code == 302 and r.url == reverse("accounts:login")
+    assert "_auth_user_id" not in client.session
 
 
 class TestLimiteLogin:
@@ -154,3 +156,28 @@ class TestLimiteLogin:
         client.post(self.URL, {"username": "gerente@tasca.pt", "password": "errada"})
         r = client.post(self.URL, {"username": "gerente@tasca.pt", "password": "segredo-de-teste-123"})
         assert r.status_code == 302
+
+    def test_bloqueio_e_por_email_e_ip(self, client, manager):
+        """Quem erra de outro sitio nao bloqueia o dono da conta."""
+        for _ in range(10):
+            client.post(self.URL, {"username": "gerente@tasca.pt", "password": "errada"}, REMOTE_ADDR="203.0.113.9")
+        r = client.post(self.URL, {"username": "gerente@tasca.pt", "password": "segredo-de-teste-123"},
+                        REMOTE_ADDR="198.51.100.4")
+        assert r.status_code == 302
+
+    def test_atras_do_proxy_conta_o_ip_que_o_proxy_viu(self, client, manager):
+        """O ultimo X-Forwarded-For e o que o proxy acrescentou; os anteriores
+        vem do cliente e podiam mudar a cada tentativa."""
+        for i in range(10):
+            client.post(self.URL, {"username": "gerente@tasca.pt", "password": "errada"},
+                        HTTP_X_FORWARDED_FOR=f"10.0.0.{i}, 203.0.113.9")
+        r = client.post(self.URL, {"username": "gerente@tasca.pt", "password": "segredo-de-teste-123"},
+                        HTTP_X_FORWARDED_FOR="10.9.9.9, 203.0.113.9")
+        assert "Demasiadas tentativas" in r.content.decode()
+
+    def test_bloqueio_e_um_erro_geral_do_formulario(self, client, manager):
+        for _ in range(10):
+            client.post(self.URL, {"username": "gerente@tasca.pt", "password": "errada"})
+        r = client.post(self.URL, {"username": "gerente@tasca.pt", "password": "segredo-de-teste-123"})
+        form = r.context["form"]
+        assert form.non_field_errors() and not form.errors.get("username")

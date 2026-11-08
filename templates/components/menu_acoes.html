@@ -7,12 +7,15 @@ biblioteca `interface`, com ligações e formulários lá dentro:
     <form method="post" action="…">{% csrf_token %}<button type="submit" class="nav-item w-full">Arquivar</button></form>
   {% endmenu_acoes %}
 Abre com um clique ou com Enter; fecha com Esc (o foco volta ao botão), com
-um clique fora, e quando a página rola ou muda de tamanho. A lista é `fixed`
+um clique fora, e quando a página ou a tabela rola, ou muda de tamanho. A lista é `fixed`
 e posiciona-se pelo botão, para o `overflow` do cartão e da tabela não a
 cortar; abre para cima quando não cabe por baixo.
 {% endcomment %}
 <div class="inline-block text-left"
      x-data="{ aberto: false,
+               init() {
+                 this.$el.closest('.overflow-x-auto')?.addEventListener('scroll', () => this.fechar(), { passive: true })
+               },
                alternar() { this.aberto ? this.fechar() : this.abrir() },
                abrir() {
                  this.aberto = true
@@ -27,6 +30,7 @@ cortar; abre para cima quando não cabe por baixo.
      x-on:click.outside="fechar()" x-on:keydown.escape="fechar(true)"
      x-on:scroll.window="fechar()" x-on:resize.window="fechar()">
   <button type="button" x-ref="botao" class="link-acao"
+          {% if nome %}aria-label="{{ rotulo }}: {{ nome }}"{% endif %}
           aria-haspopup="true" aria-expanded="false" x-bind:aria-expanded="aberto" aria-controls="{{ id }}"
           x-on:click="alternar()">{{ rotulo }}</button>
   <div id="{{ id }}" x-ref="painel" x-show="aberto" x-cloak x-transition.opacity.duration.150ms

@@ -216,3 +216,34 @@ class TestRegistosProtegidos:
             delete_worker(worker=w, user=manager)
         assert delete_blockers(w) == ["1 pedido de correção"]
         assert Worker.objects.filter(pk=w.pk).exists()
+
+
+@pytest.mark.parametrize("modelo,campo", [
+    ("attendance.TimeEntry", "worker"), ("attendance.TimeEntry", "restaurant"),
+    ("attendance.CorrectionRequest", "worker"), ("attendance.CorrectionRequest", "restaurant"),
+    ("attendance.MonthClose", "worker"), ("attendance.MonthClose", "restaurant"),
+    ("inventory.InternalConsumption", "restaurant"), ("purchasing.Receipt", "restaurant"),
+    ("sales.SalesImport", "restaurant"), ("sales.SalesDocument", "restaurant"),
+    ("vacations.VacationRequest", "worker"),
+])
+def test_registos_legais_estao_protegidos_contra_cascata(modelo, campo):
+    from django.apps import apps
+    from django.db.models import PROTECT
+
+    assert apps.get_model(modelo)._meta.get_field(campo).remote_field.on_delete is PROTECT
+
+
+def test_apagar_ficha_com_historico_inesperado_da_mensagem_e_nao_500(restaurant, manager, monkeypatch):
+    """Um PROTECT novo que o delete_blockers ainda nao conhece: a ficha fica
+    e o gerente recebe a mensagem de sempre, nao um erro 500."""
+    import workers.services as servicos
+
+    w = Worker.objects.create(restaurant=restaurant, full_name="Rui Novo")
+    monkeypatch.setattr(servicos, "delete_blockers", lambda worker: [])
+
+    def recusa(*a, **k):
+        raise ProtectedError("protegido", set())
+
+    monkeypatch.setattr(Worker, "delete", recusa)
+    with pytest.raises(ValidationError, match="Desative a ficha"):
+        delete_worker(worker=w, user=manager)

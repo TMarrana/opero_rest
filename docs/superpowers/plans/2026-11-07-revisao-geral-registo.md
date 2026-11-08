@@ -106,3 +106,16 @@ Nenhum entrou na passagem de correções. Os marcados como resolvidos foram trat
 - Final: minor (deferred): (13) o "hoje" entre as 0h e as 5h nao e o mesmo em todo o lado (lista de ferias e C4 pelo dia civil; dashboard pelo dia de servico).
 - Final: minor (deferred): (14) os separadores da Analise nao levam o periodo; com a D9 o mes muda ao trocar de separador (custo da Ruling 31).
 - Final: minor (deferred): (15) o painel Mais acoes nao segue o scroll horizontal dentro da tabela; falta um teste de que a linha devolvida pelo HTMX (pos_movimento.html) tem o menu; menu_acoes nao esta em /componentes/.
+
+## Resolução dos minors (2026-11-08, 29ª sessão, ramo `minors-revisao`)
+
+Os 49 minors por resolver foram tratados, cada um com teste. Três eram decisões de produto, tomadas pelo TM:
+- **Login:** o limite de tentativas passa a contar por email e IP (o IP é o último do `X-Forwarded-For`, o que o proxy acrescentou). Quem erra a password de outro sítio já não bloqueia o dono da conta.
+- **Ausências:** os meios-dias passam a dizer se são de manhã ou de tarde (`half_day_period`). Manhã e tarde no mesmo dia não se sobrepõem; um meio-dia antigo, sem metade, continua a contar como o dia todo.
+- **Dashboard:** o cartão «Em férias» passa a «Ausentes hoje» (todos os tipos), com até 6 pessoas e «e mais N».
+
+Ficaram por resolver, e porquê:
+- **`DatabaseCache.incr` não é atómico:** o contador usa agora `add` + `incr` + `touch`, que é atómico nas caches que o suportam. A `DatabaseCache` de produção faz o `incr` em duas consultas e pode contar uma falha a menos em concorrência. Só fica atómico com outra cache (Redis), e o plano exclui-a por agora.
+- **CI:** o `push` só corre na `main`. Um ramo sem PR deixa de ter CI.
+- **Coluna «Meio dia» da exportação das ausências:** continua a dizer sim/não, sem a metade.
+

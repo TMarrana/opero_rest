@@ -15,6 +15,7 @@ from django.db import transaction
 from django.db.models import Max, Sum
 from django.utils import timezone
 
+from core.formatos import unidade
 from inventory.models import Item
 from sales.models import PosProduct, SalesDocument, SalesLine
 
@@ -32,10 +33,10 @@ def ingredient_choices(organization):
     """Os artigos ativos das casas do grupo, como (nome, unidade), sem repetir
     o mesmo nome na mesma unidade."""
     vistos = {}
-    for nome, unidade in Item.objects.filter(
+    for nome, codigo in Item.objects.filter(
         restaurant__organization=organization, restaurant__is_active=True, is_active=True
     ).values_list("name", "unit"):
-        vistos.setdefault((nome.casefold(), unidade), (nome, unidade))
+        vistos.setdefault((nome.casefold(), codigo), (nome, codigo))
     return sorted(vistos.values(), key=lambda t: (t[0].casefold(), t[1]))
 
 
@@ -253,7 +254,7 @@ def recipe_cost(version, restaurant, *, day=None, items=None, _nivel=0):
             if item is None:
                 c.problem = "não há este artigo nesta casa"
             elif item.unit != l.unit:
-                c.item, c.problem = item, f"nesta casa está em {item.unit}"
+                c.item, c.problem = item, f"nesta casa está em {unidade(item.unit)}"
             elif item.reference_cost is None:
                 c.item, c.problem = item, "sem custo"
             else:

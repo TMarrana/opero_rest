@@ -8,6 +8,7 @@ Comparar casas é só para o Admin do grupo; os outros veem a casa ativa.
 """
 import datetime
 from decimal import Decimal
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.shortcuts import redirect
@@ -15,7 +16,7 @@ from django.utils import timezone
 from django.views.generic import TemplateView
 
 from attendance.month import month_range, next_month, previous_month
-from core import exports
+from core import exports, permissions
 from core.exports import EUROS, HORAS, NUMERO, PERCENTAGEM, Tabela
 from core.mixins import ManagerRequiredMixin, StockRequiredMixin
 from sales.reports import ultimo_dia
@@ -55,7 +56,7 @@ def periodo(request, meses=1, por_omissao=None):
     return inicio, fim, mes
 
 
-def casas_disponiveis(request, perfis=("ADMIN", "MANAGER")):
+def casas_disponiveis(request, perfis=permissions.PESSOAS):
     """As casas que a pessoa pode pôr lado a lado: todas as do grupo onde tem
     um destes perfis, se for Admin do grupo; senão, só a ativa."""
     if not request.user.is_group_admin:
@@ -130,7 +131,7 @@ class AnalysisView(StockRequiredMixin, TemplateView):
 
     def get(self, request, *args, **kwargs):
         # O resumo cruza vendas e pessoas: o Resp. stock vai para o stock.
-        if request.role not in ("ADMIN", "MANAGER"):
+        if request.role not in permissions.PESSOAS:
             return redirect("analytics:stock")
         # Abre no último mês com vendas: o mês corrente quase nunca as tem ainda.
         inicio, fim, mes = periodo(request, por_omissao=ultimo_dia(request.restaurant))
@@ -147,13 +148,7 @@ class AnalysisView(StockRequiredMixin, TemplateView):
         if formato == "csv":
             return exports.csv_response(tabela_casas(indicadores, inicio, fim), nome)
         contexto = self.get_context_data(
-            inicio=inicio,
-            fim=fim,
-            mes=mes,
-            mes_anterior=previous_month(mes or inicio),
-            mes_seguinte=next_month(mes) if mes and next_month(mes) <= timezone.localdate() else None,
-            disponiveis=disponiveis,
-            escolhidas=escolhidas,
+            **_contexto_periodo(inicio, fim, mes, disponiveis, escolhidas),
             indicadores=indicadores,
             linhas=[
                 {"rotulo": rotulo, "formato": formato_, "valores": [getattr(i, attr) for i in indicadores]}
@@ -170,6 +165,8 @@ def _contexto_periodo(inicio, fim, mes, disponiveis, escolhidas):
         "inicio": inicio,
         "fim": fim,
         "mes": mes,
+        # Os separadores levam o período, para o mês não mudar ao trocar.
+        "periodo_query": urlencode({"mes": f"{mes:%Y-%m}"} if mes else {"inicio": inicio, "fim": fim}),
         "mes_anterior": previous_month(mes or inicio),
         "mes_seguinte": next_month(mes) if mes and next_month(mes) <= timezone.localdate() else None,
         "disponiveis": disponiveis,
@@ -185,7 +182,7 @@ class StockReportView(StockRequiredMixin, TemplateView):
 
     def get(self, request, *args, **kwargs):
         inicio, fim, mes = periodo(request)
-        disponiveis = casas_disponiveis(request, ("ADMIN", "MANAGER", "STOCK"))
+        disponiveis = casas_disponiveis(request, permissions.STOCK)
         escolhidas = casas_escolhidas(request, disponiveis)
         valor, totais, sem_custo = sr.valor_por_categoria(escolhidas)
         casas = [
@@ -255,7 +252,7 @@ class PurchasesReportView(StockRequiredMixin, TemplateView):
 
     def get(self, request, *args, **kwargs):
         inicio, fim, mes = periodo(request, meses=6)
-        disponiveis = casas_disponiveis(request, ("ADMIN", "MANAGER", "STOCK"))
+        disponiveis = casas_disponiveis(request, permissions.STOCK)
         escolhidas = casas_escolhidas(request, disponiveis)
         fornecedores, totais, total = sr.por_fornecedor(escolhidas, inicio, fim)
         artigos = sr.por_artigo(escolhidas, inicio, fim)

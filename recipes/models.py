@@ -13,6 +13,7 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Q
 
+from core.formatos import unidade
 from core.models import TimeStampedModel
 
 
@@ -131,7 +132,8 @@ class RecipeLine(models.Model):
 
     @property
     def unit_label(self):
-        return "dose" if self.preparation_id else self.unit
+        # Como o stock escreve as unidades («KG» → «kg»); texto livre fica como está.
+        return "dose" if self.preparation_id else unidade(self.unit)
 
 
 class RecipeProduct(models.Model):

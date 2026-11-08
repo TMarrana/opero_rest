@@ -14,6 +14,8 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
+from core.utils import nome_do_mes
+
 from .models import CorrectionRequest, MonthClose, TimeEntry
 
 
@@ -45,7 +47,8 @@ def ensure_open(worker, *days):
     for day in days:
         if day is not None and is_closed(worker, day):
             raise ValidationError(
-                f"O mês de {day:%m/%Y} de {worker.full_name} já foi aprovado e não aceita alterações. "
+                f"O mês de {nome_do_mes(day)} de {day.year} de {worker.full_name} já foi aprovado e não aceita "
+                "alterações. "
                 "Para corrigir, o gerente tem de o reabrir."
             )
 

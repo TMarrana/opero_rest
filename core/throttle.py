@@ -20,8 +20,18 @@ class Limite:
 
     def falhou(self, chave):
         k = self._chave(chave)
-        falhas = cache.get(k, 0) + 1
-        cache.set(k, falhas, self.segundos)
+        # add + incr: dois processos a falhar ao mesmo tempo nao se apagam um
+        # ao outro (atomico onde a cache o e; a DatabaseCache faz o incr em
+        # duas consultas, e pode contar uma falha a menos em concorrencia).
+        if cache.add(k, 1, self.segundos):
+            falhas = 1
+        else:
+            try:
+                falhas = cache.incr(k)
+            except ValueError:  # expirou entre o add e o incr
+                cache.set(k, 1, self.segundos)
+                falhas = 1
+        cache.touch(k, self.segundos)  # cada falha renova o prazo
         return falhas
 
     def limpar(self, chave):

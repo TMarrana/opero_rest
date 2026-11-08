@@ -2,13 +2,14 @@ from decimal import Decimal
 
 from django import template
 
-from core.formatos import _milhares, euros, numero
+from core.formatos import euros, numero, preco
 
 register = template.Library()
 
 # Vivem em core.formatos; continuam aqui para os templates que fazem {% load vendas %}.
 register.filter("euros", euros)
 register.filter("numero", numero)
+register.filter("preco", preco)
 
 
 @register.filter
@@ -17,16 +18,6 @@ def variacao(valor):
     if valor is None:
         return ""
     return f"{'+' if valor > 0 else ''}{valor} %".replace("-", "\u2212")
-
-
-@register.filter
-def preco(valor):
-    """Preco unitario: duas casas, ou ate quatro quando as tem (0,8550 fica 0,855)."""
-    if valor is None:
-        return "\u2014"
-    valor = Decimal(valor)
-    casas = max(2, min(4, -valor.normalize().as_tuple().exponent))
-    return _milhares(valor, casas) + " \u20ac"
 
 
 @register.filter
