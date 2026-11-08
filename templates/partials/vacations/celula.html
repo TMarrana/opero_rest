@@ -13,7 +13,7 @@ no planeador de turnos.{% endcomment %}
 
   {% for a in ausencias %}
   <div class="mt-3 rounded-xl border {% if a.status == 'PENDENTE' %}border-dashed border-ardosia{% else %}border-linha{% endif %} px-2.5 py-2 text-sm">
-    <p class="font-semibold">{{ a.absence_type.name }}{% if a.half_day %} · meio dia{% endif %}</p>
+    <p class="font-semibold">{{ a.absence_type.name }}{% if a.half_day %} · {% if a.half_day_period %}{{ a.get_half_day_period_display }}{% else %}meio dia{% endif %}{% endif %}</p>
     <p class="font-dados text-xs">{{ a.start_date|date:"d/m" }}&ndash;{{ a.end_date|date:"d/m/Y" }} · {{ a.days_taken|floatformat:"-1" }} dia{{ a.days_taken|pluralize }}</p>
     <p class="text-xs text-ardosia">{% if a.status == 'PENDENTE' %}Pendente{% else %}Aprovado{% if a.decided_by %} por {{ a.decided_by }}{% endif %}{% endif %}{% if a.request_note %} · {{ a.request_note }}{% endif %}</p>
     {% if a.status == 'PENDENTE' %}
@@ -57,7 +57,7 @@ no planeador de turnos.{% endcomment %}
       <div class="space-y-1.5"><label class="block text-sm font-medium" for="{{ form.end_date.id_for_label }}">Fim</label>{{ form.end_date }}</div>
     </div>
     {% if form.half_day %}
-    <label class="flex items-center gap-2 text-sm">{{ form.half_day }} {{ form.half_day.label }}</label>
+    <div class="space-y-1.5"><label class="block text-sm font-medium" for="{{ form.half_day.id_for_label }}">{{ form.half_day.label }}</label>{{ form.half_day }}</div>
     {% endif %}
     <div class="space-y-1.5">
       <label for="{{ form.request_note.id_for_label }}" class="block text-sm font-medium">{{ form.request_note.label }}</label>

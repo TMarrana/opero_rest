@@ -237,8 +237,10 @@ def _escala(linhas, dia, agora):
         for r in l["registos"]:
             pontos += [horas(r.check_in), horas(r.check_out or max(agora, r.check_in))]
     if pontos:
-        # A hora atual entra sempre na escala, para se ver onde está o dia.
-        pontos.append(min(max(horas(agora), 0), 24))
+        # A hora atual entra sempre na escala, para se ver onde está o dia. De
+        # madrugada ainda é o serviço da véspera: a escala passa das 24h (até
+        # ao meio-dia seguinte, no máximo).
+        pontos.append(min(max(horas(agora), 0), 36))
         inicio, fim = math.floor(min(pontos)), math.ceil(max(pontos))
     else:
         inicio, fim = 9, 23

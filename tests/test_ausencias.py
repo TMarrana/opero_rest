@@ -56,10 +56,6 @@ def proximo_dia_util(worker, dia):
     return dia
 
 
-def primeiro_dia_util(worker, mes_inicio):
-    return proximo_dia_util(worker, mes_inicio)
-
-
 def _futuro(dias):
     return timezone.localdate() + datetime.timedelta(days=dias)
 
@@ -241,7 +237,7 @@ class TestPeriodosBloqueados:
 class TestMesAprovadoESobreposicao:
     def test_aprovar_em_mes_aprovado_e_recusado(self, worker, manager, ferias, mes_passado):
         mes.approve_month(worker=worker, month=mes_passado, user=manager)
-        dia = primeiro_dia_util(worker, mes_passado)
+        dia = proximo_dia_util(worker, mes_passado)
         pedido = VacationRequest.objects.create(
             worker=worker, absence_type=ferias, start_date=dia, end_date=dia, days_taken=1
         )
@@ -252,7 +248,7 @@ class TestMesAprovadoESobreposicao:
 
     def test_recusar_em_mes_aprovado_continua_possivel(self, worker, manager, ferias, mes_passado):
         mes.approve_month(worker=worker, month=mes_passado, user=manager)
-        dia = primeiro_dia_util(worker, mes_passado)
+        dia = proximo_dia_util(worker, mes_passado)
         pedido = VacationRequest.objects.create(
             worker=worker, absence_type=ferias, start_date=dia, end_date=dia, days_taken=1
         )
@@ -262,20 +258,21 @@ class TestMesAprovadoESobreposicao:
 
     def test_gerente_nao_regista_ausencia_em_mes_aprovado(self, worker, manager, ferias, mes_passado):
         mes.approve_month(worker=worker, month=mes_passado, user=manager)
-        dia = primeiro_dia_util(worker, mes_passado)
+        dia = proximo_dia_util(worker, mes_passado)
+        antes = VacationRequest.objects.filter(worker=worker).count()
         with pytest.raises(ValidationError, match="já foi aprovado"):
             create_request(worker=worker, absence_type=ferias, start_date=dia, end_date=dia, created_by=manager)
-        assert not VacationRequest.objects.filter(worker=worker).exists()
+        assert VacationRequest.objects.filter(worker=worker).count() == antes
 
     def test_tipo_sem_aprovacao_nao_nasce_em_mes_aprovado(self, worker, manager, baixa, mes_passado):
         mes.approve_month(worker=worker, month=mes_passado, user=manager)
-        dia = primeiro_dia_util(worker, mes_passado)
+        dia = proximo_dia_util(worker, mes_passado)
         with pytest.raises(ValidationError, match="já foi aprovado"):
             create_request(worker=worker, absence_type=baixa, start_date=dia, end_date=dia)
 
     def test_pedido_pendente_em_mes_aprovado_ainda_se_submete(self, worker, manager, ferias, mes_passado):
         mes.approve_month(worker=worker, month=mes_passado, user=manager)
-        dia = primeiro_dia_util(worker, mes_passado)
+        dia = proximo_dia_util(worker, mes_passado)
         pedido = create_request(worker=worker, absence_type=ferias, start_date=dia, end_date=dia)
         assert pedido.status == VacationRequest.Status.PENDENTE
 
@@ -316,7 +313,7 @@ class TestMesAprovadoESobreposicao:
         assert pedido.status == VacationRequest.Status.APROVADO
 
     def test_cancelar_ausencia_aprovada_respeita_mes_aprovado(self, worker, manager, ferias, mes_passado):
-        dia = primeiro_dia_util(worker, mes_passado)
+        dia = proximo_dia_util(worker, mes_passado)
         pedido = VacationRequest.objects.create(
             worker=worker,
             absence_type=ferias,
@@ -353,17 +350,39 @@ class TestMesAprovadoESobreposicao:
         create_request(
             worker=worker, absence_type=ferias, start_date=inicio, end_date=inicio + 2 * DIA, created_by=manager
         )
+        antes = VacationRequest.objects.filter(worker=worker).count()
         fim = inicio + 2 * DIA
         with pytest.raises(ValidationError, match="Sobrepõe-se"):
             create_request(worker=worker, absence_type=baixa, start_date=fim, end_date=fim + 2 * DIA)
-        assert VacationRequest.objects.filter(worker=worker).count() == 1
+        assert VacationRequest.objects.filter(worker=worker).count() == antes
 
     def test_dias_seguidos_sem_cruzar_nao_se_sobrepoem(self, worker, manager, ferias):
         inicio = proximo_dia_util(worker, timezone.localdate() + datetime.timedelta(days=20))
+        antes = VacationRequest.objects.filter(worker=worker).count()
         create_request(worker=worker, absence_type=ferias, start_date=inicio, end_date=inicio, created_by=manager)
         seguinte = proximo_dia_util(worker, inicio + DIA)
         create_request(worker=worker, absence_type=ferias, start_date=seguinte, end_date=seguinte, created_by=manager)
-        assert VacationRequest.objects.filter(worker=worker).count() == 2
+        assert VacationRequest.objects.filter(worker=worker).count() == antes + 2
+
+    def test_manha_e_tarde_no_mesmo_dia_nao_se_sobrepoem(self, worker, manager, ferias):
+        """Decidido pelo TM a 2026-11-08: dois meios-dias no mesmo dia aceitam-se
+        se um for de manhã e o outro de tarde."""
+        dia = proximo_dia_util(worker, timezone.localdate() + datetime.timedelta(days=20))
+        create_request(worker=worker, absence_type=ferias, start_date=dia, end_date=dia, periodo="MANHA",
+                       created_by=manager)
+        tarde = create_request(worker=worker, absence_type=ferias, start_date=dia, end_date=dia, periodo="TARDE",
+                               created_by=manager)
+        assert tarde.half_day and tarde.half_day_period == "TARDE"
+        assert tarde.status == VacationRequest.Status.APROVADO
+
+    @pytest.mark.parametrize("primeiro,segundo", [("MANHA", "MANHA"), ("", "TARDE")])
+    def test_mesma_metade_ou_metade_desconhecida_sobrepoe_se(self, worker, manager, ferias, primeiro, segundo):
+        dia = proximo_dia_util(worker, timezone.localdate() + datetime.timedelta(days=20))
+        create_request(worker=worker, absence_type=ferias, start_date=dia, end_date=dia, half_day=True,
+                       periodo=primeiro, created_by=manager)
+        with pytest.raises(ValidationError, match="Sobrepõe-se"):
+            create_request(worker=worker, absence_type=ferias, start_date=dia, end_date=dia, periodo=segundo,
+                           created_by=manager)
 
     def test_pedido_pendente_sobreposto_ainda_se_submete(self, worker, manager, ferias):
         inicio = proximo_dia_util(worker, timezone.localdate() + datetime.timedelta(days=20))
@@ -404,6 +423,15 @@ def test_pendente_com_datas_passadas_assinalado(client, manager, restaurant):
     assert "Datas já passaram" in client.get(reverse("vacations:lista")).content.decode()
 
 
+def test_pendente_que_acaba_hoje_nao_esta_atrasado(client, manager, restaurant):
+    w = Worker.objects.create(restaurant=restaurant, full_name="Rui Hoje")
+    tipo = AbsenceType.objects.get(restaurant=restaurant, name="Férias")
+    hoje = timezone.localdate()
+    VacationRequest.objects.create(worker=w, absence_type=tipo, start_date=hoje - datetime.timedelta(days=1), end_date=hoje)
+    client.force_login(manager)
+    assert "Datas já passaram" not in client.get(reverse("vacations:lista")).content.decode()
+
+
 def test_dashboard_conta_pendentes_com_datas_passadas(client, manager, restaurant):
     from sales.services import dia_de_servico
 
@@ -420,3 +448,12 @@ def test_dashboard_conta_pendentes_com_datas_passadas(client, manager, restauran
         '<span class="font-dados font-semibold">2</span> pedidos de férias por decidir, '
         '<span class="font-dados font-semibold">1</span> com datas passadas'
     ) in html
+
+
+def test_pedido_de_manha_pela_app_guarda_a_metade(client, worker, staff_user, ferias):
+    dia = proximo_dia_util(worker, timezone.localdate() + datetime.timedelta(days=20))
+    client.force_login(staff_user)
+    client.post(reverse("staff:ferias"), {"absence_type": ferias.pk, "start_date": dia.isoformat(),
+                                          "end_date": dia.isoformat(), "half_day": "MANHA"})
+    pedido = VacationRequest.objects.get(worker=worker, start_date=dia)
+    assert pedido.half_day and pedido.half_day_period == "MANHA" and pedido.days_taken == Decimal("0.5")

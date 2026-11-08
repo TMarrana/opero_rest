@@ -118,7 +118,7 @@ class VacationCreateView(ManagerRequiredMixin, View):
                     absence_type=form.cleaned_data["absence_type"],
                     start_date=form.cleaned_data["start_date"],
                     end_date=form.cleaned_data["end_date"],
-                    half_day=form.cleaned_data.get("half_day", False),
+                    periodo=form.cleaned_data.get("half_day", ""),
                     note=form.cleaned_data["request_note"],
                     created_by=request.user,
                 )
@@ -337,7 +337,7 @@ class CalendarCellView(ManagerRequiredMixin, View):
                     absence_type=form.cleaned_data["absence_type"],
                     start_date=form.cleaned_data["start_date"],
                     end_date=form.cleaned_data["end_date"],
-                    half_day=form.cleaned_data.get("half_day", False),
+                    periodo=form.cleaned_data.get("half_day", ""),
                     note=form.cleaned_data["request_note"],
                     created_by=request.user,
                 )

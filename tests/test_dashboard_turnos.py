@@ -118,12 +118,22 @@ def test_etiqueta_agora_esconde_a_hora_por_baixo(restaurant, equipa):
     assert horas["01h"] is True and horas["23h"] is False
 
 
-def test_sem_marcador_agora_nenhuma_hora_fica_oculta(restaurant, equipa):
-    # Às 03h de sábado a escala de sexta (10h–24h) já não chega à hora atual.
+def test_de_madrugada_a_escala_chega_a_hora_atual(restaurant, equipa):
+    # Às 03h de sábado ainda é o serviço de sexta: a escala estica até às 27h
+    # (03h de sábado) e o marcador «agora» aparece.
     turno(restaurant, equipa["Ana"], datetime.time(10), datetime.time(14), dia=SEXTA)
     r = turnos_de_hoje(SimpleNamespace(restaurant=restaurant), agora=_sabado(3, 0))
-    assert r["escala"]["agora"] is None
-    assert not any(h["oculta"] for h in r["escala"]["horas"])
+    assert r["escala"]["agora"] is not None
+
+
+def test_sem_marcador_agora_nenhuma_hora_fica_oculta():
+    from dashboard.views import _escala
+
+    # Um dia que não é o de hoje (a hora atual fica fora da escala).
+    agora = timezone.make_aware(datetime.datetime(2026, 11, 9, 12, 0))
+    escala = _escala([], datetime.date(2026, 11, 7), agora)
+    assert escala["agora"] is None
+    assert not any(h["oculta"] for h in escala["horas"])
 
 
 @pytest.mark.parametrize("h,texto", [(1, "Boa noite"), (4, "Boa noite"), (5, "Bom dia"), (9, "Bom dia"),

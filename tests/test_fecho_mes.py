@@ -322,6 +322,35 @@ class TestQuemEntraNoMes:
         assert w.is_active and w.end_date is None
         assert "A data de saída não pode ser no futuro" in resp.content.decode()
 
+    def test_data_de_saida_antes_do_inicio_nao_desativa(self, client, manager, restaurant):
+        w = Worker.objects.create(restaurant=restaurant, full_name="Ana Sai", start_date=datetime.date(2026, 3, 1))
+        client.force_login(manager)
+        resp = client.post(reverse("workers:desativar", args=[w.pk]), {"data_saida": "2026-02-27"}, follow=True)
+        w.refresh_from_db()
+        assert w.is_active and w.end_date is None
+        assert "não pode ser antes do início" in resp.content.decode()
+
+    def test_seletor_deixa_de_fora_quem_comeca_depois_do_mes(self, restaurant, mes_passado):
+        from attendance.selectors import workers_for_month
+
+        depois = mes.next_month(mes_passado)
+        Worker.objects.create(restaurant=restaurant, full_name="Novo", start_date=depois)
+        assert not workers_for_month(Worker.objects.all(), mes_passado).filter(full_name="Novo").exists()
+
+    def test_seletor_conta_registos_noutra_casa(self, restaurant, manager, mes_passado):
+        """Quem saiu antes do mes mas picou noutra casa do grupo nesse mes entra
+        no fecho da casa principal."""
+        from attendance.selectors import workers_for_month
+        from core.models import Restaurant
+
+        outra = Restaurant.objects.create(organization=restaurant.organization, name="Tasca Dois", slug="tasca-dois")
+        w = Worker.objects.create(restaurant=restaurant, full_name="Rita Duas", is_active=False,
+                                  end_date=mes.previous_month(mes_passado))
+        w.other_restaurants.add(outra)
+        add_manual_entry(worker=w, user=manager, check_in=_dia(mes_passado, 3), check_out=_dia(mes_passado, 3, 17),
+                         restaurant=outra)
+        assert w in workers_for_month(Worker.objects.all(), mes_passado)
+
     def test_ficha_com_historico_pede_a_data_de_saida_ao_desativar(self, client, manager, restaurant, mes_passado):
         w = Worker.objects.create(restaurant=restaurant, full_name="Ana Historico")
         add_manual_entry(worker=w, user=manager, check_in=_dia(mes_passado, 3), check_out=_dia(mes_passado, 3, 17))

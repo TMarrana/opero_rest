@@ -24,7 +24,13 @@ class VacationRequestForm(forms.Form):
     )
     start_date = forms.DateField(label="Início", widget=forms.DateInput(attrs=_DATA, format="%Y-%m-%d"))
     end_date = forms.DateField(label="Fim", widget=forms.DateInput(attrs=_DATA, format="%Y-%m-%d"))
-    half_day = forms.BooleanField(label="Só meio dia", required=False)
+    # Dia inteiro, ou que metade (manhã e tarde no mesmo dia não se sobrepõem).
+    half_day = forms.ChoiceField(
+        label="Duração",
+        required=False,
+        choices=[("", "Dia inteiro"), ("MANHA", "Só de manhã"), ("TARDE", "Só à tarde")],
+        widget=forms.Select(attrs=_INPUT),
+    )
     request_note = forms.CharField(
         label="Observação",
         required=False,

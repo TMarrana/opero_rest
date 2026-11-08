@@ -47,7 +47,11 @@
     </div>
   </div>
   {% if form.half_day %}
-  <label class="flex min-h-toque items-center gap-3 text-sm">{{ form.half_day }} Só meio dia (início e fim no mesmo dia)</label>
+  <div class="space-y-1.5">
+    <label class="block text-sm font-medium" for="{{ form.half_day.id_for_label }}">{{ form.half_day.label }}</label>
+    {{ form.half_day }}
+    <p class="text-xs text-ardosia">Meio dia: início e fim no mesmo dia.</p>
+  </div>
   {% endif %}
   <div class="space-y-1.5">
     <label for="{{ form.request_note.id_for_label }}" class="block text-sm font-medium">Observação</label>
@@ -68,7 +72,7 @@
         {% elif p.status == 'RECUSADO' %}{% include "components/badge.html" with label=p.get_status_display variante="perigo" %}
         {% else %}{% include "components/badge.html" with label=p.get_status_display variante="ambar" %}{% endif %}
       </div>
-      <p class="mt-1 text-base font-semibold">{{ p.start_date|date:"d M" }}{% if p.end_date != p.start_date %} &rarr; {{ p.end_date|date:"d M Y" }}{% else %} {{ p.start_date|date:"Y" }}{% endif %}{% if p.half_day %} · meio dia{% endif %}</p>
+      <p class="mt-1 text-base font-semibold">{{ p.start_date|date:"d M" }}{% if p.end_date != p.start_date %} &rarr; {{ p.end_date|date:"d M Y" }}{% else %} {{ p.start_date|date:"Y" }}{% endif %}{% if p.half_day %} · {% if p.half_day_period %}{{ p.get_half_day_period_display }}{% else %}meio dia{% endif %}{% endif %}</p>
       <p class="mt-0.5 text-ardosia">{{ p.days_taken }} dia{{ p.days_taken|pluralize }}{% if p.decision_note %} · {{ p.decision_note }}{% endif %}</p>
       {% if p.cancelavel %}
       <form method="post" action="{% url 'staff:cancelar_ferias' p.pk %}" x-data="{ confirmar: false }" class="mt-2">

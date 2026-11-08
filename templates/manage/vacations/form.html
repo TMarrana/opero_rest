@@ -17,7 +17,7 @@
       {% include "components/campo.html" with field=form.end_date %}
     </div>
     {% if form.half_day %}
-    <label class="flex items-center gap-2 text-sm">{{ form.half_day }} {{ form.half_day.label }}</label>
+    {% include "components/campo.html" with field=form.half_day ajuda="Meio dia só num único dia." %}
     {% endif %}
     {% include "components/campo.html" with field=form.request_note %}
   </div>

@@ -114,32 +114,37 @@ def blocking_period(worker, absence_type, start, end):
     )
 
 
-def overlapping_approved(worker, start, end, exclude=None):
+OUTRA_METADE = {"MANHA": "TARDE", "TARDE": "MANHA"}
+
+
+def overlapping_approved(worker, start, end, exclude=None, periodo=""):
     """Ausências aprovadas do trabalhador que se cruzam com [start, end],
     extremos incluídos. Duas aprovadas sobrepostas descontariam o saldo duas
-    vezes."""
+    vezes. Um meio-dia de manhã e outro de tarde no mesmo dia não se cruzam."""
     cruzadas = VacationRequest.objects.filter(
         worker=worker, status=VacationRequest.Status.APROVADO, start_date__lte=end, end_date__gte=start
     ).select_related("absence_type")
     if exclude is not None:
         cruzadas = cruzadas.exclude(pk=exclude.pk)
+    if periodo:
+        cruzadas = cruzadas.exclude(half_day=True, half_day_period=OUTRA_METADE[periodo])
     return cruzadas
 
 
 def _ensure_months_open(worker, start, end):
     """Recusa a alteração se algum dos meses que a ausência toca estiver
     aprovado (invariante 8)."""
-    mes = month_start(start)
-    while mes <= month_start(end):
+    mes, ultimo = month_start(start), month_start(end)
+    while mes <= ultimo:
         ensure_open(worker, mes)
         mes = next_month(mes)
 
 
-def _ensure_can_approve(worker, start, end, exclude=None):
+def _ensure_can_approve(worker, start, end, exclude=None, periodo=""):
     """Uma ausência só fica aprovada se nenhum dos meses que toca estiver
     aprovado e se não se sobrepuser a outra aprovada."""
     _ensure_months_open(worker, start, end)
-    outra = overlapping_approved(worker, start, end, exclude=exclude).order_by("start_date").first()
+    outra = overlapping_approved(worker, start, end, exclude=exclude, periodo=periodo).order_by("start_date").first()
     if outra is not None:
         raise ValidationError(
             f"Sobrepõe-se a {outra.absence_type.name} de {outra.start_date:%d/%m} a {outra.end_date:%d/%m}, "
@@ -147,7 +152,9 @@ def _ensure_can_approve(worker, start, end, exclude=None):
         )
 
 
-def create_request(*, worker, absence_type, start_date, end_date, half_day=False, note="", created_by=None):
+def create_request(
+    *, worker, absence_type, start_date, end_date, half_day=False, periodo="", note="", created_by=None
+):
     """Pedido de ausência.
 
     - Registado pelo gerente (`created_by`), nasce aprovado e com o
@@ -158,7 +165,9 @@ def create_request(*, worker, absence_type, start_date, end_date, half_day=False
     - Uma ausência que nasce aprovada não toca num mês aprovado nem se
       sobrepõe a outra aprovada. Um pedido pendente sobreposto aceita-se,
       com o aviso visual da invariante 6.
-    - Meio dia só num dia e em tipos que o permitam."""
+    - Meio dia só num dia e em tipos que o permitam. `periodo` (MANHA ou
+      TARDE) diz que metade, e já é meio dia."""
+    half_day = half_day or bool(periodo)
     if absence_type.restaurant_id != worker.restaurant_id or absence_type.archived_at is not None:
         raise ValidationError("Escolha um tipo de ausência em uso.")
     if end_date < start_date:
@@ -181,11 +190,12 @@ def create_request(*, worker, absence_type, start_date, end_date, half_day=False
         start_date=start_date,
         end_date=end_date,
         half_day=half_day,
+        half_day_period=periodo,
         days_taken=dias,
         request_note=note.strip(),
     )
     if created_by is not None or not absence_type.requires_approval:
-        _ensure_can_approve(worker, start_date, end_date)
+        _ensure_can_approve(worker, start_date, end_date, periodo=periodo)
     if created_by is not None:
         pedido.status = VacationRequest.Status.APROVADO
         pedido.decided_by = created_by
@@ -209,7 +219,9 @@ def decide_request(*, request_obj, user, approve, note=""):
         if pedido.status != VacationRequest.Status.PENDENTE:
             raise ValidationError("Este pedido já foi decidido.")
         if approve:
-            _ensure_can_approve(pedido.worker, pedido.start_date, pedido.end_date, exclude=pedido)
+            _ensure_can_approve(
+                pedido.worker, pedido.start_date, pedido.end_date, exclude=pedido, periodo=pedido.half_day_period
+            )
         pedido.status = VacationRequest.Status.APROVADO if approve else VacationRequest.Status.RECUSADO
         pedido.decided_by = user
         pedido.decided_at = timezone.now()

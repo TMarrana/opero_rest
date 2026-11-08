@@ -56,6 +56,11 @@ class VacationRequest(TimeStampedModel):
     start_date = models.DateField("início")
     end_date = models.DateField("fim")
     half_day = models.BooleanField("meio dia", default=False)
+    # Que metade do dia (decidido a 2026-11-08): manhã e tarde no mesmo dia
+    # não se sobrepõem. Vazio nos meios-dias antigos, que contam como o dia todo.
+    half_day_period = models.CharField(
+        "metade do dia", max_length=5, choices=[("MANHA", "manhã"), ("TARDE", "tarde")], blank=True
+    )
     days_taken = models.DecimalField("dias", max_digits=5, decimal_places=1, default=0)
     status = models.CharField("estado", max_length=10, choices=Status.choices, default=Status.PENDENTE)
     request_note = models.CharField("observação do pedido", max_length=300, blank=True)
