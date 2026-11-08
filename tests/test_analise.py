@@ -218,3 +218,12 @@ class TestPeriodoEExportacao:
         corpo = client.get(_url(mes=f"{MES:%Y-%m}")).content.decode()
         assert corpo.count("<title>") >= (FIM - INICIO).days + 1
         assert 'class="fill-floresta"' in corpo
+
+
+def test_separadores_levam_o_periodo(client, grupo, admin_user):
+    """Trocar de separador não muda o mês nem o intervalo escolhido."""
+    client.force_login(admin_user)
+    html = client.get(_url(mes="2026-09")).content.decode()
+    assert f'href="{reverse("analytics:stock")}?mes=2026-09"' in html
+    html = client.get(reverse("analytics:stock") + "?inicio=2026-09-01&fim=2026-09-15").content.decode()
+    assert f'href="{reverse("analytics:compras")}?inicio=2026-09-01&amp;fim=2026-09-15"' in html

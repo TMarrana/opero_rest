@@ -8,6 +8,7 @@ Comparar casas é só para o Admin do grupo; os outros veem a casa ativa.
 """
 import datetime
 from decimal import Decimal
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.shortcuts import redirect
@@ -147,13 +148,7 @@ class AnalysisView(StockRequiredMixin, TemplateView):
         if formato == "csv":
             return exports.csv_response(tabela_casas(indicadores, inicio, fim), nome)
         contexto = self.get_context_data(
-            inicio=inicio,
-            fim=fim,
-            mes=mes,
-            mes_anterior=previous_month(mes or inicio),
-            mes_seguinte=next_month(mes) if mes and next_month(mes) <= timezone.localdate() else None,
-            disponiveis=disponiveis,
-            escolhidas=escolhidas,
+            **_contexto_periodo(inicio, fim, mes, disponiveis, escolhidas),
             indicadores=indicadores,
             linhas=[
                 {"rotulo": rotulo, "formato": formato_, "valores": [getattr(i, attr) for i in indicadores]}
@@ -170,6 +165,8 @@ def _contexto_periodo(inicio, fim, mes, disponiveis, escolhidas):
         "inicio": inicio,
         "fim": fim,
         "mes": mes,
+        # Os separadores levam o período, para o mês não mudar ao trocar.
+        "periodo_query": urlencode({"mes": f"{mes:%Y-%m}"} if mes else {"inicio": inicio, "fim": fim}),
         "mes_anterior": previous_month(mes or inicio),
         "mes_seguinte": next_month(mes) if mes and next_month(mes) <= timezone.localdate() else None,
         "disponiveis": disponiveis,
