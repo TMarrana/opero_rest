@@ -21,7 +21,10 @@ def test_cada_ligacao_do_menu_abre(client, perfil, request):
     ligacoes = set(re.findall(r'href="(/[^"]+)"', menu))
     assert ligacoes
     for href in ligacoes:
-        assert client.get(href).status_code in (200, 302), href
+        # Um 302 so vale se acabar numa pagina da app, e nao no login.
+        resp = client.get(href, follow=True)
+        destino = resp.redirect_chain[-1][0] if resp.redirect_chain else href
+        assert resp.status_code == 200 and not destino.startswith(reverse("accounts:login")), href
 
 
 def test_resp_stock_nao_ve_as_areas_de_pessoas(client, stock_user):

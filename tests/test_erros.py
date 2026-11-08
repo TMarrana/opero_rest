@@ -1,4 +1,6 @@
 """As páginas de erro têm o aspeto da app e uma única saída: voltar ao início."""
+from unittest import mock
+
 import pytest
 from django.template import loader
 from django.test import Client
@@ -35,8 +37,6 @@ def test_500_mostra_se_sem_contexto():
 def test_500_real_usa_a_pagina_da_app(restaurant, manager):
     cliente = Client(raise_request_exception=False)
     cliente.force_login(manager)
-    from unittest import mock
-
     with mock.patch("dashboard.views.DashboardView.get_context_data", side_effect=RuntimeError("falha")):
         r = cliente.get(reverse("dashboard:home"))
     assert r.status_code == 500
@@ -61,3 +61,10 @@ def test_paginas_de_erro_sao_documentos_completos(nome):
     assert html.lstrip().lower().startswith("<!doctype html>")
     assert 'lang="pt"' in html
     assert "css/app.css" in html
+
+
+@pytest.mark.parametrize("pagina,titulo", [("403.html", "Não tem acesso a esta página"), ("500.html", "Algo correu mal")])
+def test_titulo_da_pagina_de_erro_esta_no_separador_e_no_cabecalho(pagina, titulo):
+    html = loader.render_to_string(pagina)
+    assert f"<title>{titulo} · Opero</title>" in html and f">{titulo}</h1>" in html
+    assert html.lstrip().startswith("<!doctype html>")

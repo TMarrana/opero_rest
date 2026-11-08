@@ -81,10 +81,16 @@ class User(AbstractUser):
     def is_backoffice(self):
         """Tem acesso ao backoffice em pelo menos uma casa (a vista staff é
         para todos)."""
-        return any(role in BACKOFFICE_ROLES for role in self.casas().values())
+        return tem_backoffice(self.casas())
 
 
 BACKOFFICE_ROLES = {User.Role.ADMIN, User.Role.MANAGER, User.Role.STOCK}
+
+
+def tem_backoffice(casas):
+    """{casa: perfil} com gestão em pelo menos uma casa. Os templates usam-no
+    sobre `request.casas`, que o middleware já leu, sem nova consulta."""
+    return any(role in BACKOFFICE_ROLES for role in casas.values())
 
 
 class Membership(models.Model):
